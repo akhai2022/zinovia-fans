@@ -1,0 +1,4 @@
+DEFAULT_USER_ROLE = "creator"
+ADMIN_ROLE = "admin"
+COOKIE_SAMESITE = "lax"
+TOKEN_TYPE_BEARER = "bearer"

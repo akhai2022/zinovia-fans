@@ -1,0 +1,135 @@
+# Canonical env: repo root .env. Invoke from repo root with: docker compose --env-file .env -f infra/compose/docker-compose.yml
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    env_file:
+      - ../../.env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-zinovia}
+      POSTGRES_USER: ${POSTGRES_USER:-zinovia}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zinovia}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    env_file:
+      - ../../.env
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio123}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - minio:/data
+
+  minio-init:
+    image: minio/mc:latest
+    env_file:
+      - ../../.env
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
+      mc mb --ignore-existing local/$$MINIO_BUCKET;
+      mc anonymous set none local/$$MINIO_BUCKET;
+      "
+
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/api/Dockerfile
+    env_file:
+      - ../../.env
+    environment:
+      PYTHONPATH: /app/apps/api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../..:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: infra/docker/worker/Dockerfile
+    env_file:
+      - ../../.env
+    environment:
+      PYTHONPATH: /app/apps/api:/app/apps/worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - ../..:/app
+
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/docker/web/Dockerfile
+    user: "0:0"  # run as root so next dev can write/clean .next volume
+    env_file:
+      - ../../.env
+    # Browser runs on host; API must be reachable at host (use 127.0.0.1 for consistent loopback).
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../..:/app
+      - /app/node_modules
+      - /app/apps/web/node_modules
+      - /app/packages/contracts/node_modules
+      # Isolate .next so container (non-root) can write when running next dev
+      - web_next:/app/apps/web/.next
+    command: ["npm", "--prefix", "apps/web", "run", "dev", "--", "--hostname", "0.0.0.0"]
+
+volumes:
+  pgdata:
+  minio:
+  web_next:

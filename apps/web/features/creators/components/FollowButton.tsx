@@ -1,0 +1,91 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { ApiError } from "@zinovia/contracts";
+import { CreatorsService } from "../api";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
+import { getApiErrorMessage } from "@/lib/errors";
+
+type FollowButtonProps = {
+  creatorId: string;
+  initialFollowing: boolean;
+  onToggle?: (following: boolean) => void;
+};
+
+export function FollowButton({
+  creatorId,
+  initialFollowing,
+  onToggle,
+}: FollowButtonProps) {
+  const { addToast } = useToast();
+  const [following, setFollowing] = useState(initialFollowing);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [errorKind, setErrorKind] = useState<"unauthorized" | "error" | null>(null);
+
+  const handleClick = async () => {
+    setError(null);
+    setErrorKind(null);
+    setLoading(true);
+    const previous = following;
+    setFollowing(!following);
+    try {
+      if (following) {
+        await CreatorsService.creatorsUnfollow(creatorId);
+        onToggle?.(false);
+        addToast("Unfollowed", "success");
+      } else {
+        await CreatorsService.creatorsFollow(creatorId);
+        onToggle?.(true);
+        addToast("Following", "success");
+      }
+    } catch (err) {
+      setFollowing(previous);
+      onToggle?.(previous);
+      const { kind, message } = getApiErrorMessage(err);
+      const displayMessage =
+        kind === "unauthorized"
+          ? "Sign in to follow"
+          : err instanceof ApiError &&
+              err.body &&
+              typeof err.body === "object" &&
+              "detail" in err.body &&
+              String((err.body as { detail?: unknown }).detail) === "cannot_follow_self"
+            ? "You can't follow yourself"
+            : message;
+      setError(displayMessage);
+      setErrorKind(kind === "unauthorized" ? "unauthorized" : "error");
+      addToast(displayMessage, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-1">
+      <Button
+        variant={following ? "outline" : "default"}
+        size="sm"
+        onClick={handleClick}
+        disabled={loading}
+      >
+        {loading ? "…" : following ? "Unfollow" : "Follow"}
+      </Button>
+      {error && (
+        <p className="text-xs text-destructive">
+          {error}
+          {errorKind === "unauthorized" && (
+            <>
+              {" "}
+              <Link href="/login" className="underline focus:outline-none focus:ring-2 focus:ring-ring rounded">
+                Sign in
+              </Link>
+            </>
+          )}
+        </p>
+      )}
+    </div>
+  );
+}

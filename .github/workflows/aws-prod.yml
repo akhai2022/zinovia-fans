@@ -1,0 +1,51 @@
+# Deploy to AWS production (manual trigger only)
+# Requires: AWS_ROLE_ARN_PROD secret and OIDC provider.
+
+name: AWS Prod Deploy
+
+on:
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  CLUSTER: zinovia-fans-prod-cluster
+  API_SERVICE: zinovia-fans-prod-api
+  WEB_SERVICE: zinovia-fans-prod-web
+  WORKER_SERVICE: zinovia-fans-prod-worker
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: ECR login
+        run: |
+          AWS_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com
+
+      - name: Build and push images
+        run: |
+          AWS_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+          REG="$AWS_ACCOUNT.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
+          docker build -f infra/docker/api/Dockerfile -t $REG/zinovia-fans-prod-api:$GITHUB_SHA -t $REG/zinovia-fans-prod-api:latest .
+          docker push $REG/zinovia-fans-prod-api:latest
+          docker build -f infra/docker/web/Dockerfile --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.zinovia.ai -t $REG/zinovia-fans-prod-web:$GITHUB_SHA -t $REG/zinovia-fans-prod-web:latest .
+          docker push $REG/zinovia-fans-prod-web:latest
+          docker build -f infra/docker/worker/Dockerfile -t $REG/zinovia-fans-prod-worker:$GITHUB_SHA -t $REG/zinovia-fans-prod-worker:latest .
+          docker push $REG/zinovia-fans-prod-worker:latest
+
+      - name: Force ECS deployment
+        run: |
+          aws ecs update-service --cluster ${{ env.CLUSTER }} --service ${{ env.API_SERVICE }} --force-new-deployment --region ${{ env.AWS_REGION }}
+          aws ecs update-service --cluster ${{ env.CLUSTER }} --service ${{ env.WEB_SERVICE }} --force-new-deployment --region ${{ env.AWS_REGION }}
+          aws ecs update-service --cluster ${{ env.CLUSTER }} --service ${{ env.WORKER_SERVICE }} --force-new-deployment --region ${{ env.AWS_REGION }}
