@@ -70,7 +70,9 @@ web-test:
 # AWS (infra/aws/terraform; dedicated new VPC, us-east-1)
 # -----------------------------------------------------------------------------
 AWS_TF_DIR := infra/aws/terraform
-AWS_TF := terraform -chdir=$(AWS_TF_DIR)
+# Use repo .tools/terraform if present (not in PATH); override with make TERRAFORM=/path/to/terraform
+TERRAFORM ?= $(shell test -x .tools/terraform && echo ./.tools/terraform || echo terraform)
+AWS_TF := $(TERRAFORM) -chdir=$(AWS_TF_DIR)
 
 aws-stg-plan:
 	$(AWS_TF) init -backend=false
