@@ -54,7 +54,7 @@ export function SubscribeInviteVideo() {
         />
 
         {/* Fixed aspect 4:5 + max-height so video doesn't stretch/pixelate on ultrawide */}
-        <div className="relative aspect-[4/5] max-h-[min(80vh,720px)] w-full overflow-hidden rounded-3xl bg-muted">
+        <div className="relative aspect-[4/5] max-h-[720px] w-full overflow-hidden rounded-3xl bg-muted md:max-h-[820px]">
           <video
             ref={videoRef}
             autoPlay={!reducedMotion}

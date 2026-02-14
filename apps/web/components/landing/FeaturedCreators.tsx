@@ -41,7 +41,7 @@ function CreatorCard({
       className={cn(
         "group relative flex flex-shrink-0 flex-col overflow-hidden rounded-2xl border border-white/10 shadow-premium-md",
         "transition-all duration-300 ease-premium-out",
-        "hover:-translate-y-1 hover:shadow-premium-lg",
+        "hover:-translate-y-1 hover:shadow-premium-lg motion-reduce:hover:translate-y-0",
         "w-[280px] sm:w-[300px] md:w-full"
       )}
     >
@@ -60,8 +60,8 @@ function CreatorCard({
           alt={`${name} — creator profile`}
           fill
           quality={90}
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
-          sizes="(max-width: 768px) 280px, 600px"
+          className="object-cover transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+          sizes="(max-width: 768px) 70vw, 340px"
         />
       </div>
       <div className="flex flex-col gap-3 p-4">

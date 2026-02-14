@@ -27,13 +27,13 @@ const FANS_COPY = {
 
 const CREATORS_COPY = {
   badge: "Earn on your terms",
-  title: "Get paid for your content.",
-  highlight: "Keep your audience.",
+  title: "Build your audience.",
+  highlight: "Earn recurring revenue.",
   body: "Set your subscription price, publish premium posts and paywalled content, and receive payouts securely. Built for conversion and trust.",
   primaryCta: "Become a Creator",
   primaryHref: "/signup",
-  secondaryCta: "View Creator Tools",
-  secondaryHref: "/help",
+  secondaryCta: "See top creators",
+  secondaryHref: "/creators",
 };
 
 export function LandingHero() {

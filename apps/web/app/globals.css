@@ -138,7 +138,7 @@
     content: "";
     position: absolute;
     inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.055'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.075'/%3E%3C/svg%3E");
     pointer-events: none;
     z-index: 0;
   }
@@ -154,8 +154,8 @@
     50% { opacity: 0.85; transform: scale(1.06) translate(2%, 2%); }
   }
   .aurora-bg {
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.12) 0%, rgba(168, 85, 247, 0.08) 40%, rgba(212, 175, 55, 0.06) 70%, rgba(124, 58, 237, 0.04) 100%);
-    filter: blur(24px);
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.16) 0%, rgba(168, 85, 247, 0.12) 35%, rgba(212, 175, 55, 0.1) 65%, rgba(124, 58, 237, 0.08) 100%);
+    filter: blur(32px);
     animation: aurora-shift 12s ease-in-out infinite;
   }
   @media (prefers-reduced-motion: reduce) {
@@ -170,6 +170,10 @@
     box-shadow: var(--shadow-lg);
     transform: translateY(-2px);
   }
+  @media (prefers-reduced-motion: reduce) {
+    .card-hover-lift { transition: box-shadow 200ms ease-out; }
+    .card-hover-lift:hover { transform: none; }
+  }
 
   /* Soft borders for premium sections */
   .border-soft {
@@ -180,7 +184,7 @@
     border: 1px solid rgb(255 255 255 / 0.1);
   }
 
-  /* Landing section padding — more breathing room (py-14 md:py-20) */
+  /* Landing section padding — breathing room (py-14 md:py-20) */
   .section-pad {
     padding-top: 3.5rem;
     padding-bottom: 3.5rem;
@@ -209,6 +213,9 @@
   }
   .btn-cta-primary:active {
     transform: translateY(0);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .btn-cta-primary:hover { transform: none; }
   }
 
   /* Scroll reveal — CSS only (visibility + translate when in view) */
