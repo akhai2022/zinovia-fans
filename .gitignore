@@ -24,3 +24,11 @@ infra/gcp/terraform/*.tfstate
 infra/gcp/terraform/*.tfstate.*
 infra/gcp/terraform/*.auto.tfvars
 !infra/gcp/terraform/env/staging.tfvars
+
+infra/aws/terraform/.terraform/
+infra/aws/terraform/*.tfstate
+infra/aws/terraform/*.tfstate.*
+
+# Downloaded binaries (AWS CLI, Terraform, etc.)
+awscliv2.zip
+.tools/
