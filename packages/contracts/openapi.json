@@ -419,6 +419,51 @@
         "title": "CreatorProfileUpdate",
         "type": "object"
       },
+      "CreatorRegisterRequest": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 128,
+            "minLength": 10,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "CreatorRegisterRequest",
+        "type": "object"
+      },
+      "CreatorRegisterResponse": {
+        "properties": {
+          "creator_id": {
+            "title": "Creator Id",
+            "type": "string"
+          },
+          "verification_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Token"
+          }
+        },
+        "required": [
+          "creator_id"
+        ],
+        "title": "CreatorRegisterResponse",
+        "type": "object"
+      },
       "CreatorSummary": {
         "description": "Minimal creator info for feed/post context.",
         "properties": {
@@ -500,6 +545,42 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "KycSessionResponse": {
+        "properties": {
+          "redirect_url": {
+            "title": "Redirect Url",
+            "type": "string"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "redirect_url",
+          "session_id"
+        ],
+        "title": "KycSessionResponse",
+        "type": "object"
+      },
+      "KycStatusResponse": {
+        "properties": {
+          "creator_state": {
+            "title": "Creator State",
+            "type": "string"
+          },
+          "session_status": {
+            "title": "Session Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_status",
+          "creator_state"
+        ],
+        "title": "KycStatusResponse",
         "type": "object"
       },
       "LedgerEntryCreate": {
@@ -616,6 +697,27 @@
           "size_bytes"
         ],
         "title": "MediaCreate",
+        "type": "object"
+      },
+      "OnboardingStatusResponse": {
+        "properties": {
+          "checklist": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Checklist",
+            "type": "object"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "checklist"
+        ],
+        "title": "OnboardingStatusResponse",
         "type": "object"
       },
       "PostCreate": {
@@ -1087,6 +1189,20 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "VerifyEmailRequest": {
+        "properties": {
+          "token": {
+            "minLength": 1,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "VerifyEmailRequest",
+        "type": "object"
+      },
       "WebhookAck": {
         "properties": {
           "status": {
@@ -1171,6 +1287,65 @@
         ]
       }
     },
+    "/auth/register": {
+      "post": {
+        "operationId": "auth_register",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatorRegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatorRegisterResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Register",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/auth/signup": {
       "post": {
         "operationId": "auth_signup",
@@ -1207,6 +1382,67 @@
           }
         },
         "summary": "Signup",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/verify-email": {
+      "post": {
+        "operationId": "auth_verify_email",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmailRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Auth Verify Email",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verify Email",
         "tags": [
           "auth"
         ]
@@ -1785,6 +2021,100 @@
         "summary": "Health"
       }
     },
+    "/kyc/mock-complete": {
+      "post": {
+        "description": "Staging-only: simulate KYC provider completion. Frontend calls this from /mock-kyc.",
+        "operationId": "kyc_mock_complete",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Kyc Mock Complete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Mock Kyc Complete",
+        "tags": [
+          "kyc"
+        ]
+      }
+    },
+    "/kyc/session": {
+      "post": {
+        "operationId": "kyc_create_session",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KycSessionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Kyc Session",
+        "tags": [
+          "kyc"
+        ]
+      }
+    },
+    "/kyc/status": {
+      "get": {
+        "operationId": "kyc_status",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KycStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Kyc Status",
+        "tags": [
+          "kyc"
+        ]
+      }
+    },
     "/ledger/entries": {
       "post": {
         "description": "Admin-only. For internal tooling (e.g. balance adjustments). Not used by the web app.",
@@ -1926,6 +2256,27 @@
         ]
       }
     },
+    "/onboarding/status": {
+      "get": {
+        "operationId": "onboarding_status",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Status",
+        "tags": [
+          "onboarding"
+        ]
+      }
+    },
     "/posts": {
       "post": {
         "operationId": "posts_create",
@@ -1985,6 +2336,29 @@
           }
         },
         "summary": "Ready"
+      }
+    },
+    "/webhooks/kyc": {
+      "post": {
+        "operationId": "webhooks_kyc",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Webhooks Kyc",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Kyc Webhook",
+        "tags": [
+          "webhooks"
+        ]
       }
     }
   }

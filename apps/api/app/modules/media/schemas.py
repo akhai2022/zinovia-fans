@@ -31,3 +31,14 @@ class UploadUrlResponse(BaseModel):
 
     asset_id: UUID
     upload_url: str
+
+
+class MediaMineItem(BaseModel):
+    id: UUID
+    content_type: str
+    created_at: datetime
+
+
+class MediaMinePage(BaseModel):
+    items: list[MediaMineItem]
+    next_cursor: str | None = None

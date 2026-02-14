@@ -1,10 +1,15 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CreatorAvatar } from "@/components/ui/CreatorAvatar";
 import { HeroBackground } from "@/components/brand/HeroBackground";
+import { BrandAssetsService } from "@/features/ai/api";
 import { Container, CopyBlock } from "./Container";
 import { ProductPreview } from "./ProductPreview";
 import { DEMO_ASSETS } from "@/lib/demoAssets";
+import "@/lib/api";
 
 const FEATURED_PLACEHOLDER = [
   { displayName: "Alex", handle: "alex" },
@@ -13,8 +18,16 @@ const FEATURED_PLACEHOLDER = [
 ];
 
 export function Hero() {
+  const [heroImageUrl, setHeroImageUrl] = useState<string | null>(null);
+  useEffect(() => {
+    BrandAssetsService.get()
+      .then((res) => setHeroImageUrl(res.landing_hero ?? null))
+      .catch(() => {});
+  }, []);
+
   return (
     <HeroBackground
+      backgroundImageUrl={heroImageUrl}
       withGrid
       withGrain
       className="min-h-[68vh] md:min-h-[60vh] flex flex-col justify-center"

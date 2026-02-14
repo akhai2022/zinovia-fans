@@ -227,6 +227,60 @@ async def test_non_subscriber_cannot_see_subscribers_posts(
 
 
 @pytest.mark.asyncio
+async def test_billing_status_returns_authenticated_fan_subscriptions(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    creator_email = _unique_email()
+    fan_email = _unique_email()
+    await async_client.post(
+        "/auth/signup",
+        json={"email": creator_email, "password": "password123", "display_name": "Creator"},
+    )
+    creator_login = await async_client.post(
+        "/auth/login", json={"email": creator_email, "password": "password123"}
+    )
+    creator_token = creator_login.json()["access_token"]
+    creator_me = await async_client.get(
+        "/auth/me",
+        headers={"Authorization": f"Bearer {creator_token}"},
+    )
+    creator_id = creator_me.json()["id"]
+
+    await async_client.post(
+        "/auth/signup",
+        json={"email": fan_email, "password": "password123", "display_name": "Fan"},
+    )
+    fan_login = await async_client.post(
+        "/auth/login", json={"email": fan_email, "password": "password123"}
+    )
+    fan_token = fan_login.json()["access_token"]
+    fan_me = await async_client.get(
+        "/auth/me",
+        headers={"Authorization": f"Bearer {fan_token}"},
+    )
+    fan_id = fan_me.json()["id"]
+
+    sub = Subscription(
+        fan_user_id=UUID(fan_id),
+        creator_user_id=UUID(creator_id),
+        status="active",
+        stripe_subscription_id=f"sub_{uuid.uuid4().hex}",
+    )
+    db_session.add(sub)
+    await db_session.commit()
+
+    response = await async_client.get(
+        "/billing/status",
+        headers={"Authorization": f"Bearer {fan_token}"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["fan_user_id"] == fan_id
+    assert any(item["creator_user_id"] == creator_id for item in payload["items"])
+
+
+@pytest.mark.asyncio
 async def test_webhook_missing_signature_returns_400(
     async_client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -243,6 +297,132 @@ async def test_webhook_missing_signature_returns_400(
         )
         assert r.status_code == 400
         assert "missing_signature" in (r.json().get("detail") or "")
+    finally:
+        get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_webhook_valid_signature_accepted_with_mock_construct_event(
+    async_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _Evt:
+        def __init__(self, event_id: str, event_type: str) -> None:
+            self.id = event_id
+            self.type = event_type
+
+        def get(self, key: str, default: object = None) -> object:
+            if key == "id":
+                return self.id
+            if key == "type":
+                return self.type
+            return default
+
+    def _construct_event(*, payload: bytes, sig_header: str, secret: str) -> _Evt:
+        assert payload
+        assert sig_header
+        assert secret == "whsec_primary"
+        return _Evt(f"evt_{uuid.uuid4().hex}", "unknown.event.type")
+
+    monkeypatch.setenv("STRIPE_WEBHOOK_TEST_BYPASS", "false")
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_primary")
+    monkeypatch.setattr(
+        "app.modules.billing.service.stripe.Webhook.construct_event",
+        _construct_event,
+    )
+    get_settings.cache_clear()
+    try:
+        response = await async_client.post(
+            "/billing/webhooks/stripe",
+            content=b'{"ok":true}',
+            headers={"Stripe-Signature": "t=1,v1=fakesig"},
+        )
+        assert response.status_code == 200
+        assert response.json()["status"] == "ignored"
+    finally:
+        get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_webhook_invalid_signature_rejected(
+    async_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import stripe
+
+    def _construct_event(*, payload: bytes, sig_header: str, secret: str):
+        raise stripe.error.SignatureVerificationError(
+            message="bad sig",
+            sig_header=sig_header,
+            http_body=payload.decode("utf-8", errors="ignore"),
+        )
+
+    monkeypatch.setenv("STRIPE_WEBHOOK_TEST_BYPASS", "false")
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_primary")
+    monkeypatch.setattr(
+        "app.modules.billing.service.stripe.Webhook.construct_event",
+        _construct_event,
+    )
+    get_settings.cache_clear()
+    try:
+        response = await async_client.post(
+            "/billing/webhooks/stripe",
+            content=b'{"ok":true}',
+            headers={"Stripe-Signature": "t=1,v1=bad"},
+        )
+        assert response.status_code == 400
+        assert response.json().get("detail") == "invalid_signature"
+    finally:
+        get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_webhook_duplicate_event_noop_no_side_effects(
+    async_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    event_id = f"evt_duplicate_{uuid.uuid4().hex}"
+
+    class _Evt:
+        id = event_id
+        type = "unknown.event.type"
+
+        def get(self, key: str, default: object = None) -> object:
+            if key == "id":
+                return self.id
+            if key == "type":
+                return self.type
+            return default
+
+    async def _handle(*args, **kwargs):
+        _handle.calls += 1
+        return "ignored"
+
+    _handle.calls = 0
+
+    monkeypatch.setenv("STRIPE_WEBHOOK_TEST_BYPASS", "false")
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_primary")
+    monkeypatch.setattr(
+        "app.modules.billing.service.stripe.Webhook.construct_event",
+        lambda **kwargs: _Evt(),
+    )
+    monkeypatch.setattr("app.modules.billing.router.handle_stripe_event", _handle)
+    get_settings.cache_clear()
+    try:
+        first = await async_client.post(
+            "/billing/webhooks/stripe",
+            content=b'{"ok":true}',
+            headers={"Stripe-Signature": "t=1,v1=ok"},
+        )
+        second = await async_client.post(
+            "/billing/webhooks/stripe",
+            content=b'{"ok":true}',
+            headers={"Stripe-Signature": "t=1,v1=ok"},
+        )
+        assert first.status_code == 200
+        assert second.status_code == 200
+        assert second.json()["status"] == "duplicate_ignored"
+        assert _handle.calls == 1
     finally:
         get_settings.cache_clear()
 
@@ -319,13 +499,13 @@ async def test_webhook_checkout_session_completed_upserts_subscription(
         ev = result.scalar_one_or_none()
         assert ev is not None
 
-        result = await db_session.execute(
+        sub_result = await db_session.execute(
             select(Subscription).where(
                 Subscription.fan_user_id == UUID(fan_id),
                 Subscription.creator_user_id == UUID(creator_id),
             )
         )
-        sub = result.scalar_one_or_none()
+        sub = sub_result.scalar_one_or_none()
         assert sub is not None
         assert sub.status == "active"
 
@@ -336,5 +516,90 @@ async def test_webhook_checkout_session_completed_upserts_subscription(
         )
         assert r2.status_code == 200
         assert r2.json()["status"] == "duplicate_ignored"
+    finally:
+        get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_webhook_invoice_payment_failed_marks_subscription_past_due(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("STRIPE_WEBHOOK_TEST_BYPASS", "true")
+    get_settings.cache_clear()
+    creator_email = _unique_email()
+    fan_email = _unique_email()
+    await async_client.post(
+        "/auth/signup",
+        json={"email": creator_email, "password": "password123", "display_name": "Creator"},
+    )
+    creator_login = await async_client.post(
+        "/auth/login", json={"email": creator_email, "password": "password123"}
+    )
+    creator_me = await async_client.get(
+        "/auth/me",
+        headers={"Authorization": f"Bearer {creator_login.json()['access_token']}"},
+    )
+    creator_id = UUID(creator_me.json()["id"])
+
+    await async_client.post(
+        "/auth/signup",
+        json={"email": fan_email, "password": "password123", "display_name": "Fan"},
+    )
+    fan_login = await async_client.post(
+        "/auth/login", json={"email": fan_email, "password": "password123"}
+    )
+    fan_me = await async_client.get(
+        "/auth/me",
+        headers={"Authorization": f"Bearer {fan_login.json()['access_token']}"},
+    )
+    fan_id = UUID(fan_me.json()["id"])
+    stripe_sub_id = f"sub_{uuid.uuid4().hex}"
+    sub = Subscription(
+        fan_user_id=fan_id,
+        creator_user_id=creator_id,
+        status="active",
+        stripe_subscription_id=stripe_sub_id,
+    )
+    db_session.add(sub)
+    await db_session.commit()
+
+    body = {
+        "id": f"evt_fail_{uuid.uuid4().hex}",
+        "type": "invoice.payment_failed",
+        "data": {"object": {"id": "in_failed", "subscription": stripe_sub_id}},
+    }
+    try:
+        response = await async_client.post(
+            "/billing/webhooks/stripe",
+            json=body,
+            headers={"Stripe-Signature": "bypass"},
+        )
+        assert response.status_code == 200
+        await db_session.refresh(sub)
+        assert sub.status == "past_due"
+    finally:
+        get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_billing_health_reports_test_mode(
+    async_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_123")
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_test")
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET_PREVIOUS", "whsec_old")
+    monkeypatch.setenv("ENVIRONMENT", "local")
+    get_settings.cache_clear()
+    try:
+        response = await async_client.get("/billing/health")
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["stripe_mode"] == "test"
+        assert payload["stripe_configured"] is True
+        assert payload["webhook_configured"] is True
+        assert payload["webhook_previous_configured"] is True
     finally:
         get_settings.cache_clear()

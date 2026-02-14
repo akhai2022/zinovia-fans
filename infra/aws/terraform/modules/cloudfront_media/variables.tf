@@ -29,3 +29,21 @@ variable "environment" {
   type        = string
   description = "Environment name"
 }
+
+variable "logs_bucket_domain" {
+  type        = string
+  default     = null
+  description = "S3 bucket domain for access logs (e.g. bucket.s3.region.amazonaws.com). Null = disable logging."
+}
+
+variable "logs_prefix" {
+  type        = string
+  default     = "cloudfront/media"
+  description = "Prefix for CloudFront log files"
+}
+
+variable "web_acl_id" {
+  type        = string
+  default     = null
+  description = "WAF v2 Web ACL ID (CLOUDFRONT scope). Null = no WAF."
+}

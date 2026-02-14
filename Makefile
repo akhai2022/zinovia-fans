@@ -7,8 +7,10 @@ COMPOSE := docker compose $(COMPOSE_ENV) -f $(COMPOSE_FILE)
 COMPOSE_EXEC := $(COMPOSE) exec -T
 
 help:
-	@echo "Targets: launch up down logs api-test worker-test api-lint api-typecheck web-lint web-build web-test migrate seed reset-db gen-contracts verify-local"
-	@echo "AWS: aws-stg-plan aws-stg-apply aws-stg-outputs aws-stg-destroy aws-prod-plan aws-prod-apply aws-prod-destroy terraform-destroy"
+	@echo "Local: launch up down logs api-test worker-test api-lint api-typecheck web-lint web-build web-test migrate seed reset-db gen-contracts verify-local"
+	@echo "AWS:   aws-prod-plan aws-prod-apply aws-prod-destroy aws-prod-outputs"
+	@echo "Deploy: aws-prod-build-push aws-prod-deploy aws-prod-redeploy aws-prod-smoke"
+	@echo "Fix: ./scripts/restore-secrets.sh prod  # when secrets scheduled for deletion"
 
 # Start local stack (alias for up). From repo root: make launch [then make migrate if first run].
 launch: up
@@ -38,7 +40,7 @@ worker-test:
 	$(COMPOSE_EXEC) worker sh -c "cd /app && PYTHONPATH=/app/apps/api:/app/apps/worker python -m pytest apps/worker/tests -q"
 
 api-lint:
-	$(COMPOSE_EXEC) api sh -c "cd /app/apps/api && ruff check ."
+	$(COMPOSE_EXEC) api sh -c "cd /app/apps/api && ruff check . --cache-dir /tmp/.ruff_cache"
 
 api-typecheck:
 	$(COMPOSE_EXEC) api sh -c "cd /app/apps/api && mypy ."
@@ -74,23 +76,6 @@ AWS_TF_DIR := infra/aws/terraform
 TERRAFORM ?= $(shell test -x .tools/terraform && echo ./.tools/terraform || echo terraform)
 AWS_TF := $(TERRAFORM) -chdir=$(AWS_TF_DIR)
 
-aws-stg-plan:
-	$(AWS_TF) init -backend=false
-	$(AWS_TF) plan -var-file=env/staging.tfvars -out=staging.plan
-
-aws-stg-apply:
-	$(AWS_TF) init -backend=false
-	$(AWS_TF) apply -var-file=env/staging.tfvars -auto-approve
-
-aws-stg-outputs:
-	@echo "--- Staging (run from repo root after aws-stg-apply) ---"
-	@$(AWS_TF) output 2>/dev/null || (echo "Run: make aws-stg-apply first" && exit 1)
-
-# Destroy full staging stack. Allow 20–40 min (Lambda ENIs can delay SG deletion). Re-run if interrupted.
-aws-stg-destroy:
-	$(AWS_TF) init -backend=false
-	$(AWS_TF) destroy -var-file=env/staging.tfvars -auto-approve
-
 aws-prod-plan:
 	$(AWS_TF) init -backend=false
 	$(AWS_TF) plan -var-file=env/prod.tfvars -out=prod.plan
@@ -104,6 +89,30 @@ aws-prod-destroy:
 	$(AWS_TF) init -backend=false
 	$(AWS_TF) destroy -var-file=env/prod.tfvars -auto-approve
 
-# Destroy Terraform stack (default: staging). Use aws-prod-destroy for production.
-terraform-destroy: aws-stg-destroy
+aws-prod-outputs:
+	@echo "--- Prod (run from repo root after aws-prod-apply) ---"
+	@$(AWS_TF) output 2>/dev/null || (echo "Run: make aws-prod-apply first" && exit 1)
+
+# Build and push all Docker images to ECR. Set NO_CACHE=1 for clean build.
+aws-prod-build-push:
+	$(if $(NO_CACHE),NO_CACHE=--no-cache) ./scripts/deploy/aws/build_and_push.sh
+
+# Full deploy: terraform apply + build/push + force ECS redeploy + wait for stability.
+aws-prod-deploy: aws-prod-apply aws-prod-build-push aws-prod-redeploy
+
+# Build + push images, force ECS redeploy, wait for stability (skips terraform).
+aws-prod-redeploy:
+	./scripts/deploy/aws/prod_redeploy.sh
+
+# Post-deploy verification: health, DNS, billing, optional signup test.
+aws-prod-smoke:
+	./scripts/verify/prod_smoke.sh
+
+# API-level smoke test (register, verify, login, upload, post, billing).
+aws-prod-api-smoke:
+	API_BASE_URL=https://api.zinovia.ai ./scripts/api_smoke_test.sh
+
+# Web-level smoke test (all frontend pages return 200).
+aws-prod-web-smoke:
+	WEB_BASE_URL=https://zinovia.ai ./scripts/web_smoke_test.sh
 

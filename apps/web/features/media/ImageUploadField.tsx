@@ -1,9 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
+import { ApiError } from "@zinovia/contracts";
 import { MediaService } from "@/features/media/api";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { getApiErrorMessage } from "@/lib/errors";
 import "@/lib/api";
 
 const ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
@@ -31,6 +34,7 @@ export function ImageUploadField({
   const inputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<"idle" | "uploading" | "done" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [unauthorized, setUnauthorized] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,6 +44,7 @@ export function ImageUploadField({
 
     setStatus("uploading");
     setErrorMessage(null);
+    setUnauthorized(false);
     setPreviewUrl(null);
 
     const objectKey = makeObjectKey(file);
@@ -75,7 +80,10 @@ export function ImageUploadField({
       }
     } catch (err) {
       setStatus("error");
-      setErrorMessage(err instanceof Error ? err.message : "Upload failed");
+      const { kind, message } = getApiErrorMessage(err);
+      const isUnauth = kind === "unauthorized" || (err instanceof ApiError && err.status === 401);
+      setUnauthorized(isUnauth);
+      setErrorMessage(isUnauth ? "Sign in to upload" : message || "Upload failed");
     }
   };
 
@@ -111,6 +119,14 @@ export function ImageUploadField({
         {status === "error" && errorMessage && (
           <span className="text-sm text-destructive" role="alert">
             {errorMessage}
+            {unauthorized && (
+              <>
+                {" "}
+                <Link href="/login" className="underline focus:outline-none focus:ring-2 focus:ring-ring rounded">
+                  Sign in
+                </Link>
+              </>
+            )}
           </span>
         )}
       </div>

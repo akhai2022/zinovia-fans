@@ -1,363 +1,171 @@
-"use client";
-
-import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ApiError } from "@zinovia/contracts";
-import {
-  CreatorsService,
-  type CreatorProfilePublic,
-} from "@/features/creators/api";
-import { BillingService } from "@/features/billing/api";
-import type { PostPage } from "@/features/posts/api";
+import { cookies } from "next/headers";
+import { notFound } from "next/navigation";
+
 import { FollowButton } from "@/features/creators/components/FollowButton";
-import { getApiErrorMessage } from "@/lib/errors";
-import { getApiBaseUrl } from "@/lib/apiBase";
+import { CreatorAvatarAsset } from "@/features/creators/components/CreatorAvatarAsset";
+import { PostMediaImage } from "@/features/posts/components/PostMediaImage";
 import { Page } from "@/components/brand/Page";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  BioExpand,
-  CreatorHeader,
-  MediaGrid,
-  SubscribeSheet,
-} from "@/components/premium";
-import { DEFAULT_SUBSCRIPTION_OFFER } from "@/types/creator";
-import type { PostItem, SubscriptionOffer } from "@/types/creator";
-import { DEMO_ASSETS } from "@/lib/demoAssets";
-import "@/lib/api";
+import { Card } from "@/components/ui/card";
+import { BioExpand } from "@/components/premium";
+import type { PostItem } from "@/types/creator";
+import { ApiClientError, apiFetchServer } from "@/lib/api/client";
+import { SubscribeCheckoutButton } from "@/features/billing/components/SubscribeCheckoutButton";
+import { CreatorPostsSection } from "./CreatorPostsSection";
 
-const PAYMENTS_NOT_CONFIGURED_MESSAGE =
-  "Payments not configured in this environment.";
-
-function mapPostToItem(p: PostPage["items"][0]): PostItem {
-  return {
-    id: p.id,
-    creator_user_id: p.creator_user_id,
-    type: p.type as PostItem["type"],
-    caption: p.caption,
-    visibility: p.visibility as PostItem["visibility"],
-    nsfw: p.nsfw,
-    created_at: p.created_at,
-    updated_at: p.updated_at,
-    asset_ids: p.asset_ids ?? [],
-    is_locked: p.is_locked ?? false,
-    locked_reason: p.locked_reason ?? undefined,
-  };
+function normalizeHandle(raw: string): string {
+  return raw.replace(/^@/, "").trim().toLowerCase() || raw;
 }
 
-export default function CreatorProfilePage({
+type CreatorProfile = {
+  user_id: string;
+  handle: string;
+  display_name: string;
+  bio?: string | null;
+  avatar_media_id?: string | null;
+  banner_media_id?: string | null;
+  followers_count: number;
+  posts_count: number;
+  is_following?: boolean;
+};
+
+type CreatorPostsPage = {
+  items: Array<{
+    id: string;
+    creator_user_id: string;
+    type: PostItem["type"];
+    caption: string | null;
+    visibility: PostItem["visibility"];
+    nsfw: boolean;
+    created_at: string;
+    updated_at: string;
+    asset_ids: string[];
+    is_locked?: boolean;
+    locked_reason?: string | null;
+  }>;
+};
+
+export default async function CreatorProfilePage({
   params,
 }: {
   params: { handle: string };
 }) {
-  const handle =
+  const rawHandle =
     typeof params.handle === "string" ? params.handle : params.handle[0];
-  const [creator, setCreator] = useState<CreatorProfilePublic | null>(null);
-  const [posts, setPosts] = useState<PostItem[]>([]);
-  const [status, setStatus] = useState<"loading" | "error" | "ok">("loading");
-  const [profileError, setProfileError] = useState<ReturnType<typeof getApiErrorMessage> | null>(null);
-  const [postsStatus, setPostsStatus] = useState<
-    "loading" | "error" | "ok"
-  >("loading");
-  const [subscribeOpen, setSubscribeOpen] = useState(false);
-  const [subscribeLoading, setSubscribeLoading] = useState(false);
-  const [subscribeError, setSubscribeError] = useState<string | null>(null);
-
-  const offer: SubscriptionOffer = {
-    ...DEFAULT_SUBSCRIPTION_OFFER,
-    dm_included: true,
-  };
-
-  const loadCreator = useCallback(() => {
-    setProfileError(null);
-    CreatorsService.creatorsGetByHandle(handle)
-      .then((data) => {
-        setCreator(data);
-        setStatus("ok");
-      })
-      .catch((err: unknown) => {
-        setProfileError(getApiErrorMessage(err));
-        setStatus("error");
-      });
-  }, [handle]);
-
-  const loadPosts = useCallback(() => {
-    if (status !== "ok") return;
-    CreatorsService.creatorsListPostsByHandle(handle, 1, 20, true)
-      .then((data: PostPage) => {
-        setPosts(data.items.map(mapPostToItem));
-        setPostsStatus("ok");
-      })
-      .catch(() => setPostsStatus("error"));
-  }, [handle, status]);
-
-  useEffect(() => loadCreator(), [loadCreator]);
-  useEffect(() => loadPosts(), [loadPosts]);
-
-  const startCheckout = () => {
-    if (!creator) return;
-    setSubscribeError(null);
-    setSubscribeLoading(true);
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const successUrl = `${origin}/billing/success?return=${encodeURIComponent(`/creators/${handle}`)}`;
-    const cancelUrl = `${origin}/billing/cancel?return=${encodeURIComponent(`/creators/${handle}`)}`;
-    BillingService.billingCheckoutSubscription({
-      creator_id: creator.user_id,
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-    })
-      .then((res) => {
-        if (res.checkout_url) window.location.href = res.checkout_url;
-      })
-      .catch((err: unknown) => {
-        const detail =
-          err instanceof ApiError &&
-          err.body &&
-          typeof err.body === "object" &&
-          "detail" in err.body
-            ? String((err.body as { detail?: unknown }).detail)
-            : "";
-        const isNotConfigured =
-          err instanceof ApiError &&
-          (err.status === 501 || err.status === 503) &&
-          (detail.toLowerCase().includes("stripe not configured") ||
-            detail === "stripe_not_configured");
-        setSubscribeError(
-          isNotConfigured
-            ? PAYMENTS_NOT_CONFIGURED_MESSAGE
-            : "Something went wrong. Please try again."
-        );
-      })
-      .finally(() => setSubscribeLoading(false));
-  };
-
-  if (status === "loading") {
+  const handle = normalizeHandle(rawHandle);
+  const cookieHeader = cookies().toString();
+  let creator: CreatorProfile;
+  try {
+    creator = await apiFetchServer<CreatorProfile>(`/creators/${encodeURIComponent(handle)}`, {
+      method: "GET",
+      cookieHeader,
+    });
+  } catch (error) {
+    if (error instanceof ApiClientError) {
+      if (error.status === 404) notFound();
+    }
     return (
-      <Page>
-        <Skeleton className="h-28 w-full rounded-premium-lg" />
-        <div className="mt-6 flex gap-4">
-          <Skeleton className="h-16 w-16 rounded-full" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-4 w-32" />
-          </div>
-        </div>
-        <div className="mt-8">
-          <Skeleton className="mb-4 h-4 w-24" />
-          <div className="grid grid-cols-2 gap-2">
-            <Skeleton className="aspect-square rounded-premium-md" />
-            <Skeleton className="aspect-square rounded-premium-md" />
-            <Skeleton className="aspect-square rounded-premium-md" />
-            <Skeleton className="aspect-square rounded-premium-md" />
-          </div>
-        </div>
-      </Page>
-    );
-  }
-
-  if (status === "error" || !creator) {
-    const isUnauthorized = profileError?.kind === "unauthorized";
-    const isNotFound = profileError?.status === 404;
-    const message =
-      isNotFound
-        ? "Creator not found."
-        : isUnauthorized
-          ? "Sign in to view this profile."
-          : profileError?.message ?? "Creator not found.";
-    return (
-      <Page>
-        <div
-          className="rounded-premium-lg border border-border bg-muted/30 py-8 text-center"
-          role="alert"
-        >
-          <p className="text-destructive">{message}</p>
-          {isUnauthorized ? (
-            <Button variant="default" size="sm" className="mt-4 rounded-premium-sm" asChild>
-              <Link href="/login">Log in</Link>
-            </Button>
-          ) : (
-            <Button variant="outline" size="sm" className="mt-4 rounded-premium-sm" onClick={loadCreator}>
-              Retry
-            </Button>
-          )}
-        </div>
-        <Button variant="ghost" size="sm" className="mt-4 rounded-premium-sm" asChild>
-          <Link href="/creators">Back to creators</Link>
-        </Button>
-        {process.env.NODE_ENV === "development" && (
-          <p className="mt-4 text-xs text-muted-foreground">
-            API base URL: {getApiBaseUrl()}
+      <Page className="max-w-3xl space-y-4">
+        <Card className="rounded-2xl border border-border p-8 text-center shadow-sm">
+          <p className="text-sm font-medium text-foreground">Unable to load creator profile.</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {error instanceof ApiClientError ? error.detail || error.message : "Please try again."}
           </p>
-        )}
+          <Button className="mt-4" variant="secondary" asChild>
+            <Link href={`/creators/${handle}`}>Retry</Link>
+          </Button>
+        </Card>
       </Page>
     );
   }
-
-  const bannerUrl = creator.banner_media_id
-    ? undefined
-    : DEMO_ASSETS.banner["1500x500"];
-  const avatarUrl = creator.avatar_media_id
-    ? undefined
-    : DEMO_ASSETS.avatar[512];
+  let posts: PostItem[] = [];
+  let postsError: string | null = null;
+  try {
+    const postPage = await apiFetchServer<CreatorPostsPage>(
+      `/creators/${encodeURIComponent(handle)}/posts`,
+      {
+        method: "GET",
+        query: { page: 1, page_size: 20, include_locked: true },
+        cookieHeader,
+      }
+    );
+    posts = postPage.items.map((item) => ({ ...item }));
+  } catch (error) {
+    postsError = error instanceof ApiClientError ? error.detail || error.message : "Failed to load posts.";
+  }
 
   return (
-    <Page className="space-y-6 pb-24 md:pb-8">
-      {/* Banner: demo image when no banner_media_id */}
-      <div
-        className="-mx-4 h-28 sm:-mx-6 sm:h-36 md:rounded-premium-lg bg-brand-gradient-subtle bg-cover bg-center"
-        style={
-          bannerUrl
-            ? { backgroundImage: `url(${bannerUrl})` }
-            : undefined
-        }
-      />
-
-      {/* Profile block: avatar, name, handle, verified, CTA */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-        <CreatorHeader
-          displayName={creator.display_name}
-          handle={creator.handle}
-          avatarUrl={avatarUrl}
-          href={`/creators/${handle}`}
-          noLink
-          size="lg"
-          className="flex-1"
-        />
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <Badge variant="verified" className="shrink-0">
-            Verified by Zinovia
-          </Badge>
-          <FollowButton
-            creatorId={creator.user_id}
-            initialFollowing={creator.is_following ?? false}
+    <Page className="max-w-6xl space-y-6 pb-10">
+      <div className="-mx-4 overflow-hidden rounded-2xl border border-border sm:-mx-6 md:mx-0">
+        {creator.banner_media_id ? (
+          <PostMediaImage
+            assetId={creator.banner_media_id}
+            variant="full"
+            className="h-40 w-full object-cover sm:h-56"
           />
-          <Button
-            variant="brand"
-            size="sm"
-            className="rounded-premium-sm"
-            onClick={() => setSubscribeOpen(true)}
-            disabled={subscribeLoading}
-            aria-label="Subscribe to this creator"
-          >
-            {subscribeLoading ? "Starting…" : "Subscribe"}
-          </Button>
-        </div>
+        ) : (
+          <div className="h-40 w-full bg-gradient-to-br from-primary/20 via-accent/10 to-surface-alt sm:h-56" />
+        )}
       </div>
-
-      {subscribeError && (
-        <p className="text-sm text-destructive" role="alert">
-          {subscribeError}
-        </p>
-      )}
-
-      {/* Bio — 2–4 lines visible; Read more if longer */}
-      {creator.bio && (
-        <div>
-          <BioExpand text={creator.bio} />
+      <div className="relative rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="absolute -top-10 left-6">
+          <CreatorAvatarAsset
+            assetId={creator.avatar_media_id ?? null}
+            displayName={creator.display_name}
+            handle={creator.handle}
+            size="lg"
+            withRing
+          />
         </div>
-      )}
-
-      {/* Subscribe benefits + trust */}
-      <div className="rounded-premium-lg border border-border bg-surface-2/50 p-4">
-        <h2 className="font-display text-premium-h3 font-semibold text-foreground">
-          What you get
-        </h2>
-        <ul
-          className="mt-2 space-y-1 text-premium-body-sm text-muted-foreground"
-          role="list"
-        >
-          <li className="flex items-center gap-2">
-            <span className="text-success-500" aria-hidden>
-              ✓
-            </span>
-            Exclusive posts
-          </li>
-          <li className="flex items-center gap-2">
-            <span className="text-success-500" aria-hidden>
-              ✓
-            </span>
-            Subscriber-only DMs included
-          </li>
-          <li className="flex items-center gap-2">
-            <span className="text-success-500" aria-hidden>
-              ✓
-            </span>
-            Full feed access
-          </li>
-        </ul>
-        <p className="mt-3 text-premium-small text-muted-foreground">
-          Cancel anytime. Secure payments.
-        </p>
-      </div>
-
-      {/* Preview grid with locked overlays */}
-      <div>
-        <h2 className="mb-4 text-premium-h3 font-semibold text-foreground">
-          Posts
-        </h2>
-        {postsStatus === "loading" && (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-            <Skeleton className="aspect-square rounded-premium-md" />
-            <Skeleton className="aspect-square rounded-premium-md" />
-            <Skeleton className="aspect-square rounded-premium-md" />
-            <Skeleton className="aspect-square rounded-premium-md" />
+        <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="font-display text-2xl font-semibold text-foreground">{creator.display_name}</h1>
+            <p className="text-sm text-muted-foreground">@{creator.handle}</p>
+            <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+              <span>{creator.followers_count} followers</span>
+              <span>·</span>
+              <span>{creator.posts_count} posts</span>
+              <Badge variant="verified">Verified</Badge>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <FollowButton creatorId={creator.user_id} initialFollowing={creator.is_following ?? false} />
+            <Button variant="secondary" size="sm" asChild>
+              <Link href="/messages">Message</Link>
+            </Button>
+            <SubscribeCheckoutButton creatorId={creator.user_id} creatorHandle={creator.handle} />
+          </div>
+        </div>
+        {creator.bio && (
+          <div className="mt-4">
+            <BioExpand text={creator.bio} />
           </div>
         )}
-        {postsStatus === "error" && (
-          <p className="text-sm text-destructive">Failed to load posts.</p>
-        )}
-        {postsStatus === "ok" && (
-          <MediaGrid
+      </div>
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <h2 className="font-display text-xl font-semibold text-foreground">Posts</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Subscriber posts remain blurred until unlocked.</p>
+        {postsError ? (
+          <div className="mt-4 rounded-xl border border-border p-4 text-sm text-muted-foreground">
+            Failed to load posts: {postsError}{" "}
+            <Link href={`/creators/${handle}`} className="underline underline-offset-2">Retry</Link>
+          </div>
+        ) : (
+          <CreatorPostsSection
             posts={posts}
-            isSubscriber={false}
-            isLocked={(p) => p.visibility === "SUBSCRIBERS"}
-            creatorHandle={handle}
-            onUnlockClick={() => setSubscribeOpen(true)}
-            columns={4}
-            showWatermark
+            creatorHandle={creator.handle}
+            creatorName={creator.display_name}
+            creatorId={creator.user_id}
           />
         )}
       </div>
-
-      {/* Sticky subscribe bar (mobile) */}
-      <div
-        className="fixed bottom-0 left-0 right-0 z-40 flex items-center gap-3 border-t border-border bg-card/95 backdrop-blur-sm px-4 py-3 shadow-strong md:hidden"
-        role="complementary"
-        aria-label="Subscribe bar"
-      >
-        <div className="h-10 w-10 shrink-0 rounded-full bg-brand-gradient-subtle ring-2 ring-brand/20" />
-        <span className="min-w-0 flex-1 truncate text-premium-body-sm font-medium text-foreground">
-          Subscribe to {creator.display_name}
-        </span>
-        <Button
-          variant="brand"
-          size="sm"
-          className="shrink-0 rounded-premium-sm"
-          onClick={() => setSubscribeOpen(true)}
-          disabled={subscribeLoading}
-        >
-          Subscribe
+      <div className="flex gap-2">
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/creators">Back to creators</Link>
         </Button>
       </div>
-
-      <SubscribeSheet
-        open={subscribeOpen}
-        onOpenChange={setSubscribeOpen}
-        creatorName={creator.display_name}
-        offer={offer}
-        onSubscribe={startCheckout}
-        loading={subscribeLoading}
-        disabledHelper={
-          subscribeError === PAYMENTS_NOT_CONFIGURED_MESSAGE
-            ? PAYMENTS_NOT_CONFIGURED_MESSAGE
-            : null
-        }
-      />
-
-      <Button variant="ghost" size="sm" className="rounded-premium-sm" asChild>
-        <Link href="/">Back to home</Link>
-      </Button>
     </Page>
   );
 }

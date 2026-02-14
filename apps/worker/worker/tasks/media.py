@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.settings import get_settings
 from app.db.session import async_session_factory
 from app.modules.media.models import MediaDerivedAsset, MediaObject
-from worker.storage_io import get_object_bytes, put_object_bytes
+from worker.storage_io import get_media_bucket, get_object_bytes, put_object_bytes
 from worker.watermark import apply_footer_watermark, should_watermark_variant
 
 logger = logging.getLogger(__name__)
@@ -91,7 +91,7 @@ def _generate_one_variant(
 ) -> str | None:
     """Generate a single variant; upload and return object_key. Returns None if skipped (e.g. idempotent)."""
     settings = get_settings()
-    bucket = settings.minio_bucket
+    bucket = get_media_bucket()
     max_dim = VARIANT_SPECS.get(variant)
     if not max_dim:
         return None
@@ -246,7 +246,7 @@ def generate_video_poster(asset_id: str) -> str | None:
         logger.info("Video poster disabled", extra={"asset_id": asset_id})
         return None
 
-    bucket = settings.minio_bucket
+    bucket = get_media_bucket()
     try:
         raw = get_object_bytes(bucket, _get_video_object_key(parent_id))
     except Exception as e:

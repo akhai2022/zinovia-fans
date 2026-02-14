@@ -39,7 +39,7 @@ jobs:
           REG="$AWS_ACCOUNT.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
           docker build -f infra/docker/api/Dockerfile -t $REG/zinovia-fans-prod-api:$GITHUB_SHA -t $REG/zinovia-fans-prod-api:latest .
           docker push $REG/zinovia-fans-prod-api:latest
-          docker build -f infra/docker/web/Dockerfile --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.zinovia.ai -t $REG/zinovia-fans-prod-web:$GITHUB_SHA -t $REG/zinovia-fans-prod-web:latest .
+          docker build -f infra/docker/web/Dockerfile --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.zinovia.ai --build-arg NEXT_PUBLIC_API_SAME_ORIGIN_PROXY=true --build-arg NEXT_PUBLIC_APP_URL=https://zinovia.ai --build-arg NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="${{ secrets.STRIPE_PUBLISHABLE_KEY_PROD }}" -t $REG/zinovia-fans-prod-web:$GITHUB_SHA -t $REG/zinovia-fans-prod-web:latest .
           docker push $REG/zinovia-fans-prod-web:latest
           docker build -f infra/docker/worker/Dockerfile -t $REG/zinovia-fans-prod-worker:$GITHUB_SHA -t $REG/zinovia-fans-prod-worker:latest .
           docker push $REG/zinovia-fans-prod-worker:latest

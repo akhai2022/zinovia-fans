@@ -29,9 +29,12 @@ FROM base AS runtime
 COPY --from=builder /usr/local /usr/local
 COPY apps/api/alembic.ini /app/apps/api/alembic.ini
 COPY apps/api/app /app/apps/api/app
+COPY infra/docker/api/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 USER appuser
 
 EXPOSE 8000
 
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

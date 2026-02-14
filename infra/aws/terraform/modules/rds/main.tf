@@ -2,6 +2,11 @@ resource "aws_db_subnet_group" "main" {
   name       = "${var.name_prefix}-rds-subnet"
   subnet_ids = var.subnet_ids
   tags       = { Name = "${var.name_prefix}-rds-subnet" }
+
+  # When replacing (staging→prod), create new subnet group before destroying old so RDS can migrate
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_db_instance" "main" {

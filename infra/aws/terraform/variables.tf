@@ -1,20 +1,16 @@
 variable "environment" {
   type        = string
-  description = "Environment name: staging or prod"
+  description = "Environment name: prod only"
   validation {
-    condition     = contains(["staging", "prod"], var.environment)
-    error_message = "environment must be staging or prod."
+    condition     = var.environment == "prod"
+    error_message = "environment must be prod."
   }
 }
 
 variable "aws_region" {
   type        = string
   default     = "us-east-1"
-  description = "Primary AWS region for ECS, RDS, S3, ALB, Secrets Manager (staging must use us-east-1)."
-  validation {
-    condition     = var.environment != "staging" || var.aws_region == "us-east-1"
-    error_message = "Staging must use aws_region = us-east-1."
-  }
+  description = "Primary AWS region for ECS, RDS, S3, ALB, Secrets Manager."
 }
 
 variable "project_name" {
@@ -60,18 +56,17 @@ variable "private_subnet_ids" {
   description = "Existing private subnet IDs for ECS and RDS (required when use_existing_vpc = true)"
 }
 
-# NAT: 1 for staging (cost), 2 for prod (HA)
 variable "nat_gateway_count" {
   type        = number
   default     = 1
-  description = "Number of NAT gateways in new VPC (1 = staging, 2 = prod)"
+  description = "Number of NAT gateways in new VPC (2 for prod HA)"
 }
 
 # RDS
 variable "db_instance_class" {
   type        = string
   default     = "db.t3.micro"
-  description = "RDS instance class (staging: db.t3.micro; prod: db.t3.small or larger)"
+  description = "RDS instance class (prod: db.t3.small or larger)"
 }
 
 variable "db_multi_az" {
@@ -129,11 +124,43 @@ variable "worker_memory_mb" {
   description = "Worker task memory MB"
 }
 
+# ECS autoscaling (min/max tasks per service)
+variable "api_scaling_min" {
+  type        = number
+  default     = 1
+  description = "Minimum API tasks"
+}
+variable "api_scaling_max" {
+  type        = number
+  default     = 3
+  description = "Maximum API tasks"
+}
+variable "web_scaling_min" {
+  type        = number
+  default     = 1
+  description = "Minimum Web tasks"
+}
+variable "web_scaling_max" {
+  type        = number
+  default     = 3
+  description = "Maximum Web tasks"
+}
+variable "worker_scaling_min" {
+  type        = number
+  default     = 1
+  description = "Minimum Worker tasks"
+}
+variable "worker_scaling_max" {
+  type        = number
+  default     = 2
+  description = "Maximum Worker tasks"
+}
+
 # S3 / media
 variable "media_lifecycle_days" {
   type        = number
   default     = 90
-  description = "S3 media bucket: expire objects after N days (0 to disable; staging only)"
+  description = "S3 media bucket: expire objects after N days (0 to disable)"
 }
 
 variable "media_versioning" {
@@ -200,4 +227,91 @@ variable "dns_delegated" {
   type        = bool
   default     = false
   description = "If true, create Route53 A/alias and ACM validation records. If false, create no DNS records and output nameservers + ACM CNAMEs for manual setup."
+}
+
+# When true, serve Next.js at zinovia.ai and www.zinovia.ai instead of app.zinovia.ai. Mutually exclusive with enable_apex_cloudfront.
+variable "web_use_apex" {
+  type        = bool
+  default     = false
+  description = "If true (prod only), frontend is at apex (zinovia.ai) and www.zinovia.ai via ALB; disable enable_apex_cloudfront."
+
+  validation {
+    condition     = !var.web_use_apex || !var.enable_apex_cloudfront
+    error_message = "web_use_apex and enable_apex_cloudfront cannot both be true; they are mutually exclusive."
+  }
+}
+
+# Apex + www: CloudFront for zinovia.ai and www.zinovia.ai (ACM in us-east-1 with both names). Requires enable_route53, enable_acm, enable_cloudfront. Mutually exclusive with web_use_apex.
+variable "enable_apex_cloudfront" {
+  type        = bool
+  default     = false
+  description = "If true, create CloudFront for apex (zinovia.ai) and www.zinovia.ai with ACM cert covering both; Route53 A/AAAA ALIAS to CloudFront."
+}
+
+# Emergency mode: when true, HTTP listener forwards to target groups (host-based) instead of redirecting to HTTPS. Use when ACM cert is PENDING_VALIDATION or for temporary bring-up.
+variable "force_http_forwarding" {
+  type        = bool
+  default     = false
+  description = "If true, ALB HTTP listener forwards to target groups (api/web). Use for emergency bring-up when ACM not validated. Set false after HTTPS is working."
+}
+
+# Phase feature toggles (propagated as container env vars)
+variable "enable_likes" {
+  type    = bool
+  default = false
+}
+variable "enable_comments" {
+  type    = bool
+  default = false
+}
+variable "enable_notifications" {
+  type    = bool
+  default = false
+}
+variable "enable_vault" {
+  type    = bool
+  default = false
+}
+variable "enable_scheduled_posts" {
+  type    = bool
+  default = false
+}
+variable "enable_promotions" {
+  type    = bool
+  default = false
+}
+variable "enable_dm_broadcast" {
+  type    = bool
+  default = false
+}
+variable "enable_ppv_posts" {
+  type    = bool
+  default = false
+}
+variable "enable_ppvm" {
+  type    = bool
+  default = false
+}
+variable "enable_moderation" {
+  type    = bool
+  default = false
+}
+variable "enable_analytics" {
+  type    = bool
+  default = false
+}
+variable "enable_mobile_nav_polish" {
+  type    = bool
+  default = false
+}
+variable "enable_mock_kyc" {
+  type        = bool
+  default     = false
+  description = "Allow mock KYC provider in production (temporary until real KYC vendor integrated)"
+}
+
+variable "default_currency" {
+  type        = string
+  default     = "eur"
+  description = "Default currency for subscription pricing and PPV (ISO 4217 lowercase)"
 }

@@ -288,11 +288,13 @@ async def test_download_url_returns_200_for_public_post_media_without_auth(
     user_id = uuid.UUID(me.json()["id"])
 
     user = await db_session.get(User, user_id)
+    assert user is not None
     user.role = CREATOR_ROLE
     result = await db_session.execute(select(Profile).where(Profile.user_id == user_id))
     profile = result.scalar_one()
-    profile.handle = "testcreator"
-    profile.handle_normalized = "testcreator"
+    unique_handle = f"testcreator-{uuid.uuid4().hex[:8]}"
+    profile.handle = unique_handle
+    profile.handle_normalized = unique_handle
     profile.discoverable = True
     await db_session.commit()
 

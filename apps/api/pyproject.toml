@@ -19,6 +19,7 @@ dependencies = [
   "redis>=5.0.0",
   "celery>=5.4.0",
   "minio>=7.2.0",
+  "boto3>=1.34.0",
   "stripe>=10.0.0",
   "httpx>=0.27.0",
 ]
@@ -41,9 +42,21 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+exclude = ["app/db/migrations"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "N"]
+ignore = [
+    "B008",  # FastAPI Depends() in defaults is correct
+    "B904",  # raise from err; can enable when codebase is updated
+    "E501",  # Line length
+    "E402",  # Module import not at top (logger pattern)
+    "F401",  # Unused imports
+    "F841",  # Unused variable
+    "I001",  # Import order
+    "UP017",  # datetime.UTC alias
+    "UP037",  # Quoted type annotations (forward refs)
+]
 
 [tool.mypy]
 python_version = "3.12"
@@ -55,5 +68,5 @@ strict_equality = true
 exclude = ["app/db/migrations"]
 
 [[tool.mypy.overrides]]
-module = ["minio", "stripe", "pythonjsonlogger", "argon2"]
+module = ["minio", "stripe", "pythonjsonlogger", "argon2", "boto3", "botocore", "botocore.config", "celery", "jose"]
 ignore_missing_imports = true

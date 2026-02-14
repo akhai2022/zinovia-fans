@@ -22,6 +22,16 @@ class User(TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # Password reset
+    password_reset_token: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    password_reset_expires: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Creator onboarding (Feature 1)
+    onboarding_state: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    country: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    explicit_intent: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    explicit_intent_locked: Mapped[bool] = mapped_column(Boolean, default=False)
+
     profile: Mapped["Profile"] = relationship(back_populates="user", uselist=False)
 
 

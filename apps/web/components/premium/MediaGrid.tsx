@@ -1,10 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { PostMediaImage } from "@/features/posts/components/PostMediaImage";
 import { PostMediaVideo } from "@/features/posts/components/PostMediaVideo";
 import { LockedOverlay } from "./LockedOverlay";
-import { DEMO_ASSETS } from "@/lib/demoAssets";
 import { cn } from "@/lib/utils";
 import type { PostItem } from "@/types/creator";
 
@@ -41,15 +39,6 @@ function PostCell({
   const imagePlaceholder = (
     <div className="h-full w-full bg-muted" aria-hidden />
   );
-  const lockedPlaceholderImage = (
-    <Image
-      src={DEMO_ASSETS.locked}
-      alt=""
-      fill
-      className="object-cover"
-      sizes="(max-width: 640px) 50vw, 25vw"
-    />
-  );
   const overlayLabel =
     post.locked_reason === "FOLLOW_REQUIRED" ? "Follow to unlock" : "Subscribe to unlock";
 
@@ -57,6 +46,7 @@ function PostCell({
     <div className={cn("h-full w-full bg-muted", locked && "blur-[2px] opacity-90")}>
       <PostMediaImage
         assetId={post.asset_ids![0]}
+        variant={locked ? "thumb" : undefined}
         className="h-full w-full object-cover"
         watermark={showWatermark && !locked}
       />
@@ -72,17 +62,25 @@ function PostCell({
       onUnlockClick={onUnlockClick}
       className="aspect-square rounded-premium-md overflow-hidden bg-muted"
     >
-      {locked && !hasImageAsset && post.type !== "IMAGE" ? (
-        <div className="relative h-full w-full">{lockedPlaceholderImage}</div>
-      ) : imageCell ? (
+      {imageCell ? (
         imageCell
       ) : hasVideoAsset ? (
-        <div className="h-full w-full bg-muted">
-          <PostMediaVideo
-            assetId={post.asset_ids![0]}
-            className="h-full w-full object-cover"
-          />
-        </div>
+        locked ? (
+          <div className="h-full w-full bg-muted blur-[2px] opacity-90">
+            <PostMediaImage
+              assetId={post.asset_ids![0]}
+              variant="poster"
+              className="h-full w-full object-cover"
+            />
+          </div>
+        ) : (
+          <div className="h-full w-full bg-muted">
+            <PostMediaVideo
+              assetId={post.asset_ids![0]}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        )
       ) : isVideo ? (
         imagePlaceholder
       ) : (

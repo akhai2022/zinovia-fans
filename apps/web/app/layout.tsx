@@ -1,35 +1,51 @@
 import "./globals.css";
 import type { ReactNode } from "react";
-import { Inter, Sora } from "next/font/google";
+import { cookies } from "next/headers";
 import { ApiBaseSync } from "@/components/app/ApiBaseSync";
+import { ApiHealthBanner } from "@/components/app/ApiHealthBanner";
 import { Navbar } from "@/components/app/Navbar";
+import { Footer } from "@/components/app/Footer";
 import { ToastProvider } from "@/components/ui/toast";
+import { getSession } from "@/lib/api/auth";
+// Validate critical env vars at startup (server-side only, logs warnings).
+import "@/lib/envCheck";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-sans",
-  display: "swap",
-});
-
-const sora = Sora({
-  subsets: ["latin"],
-  variable: "--font-display",
-  display: "swap",
-});
+const SITE_URL = "https://zinovia.ai";
 
 export const metadata = {
-  title: "Zinovia Fans",
-  description: "Creator subscription platform",
+  title: "Zinovia Fans — Premium Creator Subscription Platform",
+  description:
+    "Subscribe to exclusive content from your favourite creators. Secure payouts, Stripe checkout, and private media delivery. For fans and creators.",
+  openGraph: {
+    title: "Zinovia Fans — Premium Creator Subscription Platform",
+    description:
+      "Subscribe to exclusive content from your favourite creators. Secure payouts, Stripe checkout, and private media delivery.",
+    url: SITE_URL,
+    siteName: "Zinovia Fans",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Zinovia Fans — Premium Creator Subscription Platform",
+    description:
+      "Subscribe to exclusive content from your favourite creators. Secure payouts and private delivery.",
+  },
+  metadataBase: new URL(SITE_URL),
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const cookieHeader = cookies().toString();
+  const session = await getSession(cookieHeader);
   return (
-    <html lang="en" className={`${inter.variable} ${sora.variable}`}>
+    <html lang="en" className="scroll-smooth">
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
         <ToastProvider>
           <ApiBaseSync />
-          <Navbar />
+          <ApiHealthBanner />
+          <Navbar initialSession={session.user} sessionUnavailable={session.unavailable} />
           {children}
+          <Footer />
         </ToastProvider>
       </body>
     </html>

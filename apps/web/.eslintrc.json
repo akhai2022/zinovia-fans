@@ -1,3 +1,28 @@
 {
-  "extends": ["next/core-web-vitals"]
+  "extends": ["next/core-web-vitals"],
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "crypto",
+            "message": "Use '@/lib/uuid' helpers instead of direct crypto imports."
+          },
+          {
+            "name": "node:crypto",
+            "message": "Use '@/lib/uuid' helpers instead of direct crypto imports."
+          }
+        ]
+      }
+    ],
+    "no-restricted-properties": [
+      "error",
+      {
+        "object": "crypto",
+        "property": "randomUUID",
+        "message": "Use uuidClient()/uuidServer() from '@/lib/uuid'."
+      }
+    ]
+  }
 }

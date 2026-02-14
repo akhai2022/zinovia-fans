@@ -6,6 +6,9 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.modules.posts.constants import (
+    POST_STATUS_DRAFT,
+    POST_STATUS_PUBLISHED,
+    POST_STATUS_SCHEDULED,
     POST_TYPE_IMAGE,
     POST_TYPE_TEXT,
     POST_TYPE_VIDEO,
@@ -44,6 +47,7 @@ class PostCreate(BaseModel):
     )
     nsfw: bool = False
     asset_ids: list[UUID] = Field(default_factory=list)
+    publish_at: datetime | None = None
 
 
 class PostOut(BaseModel):
@@ -58,6 +62,11 @@ class PostOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     asset_ids: list[UUID] = Field(default_factory=list)
+    publish_at: datetime | None = None
+    status: str = Field(
+        default=POST_STATUS_PUBLISHED,
+        pattern=f"^({POST_STATUS_DRAFT}|{POST_STATUS_SCHEDULED}|{POST_STATUS_PUBLISHED})$",
+    )
     is_locked: bool = Field(default=False, description="True when viewer cannot access content (teaser only).")
     locked_reason: str | None = Field(
         default=None,
@@ -77,6 +86,16 @@ class PostWithCreator(BaseModel):
     created_at: datetime
     updated_at: datetime
     asset_ids: list[UUID] = Field(default_factory=list)
+    publish_at: datetime | None = None
+    status: str = Field(
+        default=POST_STATUS_PUBLISHED,
+        pattern=f"^({POST_STATUS_DRAFT}|{POST_STATUS_SCHEDULED}|{POST_STATUS_PUBLISHED})$",
+    )
+    is_locked: bool = Field(default=False, description="True when viewer cannot access content (teaser only).")
+    locked_reason: str | None = Field(
+        default=None,
+        description="When is_locked: SUBSCRIPTION_REQUIRED or FOLLOW_REQUIRED for UI copy.",
+    )
     creator: CreatorSummary
 
 
@@ -90,9 +109,35 @@ class PostPage(BaseModel):
 
 
 class FeedPage(BaseModel):
-    """Paginated feed with creator summary."""
+    """Paginated feed with creator summary. Supports cursor-based pagination."""
 
     items: list[PostWithCreator]
     total: int
     page: int
     page_size: int
+    next_cursor: str | None = Field(
+        default=None,
+        description="Opaque cursor for the next page. Pass as ?cursor= for infinite scroll.",
+    )
+
+
+class PostLikeSummary(BaseModel):
+    post_id: UUID
+    count: int
+    viewer_liked: bool
+
+
+class PostCommentCreate(BaseModel):
+    body: str = Field(min_length=1, max_length=1000)
+
+
+class PostCommentOut(BaseModel):
+    id: UUID
+    post_id: UUID
+    user_id: UUID
+    body: str
+    created_at: datetime
+class PostCommentPageOut(BaseModel):
+    items: list[PostCommentOut]
+    next_cursor: str | None = None
+    total: int = 0

@@ -9,13 +9,13 @@ output "api_url_cli" {
 }
 
 output "app_url" {
-  value       = var.enable_custom_domain ? "https://${local.app_domain}" : null
-  description = "Web app URL (custom domain when enable_custom_domain)."
+  value       = var.enable_custom_domain ? (var.web_use_apex ? "https://${var.domain_name}" : "https://${local.app_domain}") : null
+  description = "Web app URL (zinovia.ai when web_use_apex, else app.zinovia.ai)."
 }
 
 output "web_url" {
-  value       = var.enable_alb ? (var.enable_custom_domain ? "https://${local.app_domain}" : null) : try("https://${aws_cloudfront_distribution.web[0].domain_name}", "N/A - set enable_cloudfront when account verified")
-  description = "Web app URL: when no ALB and CloudFront enabled, CloudFront default domain; when no ALB and no CloudFront, N/A."
+  value       = var.enable_alb ? (var.enable_custom_domain ? (var.web_use_apex ? "https://${var.domain_name}" : "https://${local.app_domain}") : "http://${aws_lb.main[0].dns_name}") : try("https://${aws_cloudfront_distribution.web[0].domain_name}", "N/A - set enable_cloudfront when account verified")
+  description = "Web app URL: zinovia.ai when web_use_apex, else app subdomain; ALB DNS when no custom domain."
 }
 
 output "media_cdn_url" {
@@ -78,9 +78,9 @@ output "media_bucket_id" {
   description = "S3 media bucket name"
 }
 
-output "media_jobs_queue_url" {
-  value       = module.sqs_media.queue_url
-  description = "SQS media jobs queue URL"
+output "redis_url" {
+  value       = local.redis_url
+  description = "Redis URL for Celery broker (ElastiCache)"
 }
 
 output "ecs_cluster_name" {
@@ -139,4 +139,24 @@ output "acm_validation_records_alb" {
 output "acm_validation_records_cloudfront" {
   value       = var.enable_acm && !var.dns_delegated ? try(module.acm_cloudfront[0].validation_options, []) : []
   description = "ACM DNS validation records for CloudFront media cert (us-east-1). Create these CNAME records for certificate validation."
+}
+
+output "acm_validation_records_apex" {
+  value       = var.enable_apex_cloudfront && !var.web_use_apex && !var.dns_delegated ? try(module.acm_apex[0].validation_options, []) : []
+  description = "ACM DNS validation records for apex+www cert (us-east-1: zinovia.ai, www.zinovia.ai). Create these CNAME records, then set dns_delegated = true and re-apply."
+}
+
+output "apex_cloudfront_domain" {
+  value       = var.enable_apex_cloudfront && !var.web_use_apex ? aws_cloudfront_distribution.apex[0].domain_name : null
+  description = "CloudFront distribution domain for apex (zinovia.ai and www.zinovia.ai)."
+}
+
+output "ses_domain_identity_arn" {
+  value       = var.enable_route53 ? aws_ses_domain_identity.main[0].arn : null
+  description = "SES domain identity ARN for zinovia.ai."
+}
+
+output "ses_dkim_tokens" {
+  value       = var.enable_route53 ? aws_ses_domain_dkim.main[0].dkim_tokens : []
+  description = "SES DKIM tokens (for verification/debug)."
 }

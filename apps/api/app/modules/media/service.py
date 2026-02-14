@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import select
@@ -14,7 +15,7 @@ from app.modules.media.models import MediaDerivedAsset, MediaObject
 from app.modules.media.storage import StorageClient
 from app.modules.posts.models import Post, PostMedia
 from app.modules.posts.service import _can_see_post
-from app.modules.posts.constants import VISIBILITY_PUBLIC
+from app.modules.posts.constants import POST_STATUS_PUBLISHED, VISIBILITY_PUBLIC
 
 CONTENT_TYPE_VIDEO_MP4 = "video/mp4"
 
@@ -22,6 +23,7 @@ VALID_DOWNLOAD_VARIANTS = frozenset({"thumb", "grid", "full", "poster"})
 
 # Variants that must not fall back to original (e.g. poster for video: no poster => no URL)
 VARIANT_NO_FALLBACK = frozenset({"poster"})
+TEASER_VARIANTS = frozenset({"thumb", "grid"})
 
 
 def validate_media_upload(content_type: str, size_bytes: int) -> None:
@@ -29,14 +31,16 @@ def validate_media_upload(content_type: str, size_bytes: int) -> None:
     if not content_type:
         raise AppError(status_code=400, detail="content_type_required")
     ct_lower = content_type.lower().strip()
+    settings = get_settings()
     if ct_lower.startswith("image/"):
+        if size_bytes > settings.media_max_image_bytes:
+            raise AppError(status_code=413, detail="image_exceeds_max_size")
         return
     if ct_lower == CONTENT_TYPE_VIDEO_MP4:
-        settings = get_settings()
         if not settings.media_allow_video:
             raise AppError(status_code=400, detail="video_upload_disabled")
         if size_bytes > settings.media_max_video_bytes:
-            raise AppError(status_code=400, detail="video_exceeds_max_size")
+            raise AppError(status_code=413, detail="video_exceeds_max_size")
         return
     raise AppError(status_code=400, detail="unsupported_media_type")
 
@@ -67,6 +71,7 @@ async def resolve_download_object_key(
 async def can_anonymous_access_media(
     session: AsyncSession,
     media_id: UUID,
+    variant: str | None = None,
 ) -> bool:
     """True if media is publicly viewable: used in a PUBLIC post or is a creator avatar/banner."""
     # Used in any post with visibility PUBLIC
@@ -81,6 +86,22 @@ async def can_anonymous_access_media(
     )
     if post_public.scalar_one_or_none() is not None:
         return True
+    # Locked teaser behavior: permit signed thumb/grid for non-public published posts.
+    if variant in TEASER_VARIANTS:
+        now = datetime.now(timezone.utc)
+        teaser_post = await session.execute(
+            select(Post.id)
+            .join(PostMedia, PostMedia.post_id == Post.id)
+            .where(
+                PostMedia.media_asset_id == media_id,
+                Post.visibility != VISIBILITY_PUBLIC,
+                Post.status == POST_STATUS_PUBLISHED,
+                ((Post.publish_at.is_(None)) | (Post.publish_at <= now)),
+            )
+            .limit(1)
+        )
+        if teaser_post.scalar_one_or_none() is not None:
+            return True
     # Creator profile avatar or banner
     profile_asset = await session.execute(
         select(Profile.id).where(
@@ -94,6 +115,7 @@ async def can_user_access_media(
     session: AsyncSession,
     media_id: UUID,
     user_id: UUID,
+    variant: str | None = None,
 ) -> bool:
     """True if user is media owner or can see a post that references this asset (visibility rules)."""
     result = await session.execute(select(MediaObject).where(MediaObject.id == media_id))
@@ -126,6 +148,15 @@ async def can_user_access_media(
             is_subscriber=is_subscriber,
         ):
             return True
+        # Locked teaser behavior: allow only non-full variants for inaccessible posts.
+        if variant in TEASER_VARIANTS:
+            now = datetime.now(timezone.utc)
+            if (
+                post.visibility != VISIBILITY_PUBLIC
+                and post.status == POST_STATUS_PUBLISHED
+                and (post.publish_at is None or post.publish_at <= now)
+            ):
+                return True
     return False
 
 

@@ -28,8 +28,9 @@ export function PricingCard({
   disabled = false,
   disabledHelper,
 }: PricingCardProps) {
-  const priceLabel = `$${offer.price}/${offer.interval}`;
-  const cta = ctaLabel ?? `Subscribe — $${offer.price}/${offer.interval}`;
+  const symbol = offer.currency.toUpperCase() === "EUR" ? "€" : "$";
+  const priceLabel = `${symbol}${offer.price}/${offer.interval}`;
+  const cta = ctaLabel ?? `Subscribe — ${symbol}${offer.price}/${offer.interval}`;
 
   return (
     <Card

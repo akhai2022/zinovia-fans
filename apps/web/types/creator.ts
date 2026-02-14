@@ -41,7 +41,7 @@ export interface SubscriptionOffer {
 /** Mock/default for subscribe sheet when API doesn't return plan */
 export const DEFAULT_SUBSCRIPTION_OFFER: SubscriptionOffer = {
   price: "4.99",
-  currency: "USD",
+  currency: "EUR",
   interval: "month",
   perks: ["Full feed access", "Subscriber-only DMs", "Exclusive posts"],
   dm_included: true,

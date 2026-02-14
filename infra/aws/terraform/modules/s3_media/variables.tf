@@ -19,3 +19,15 @@ variable "environment" {
   type        = string
   description = "Environment name"
 }
+
+variable "logs_bucket_id" {
+  type        = string
+  default     = null
+  description = "S3 bucket ID for server access logs. Null = disable."
+}
+
+variable "enable_logging" {
+  type        = bool
+  default     = false
+  description = "Enable server access logging. Set true when logs_bucket_id is provided."
+}

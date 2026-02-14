@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { AuthService, type UserOut } from "@zinovia/contracts";
+import { usePathname, useRouter } from "next/navigation";
+import { type UserOut } from "@zinovia/contracts";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,49 +12,76 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Drawer } from "@/components/ui/drawer";
+import { listNotifications } from "@/features/engagement/api";
+import { logout } from "@/lib/api/auth";
 import { cn } from "@/lib/utils";
 import "@/lib/api";
 
-const NAV_LINKS_ALWAYS = [
+const NAV_LINKS_PUBLIC = [
   { href: "/", label: "Home" },
   { href: "/feed", label: "Feed" },
   { href: "/creators", label: "Creators" },
 ] as const;
 
-const NAV_LINK_SETTINGS = { href: "/settings/profile", label: "Settings" } as const;
-const NAV_LINK_NEW_POST = { href: "/creator/post/new", label: "New post" } as const;
+const NAV_LINKS_AUTH = [
+  { href: "/messages", label: "Messages" },
+  { href: "/creator/post/new", label: "New post" },
+  { href: "/settings/profile", label: "Settings" },
+] as const;
 
-export function Navbar() {
+export function Navbar({
+  initialSession,
+  sessionUnavailable = false,
+}: {
+  initialSession: UserOut | null;
+  sessionUnavailable?: boolean;
+}) {
   const pathname = usePathname();
-  const [user, setUser] = useState<UserOut | null>(null);
-  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const [user, setUser] = useState<UserOut | null>(initialSession);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Refetch auth on pathname change so after login/signup redirect we show the correct state
   useEffect(() => {
-    setLoading(true);
-    AuthService.authMe()
-      .then(setUser)
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false));
-  }, [pathname]);
+    setUser(initialSession);
+  }, [initialSession]);
 
-  const handleLogout = () => {
+  useEffect(() => {
+    if (!user) {
+      setUnreadNotifications(0);
+      return;
+    }
+    listNotifications()
+      .then((res) => setUnreadNotifications(res.unread_count))
+      .catch(() => setUnreadNotifications(0));
+  }, [user, pathname]);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch {
+      // Fallback to local UI reset even if API logout fails.
+    }
     setUser(null);
+    // Full navigation to "/" clears all client state (SWR cache, etc.)
+    // and prevents back-button from showing authenticated content.
+    window.location.href = "/";
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
+    <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link
           href="/"
-          className="flex items-center gap-1.5 font-semibold tracking-tight no-underline"
+          className="flex items-center gap-1.5 font-display text-lg font-semibold tracking-tight no-underline"
           aria-label="Zinovia Fans home"
         >
           <span className="text-gradient-brand">Zinovia</span>
-          <span className="text-foreground/70">Fans</span>
+          <span className="text-foreground/75">Fans</span>
         </Link>
-        <nav className="flex items-center gap-1 sm:gap-2">
-          {NAV_LINKS_ALWAYS.map(({ href, label }) => {
+        <nav className="hidden items-center gap-1 sm:flex sm:gap-2">
+          {NAV_LINKS_PUBLIC.map(({ href, label }) => {
             const active = pathname === href || (href !== "/" && pathname.startsWith(href));
             return (
               <Button
@@ -63,7 +90,7 @@ export function Navbar() {
                 size="sm"
                 asChild
                 className={cn(
-                  active && "bg-accent/50 ring-brand rounded-brand"
+                  active && "bg-muted text-foreground"
                 )}
               >
                 <Link href={href}>{label}</Link>
@@ -72,31 +99,27 @@ export function Navbar() {
           })}
           {user && (
             <>
-              <Button
-                variant="ghost"
-                size="sm"
-                asChild
-                className={cn(
-                  (pathname === NAV_LINK_NEW_POST.href || pathname.startsWith(NAV_LINK_NEW_POST.href + "/")) && "bg-accent/50 ring-brand rounded-brand"
-                )}
-              >
-                <Link href={NAV_LINK_NEW_POST.href}>{NAV_LINK_NEW_POST.label}</Link>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                asChild
-                className={cn(
-                  (pathname === NAV_LINK_SETTINGS.href || pathname.startsWith(NAV_LINK_SETTINGS.href + "/")) && "bg-accent/50 ring-brand rounded-brand"
-                )}
-              >
-                <Link href={NAV_LINK_SETTINGS.href}>{NAV_LINK_SETTINGS.label}</Link>
+              {NAV_LINKS_AUTH.map((link) => (
+                <Button
+                  key={link.href}
+                  variant="ghost"
+                  size="sm"
+                  asChild
+                  className={cn(
+                    (pathname === link.href || pathname.startsWith(link.href + "/")) && "bg-muted text-foreground"
+                  )}
+                >
+                  <Link href={link.href}>{link.label}</Link>
+                </Button>
+              ))}
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/notifications">
+                  Notifications{unreadNotifications > 0 ? ` (${unreadNotifications})` : ""}
+                </Link>
               </Button>
             </>
           )}
-          {loading ? (
-            <span className="h-8 w-16 animate-pulse rounded-brand bg-muted" />
-          ) : user ? (
+          {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -115,25 +138,96 @@ export function Navbar() {
                   <Link href="/me">Me</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
+                  <Link href="/messages">Messages</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
                   <Link href="/settings/profile">Settings</Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/billing/manage">Subscriptions</Link>
+                </DropdownMenuItem>
+                {user?.role === "admin" && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin">Admin</Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={handleLogout}>
                   Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <div className="flex items-center gap-1">
-              <Button variant="outline" size="sm" className="btn-secondary" asChild>
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" size="sm" asChild>
                 <Link href="/login">Login</Link>
               </Button>
-              <Button size="sm" className="btn-primary" asChild>
+              <Button size="sm" asChild>
                 <Link href="/signup">Sign up</Link>
               </Button>
+              {sessionUnavailable && (
+                <span className="text-xs text-muted-foreground" title="Session check failed; API may be temporarily unavailable.">
+                  reconnecting…
+                </span>
+              )}
             </div>
           )}
         </nav>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="sm:hidden"
+          onClick={() => setMobileOpen(true)}
+          aria-label="Open navigation menu"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="M4 7H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <path d="M4 12H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <path d="M4 17H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          Menu
+        </Button>
       </div>
+      <Drawer open={mobileOpen} onClose={() => setMobileOpen(false)} title="Navigation">
+        <div className="space-y-2">
+          {[...NAV_LINKS_PUBLIC, ...(user ? NAV_LINKS_AUTH : [])].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setMobileOpen(false)}
+              className="block rounded-brand border border-border bg-card px-3 py-2 text-sm font-medium text-foreground"
+            >
+              {item.label}
+            </Link>
+          ))}
+          {user && (
+            <Link
+              href="/notifications"
+              onClick={() => setMobileOpen(false)}
+              className="block rounded-brand border border-border bg-card px-3 py-2 text-sm font-medium text-foreground"
+            >
+              Notifications{unreadNotifications > 0 ? ` (${unreadNotifications})` : ""}
+            </Link>
+          )}
+          {!user && (
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <Button className="btn-cta-primary" asChild>
+                <Link href="/signup" onClick={() => setMobileOpen(false)}>Start Subscribing</Link>
+              </Button>
+              <Button variant="secondary" asChild>
+                <Link href="/creators" onClick={() => setMobileOpen(false)}>Explore Creators</Link>
+              </Button>
+              <Link
+                href="/login"
+                onClick={() => setMobileOpen(false)}
+                className="col-span-2 rounded-brand border border-border py-2 text-center text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                Login
+              </Link>
+            </div>
+          )}
+        </div>
+      </Drawer>
     </header>
   );
 }

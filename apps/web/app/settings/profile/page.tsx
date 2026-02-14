@@ -13,6 +13,7 @@ import { Page } from "@/components/brand/Page";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/toast";
@@ -116,9 +117,7 @@ export default function SettingsProfilePage() {
   if (prefillStatus === "loading") {
     return (
       <Page>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Creator profile
-        </h1>
+        <h1 className="font-display text-premium-h2 font-semibold text-foreground">Creator profile</h1>
         <Card className="mt-4">
           <CardHeader>
             <Skeleton className="h-6 w-32" />
@@ -135,10 +134,8 @@ export default function SettingsProfilePage() {
   }
 
   return (
-    <Page>
-      <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-        Creator profile
-      </h1>
+    <Page className="space-y-4">
+      <h1 className="font-display text-premium-h2 font-semibold text-foreground">Creator profile</h1>
       {prefillStatus === "error" && (
         <p className="mt-2 text-sm text-muted-foreground">
           Creator-only. Set up your account as a creator to edit profile.
@@ -146,12 +143,12 @@ export default function SettingsProfilePage() {
       )}
       <Card className="mt-4">
         <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription>Update your public creator profile.</CardDescription>
+          <CardTitle>Profile details</CardTitle>
+          <CardDescription>Control your public presence and trust signals.</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-6" onSubmit={onSubmit}>
-            <div className="space-y-2">
+            <div className="space-y-2 rounded-premium-lg border border-border bg-surface-alt p-4">
               <Label>Profile photo (avatar)</Label>
               <div className="flex flex-wrap items-center gap-4">
                 {avatarMediaId && (
@@ -163,13 +160,20 @@ export default function SettingsProfilePage() {
                     className="shrink-0"
                   />
                 )}
-                <ImageUploadField
-                  onUploadComplete={(assetId) => setAvatarMediaId(assetId)}
-                  disabled={loading}
-                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <ImageUploadField
+                    onUploadComplete={(assetId) => setAvatarMediaId(assetId)}
+                    disabled={loading}
+                  />
+                  <Button variant="secondary" size="sm" asChild>
+                    <Link href="/ai/images/new?apply=creator.avatar">
+                      Generate with AI
+                    </Link>
+                  </Button>
+                </div>
               </div>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 rounded-premium-lg border border-border bg-surface-alt p-4">
               <Label>Banner image</Label>
               <p className="text-xs text-muted-foreground">
                 Shown at the top of your creator profile (e.g. 1500×500).
@@ -179,10 +183,17 @@ export default function SettingsProfilePage() {
                   <BannerPreview assetId={bannerMediaId} />
                 </div>
               )}
-              <ImageUploadField
-                onUploadComplete={(assetId) => setBannerMediaId(assetId)}
-                disabled={loading}
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                <ImageUploadField
+                  onUploadComplete={(assetId) => setBannerMediaId(assetId)}
+                  disabled={loading}
+                />
+                <Button variant="secondary" size="sm" asChild>
+                  <Link href="/ai/images/new?apply=creator.banner">
+                    Generate with AI
+                  </Link>
+                </Button>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="handle">Handle</Label>
@@ -209,16 +220,15 @@ export default function SettingsProfilePage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="bio">Bio</Label>
-              <textarea
+              <Textarea
                 id="bio"
-                className="flex min-h-[80px] w-full rounded-brand border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 rows={3}
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 placeholder="Short bio"
               />
             </div>
-            <div className="flex items-center justify-between rounded-brand border border-border p-4">
+            <div className="flex items-center justify-between rounded-brand border border-border bg-surface-alt p-4">
               <div>
                 <Label htmlFor="discoverable" className="text-base">
                   Discoverable
@@ -226,14 +236,20 @@ export default function SettingsProfilePage() {
                 <p className="text-sm text-muted-foreground">
                   Show your profile in discovery and feed.
                 </p>
+                {!handle.trim() && (
+                  <p className="mt-1 text-xs text-amber-600">
+                    A handle is required to appear in discovery. Set one above.
+                  </p>
+                )}
               </div>
               <Switch
                 id="discoverable"
                 checked={discoverable}
                 onCheckedChange={setDiscoverable}
+                disabled={!handle.trim()}
               />
             </div>
-            <div className="flex items-center justify-between rounded-brand border border-border p-4">
+            <div className="flex items-center justify-between rounded-brand border border-border bg-surface-alt p-4">
               <div>
                 <Label htmlFor="nsfw" className="text-base">
                   NSFW

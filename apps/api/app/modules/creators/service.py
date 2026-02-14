@@ -85,7 +85,7 @@ async def get_posts_count(session: AsyncSession, creator_user_id: UUID) -> int:
     return result.scalar_one() or 0
 
 
-def _discoverable_where():
+def _discoverable_where() -> tuple:
     """Base conditions for discoverable creators (role, handle set, discoverable)."""
     return (
         User.role == CREATOR_ROLE,
@@ -236,14 +236,18 @@ async def follow_creator(
 ) -> bool:
     if fan_user_id == creator_user_id:
         raise AppError(status_code=400, detail="cannot_follow_self")
+    existing = await session.execute(
+        select(Follow).where(
+            Follow.fan_user_id == fan_user_id,
+            Follow.creator_user_id == creator_user_id,
+        )
+    )
+    if existing.scalar_one_or_none() is not None:
+        return False
     follow = Follow(fan_user_id=fan_user_id, creator_user_id=creator_user_id)
     session.add(follow)
-    try:
-        await session.commit()
-        return True
-    except IntegrityError:
-        await session.rollback()
-        return False
+    await session.commit()
+    return True
 
 
 async def unfollow_creator(
@@ -288,5 +292,6 @@ async def get_following_page(
         .offset(offset)
         .limit(limit)
     )
-    items = list(rows_result.all())
+    rows = rows_result.all()
+    items = [(row[0], row[1]) for row in rows]
     return items, total

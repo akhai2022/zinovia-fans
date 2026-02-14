@@ -97,9 +97,12 @@ Full review of the staging/production AWS infrastructure (Terraform in `infra/aw
 - **Target groups**:
   - API: port 8000, health check `/health`.
   - Web: port 3000, health check `/`.
-- **Listener**: when `enable_acm` → HTTPS (443) with cert; when `!enable_acm` → HTTP (80) forwarding to API target group.
+- **Listeners**:
+  - When `enable_acm`: HTTPS (443) with host-based routing (api_domain → API, app_domain → web); HTTP (80) redirects to HTTPS.
+  - When `!enable_acm`: HTTP (80) with **path-based routing** — API paths (`/health`, `/auth*`, `/creators*`, `/posts*`, `/feed*`, `/media*`, `/billing*`, `/ledger*`) → API target group; default action → web target group. So both API and web are reachable at `http://<alb-dns-name>` (API on those paths, web at `/`).
 - **ECS services**: `api` and `web` (Fargate, private subnets); depend on ALB; registered to corresponding target groups; IAM role for Secrets, ECR, SQS, S3.
-- **api_url output**: when custom domain → `https://<api-domain>`; when ALB only → `http://<alb-dns-name>` (no placeholder).
+- **Outputs**: `api_url` = `http(s)://<alb-dns or api-domain>`; `web_url` = `http(s)://<alb-dns or app-domain>` when ALB enabled (no longer null when no custom domain).
+- **Web task env**: `NEXT_PUBLIC_API_BASE_URL` is set to ALB DNS when no custom domain so the web app can call the API on the same origin.
 
 ---
 
@@ -127,9 +130,9 @@ Full review of the staging/production AWS infrastructure (Terraform in `infra/aw
 ## 15. Staging summary (env/staging.tfvars)
 
 - **Region**: us-east-1 (enforced by validation).
-- **ALB**: enabled (HTTP on 80; no ACM).
+- **ALB**: enabled (HTTP on 80; no ACM). Path-based routing: API on `/health`, `/auth*`, `/creators*`, etc.; web app at `/`.
 - **ACM / Route53 / CloudFront**: disabled.
-- **api_url**: `http://<alb-dns-name>` after apply (no custom domain).
+- **api_url** / **web_url**: both `http://<alb-dns-name>` after apply (same ALB; API and web on different paths).
 - **Secrets**: created in us-east-1 by Terraform if missing.
 - **ECR**: api, web, worker repos always created.
 

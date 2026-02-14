@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 from datetime import datetime, timezone
 from decimal import Decimal
+from uuid import uuid4
 from uuid import UUID
 
 import stripe
 from sqlalchemy import or_, select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
@@ -24,19 +26,39 @@ from app.modules.billing.constants import (
 )
 from app.modules.billing.models import CreatorPlan, StripeEvent, Subscription
 from app.modules.ledger.constants import LEDGER_DIRECTION_CREDIT
-from app.modules.ledger.service import create_ledger_entry
+from app.modules.ledger.service import create_ledger_entry, create_ledger_event
+from app.modules.payments.models import PpvPurchase, Tip
 
 STRIPE_KEY_PLACEHOLDER = "sk_test_placeholder"
 
 
 def verify_stripe_signature(payload: bytes, signature: str) -> stripe.Event:
     settings = get_settings()
+    secrets_to_try = []
+    primary_secret = (settings.stripe_webhook_secret or "").strip()
+    previous_secret = (settings.stripe_webhook_secret_previous or "").strip()
+    if primary_secret:
+        secrets_to_try.append(primary_secret)
+    if previous_secret and previous_secret != primary_secret:
+        secrets_to_try.append(previous_secret)
+
+    if not secrets_to_try:
+        raise AppError(status_code=501, detail="Stripe not configured in this environment")
+
+    last_signature_error: Exception | None = None
     try:
-        return stripe.Webhook.construct_event(
-            payload=payload, sig_header=signature, secret=settings.stripe_webhook_secret
-        )
-    except stripe.error.SignatureVerificationError as exc:
-        raise AppError(status_code=400, detail="invalid_signature") from exc
+        for secret in secrets_to_try:
+            try:
+                return stripe.Webhook.construct_event(  # type: ignore[no-any-return]
+                    payload=payload,
+                    sig_header=signature,
+                    secret=secret,
+                )
+            except stripe.error.SignatureVerificationError as exc:
+                last_signature_error = exc
+        raise AppError(status_code=400, detail="invalid_signature") from last_signature_error
+    except ValueError as exc:
+        raise AppError(status_code=400, detail="invalid_payload") from exc
 
 
 async def record_stripe_event(
@@ -45,30 +67,42 @@ async def record_stripe_event(
     event_type: str,
     payload: dict | None = None,
 ) -> tuple[bool, str | None]:
-    """Store event; return (True, event_id) if new, (False, None) if duplicate (idempotent)."""
-    event = StripeEvent(
-        event_id=event_id,
-        event_type=event_type,
-        payload=payload,
+    """Store event in current transaction; return (True, id) if new else duplicate."""
+    stmt = (
+        pg_insert(StripeEvent)
+        .values(
+            event_id=event_id,
+            event_type=event_type,
+            payload=payload,
+        )
+        .on_conflict_do_nothing(index_elements=[StripeEvent.event_id])
+        .returning(StripeEvent.event_id)
     )
-    session.add(event)
-    try:
-        await session.commit()
-        return True, event_id
-    except IntegrityError:
-        await session.rollback()
+    result = await session.execute(stmt)
+    inserted_id = result.scalar_one_or_none()
+    if inserted_id is None:
         return False, None
+    return True, inserted_id
 
 
 async def mark_stripe_event_processed(
     session: AsyncSession, event_id: str
 ) -> None:
-    """Set processed_at for the event (call after handling)."""
+    """Set processed_at for the event in current transaction."""
     now = datetime.now(timezone.utc)
     await session.execute(
         update(StripeEvent).where(StripeEvent.event_id == event_id).values(processed_at=now)
     )
-    await session.commit()
+
+
+async def get_stripe_event_processed_at(
+    session: AsyncSession, event_id: str
+) -> datetime | None:
+    """Return processed_at timestamp for a Stripe event row."""
+    result = await session.execute(
+        select(StripeEvent.processed_at).where(StripeEvent.event_id == event_id)
+    )
+    return result.scalar_one_or_none()
 
 
 def _ensure_stripe_price(plan: CreatorPlan) -> str:
@@ -123,10 +157,23 @@ async def get_or_create_creator_plan(
 
 def _stripe_configured() -> bool:
     settings = get_settings()
-    return bool(
-        settings.stripe_secret_key
-        and settings.stripe_secret_key != STRIPE_KEY_PLACEHOLDER
-    )
+    key = (settings.stripe_secret_key or "").strip()
+    if not key or key == STRIPE_KEY_PLACEHOLDER:
+        return False
+    if settings.environment in ("production", "prod") and not key.startswith("sk_live_"):
+        return False
+    return True
+
+
+def stripe_mode() -> str:
+    """Infer Stripe mode from secret key prefix."""
+    settings = get_settings()
+    key = (settings.stripe_secret_key or "").strip()
+    if key.startswith("sk_live_"):
+        return "live"
+    if key.startswith("sk_test_"):
+        return "test"
+    return "unknown"
 
 
 async def create_checkout_session(
@@ -144,7 +191,7 @@ async def create_checkout_session(
     if not _stripe_configured():
         raise AppError(status_code=501, detail="Stripe not configured in this environment")
     plan = await get_or_create_creator_plan(session, creator_user_id)
-    if not plan.active:
+    if not plan.active or not plan.stripe_price_id:
         raise AppError(status_code=400, detail="creator_plan_inactive")
     settings = get_settings()
     success_url = success_url or settings.checkout_success_url
@@ -153,15 +200,24 @@ async def create_checkout_session(
     metadata: dict[str, str] = {
         "fan_user_id": str(fan_user_id),
         "creator_user_id": str(creator_user_id),
+        "environment": settings.environment,
+        "correlation_id": str(uuid4()),
     }
     if creator_handle:
         metadata["creator_handle"] = creator_handle
     checkout = stripe.checkout.Session.create(
         mode="subscription",
-        line_items=[{"price": plan.stripe_price_id, "quantity": 1}],
+        line_items=[{"price": str(plan.stripe_price_id), "quantity": 1}],
         success_url=success_url,
         cancel_url=cancel_url,
         metadata=metadata,
+        subscription_data={"metadata": metadata},
+    )
+    logger.info(
+        "stripe checkout created fan_user_id=%s creator_user_id=%s correlation_id=%s",
+        fan_user_id,
+        creator_user_id,
+        metadata["correlation_id"],
     )
     return checkout.url or ""
 
@@ -230,7 +286,7 @@ async def _handle_checkout_session_completed(
             stripe_customer_id=stripe_customer_id,
         )
         session.add(subscription)
-    await session.commit()
+    await session.flush()
     logger.info(
         "stripe subscription upserted fan_user_id=%s creator_user_id=%s status=%s",
         fan_user_id,
@@ -262,7 +318,7 @@ async def _upsert_subscription_from_stripe(
         sub.current_period_end = current_period_end
         sub.cancel_at_period_end = bool(stripe_subscription.get("cancel_at_period_end"))
         sub.cancel_at = cancel_at
-        await session.commit()
+        await session.flush()
         return
     if fan_user_id and creator_user_id:
         sub = Subscription(
@@ -276,7 +332,7 @@ async def _upsert_subscription_from_stripe(
             stripe_subscription_id=stripe_subscription.id,
         )
         session.add(sub)
-        await session.commit()
+        await session.flush()
         return
     logger.warning(
         "customer.subscription created/updated with no fan/creator mapping; stripe_subscription_id=%s (check metadata or checkout.session.completed)",
@@ -302,7 +358,7 @@ async def _handle_subscription_deleted(
     if not sub:
         return
     sub.status = "canceled"
-    await session.commit()
+    await session.flush()
 
 
 async def _handle_invoice_paid(
@@ -323,7 +379,7 @@ async def _handle_invoice_paid(
         sub.current_period_end = _period_end_from_stripe(period_end_ts)
     sub.status = "active"
     sub.renew_at = sub.current_period_end
-    await session.commit()
+    await session.flush()
 
     settings = get_settings()
     amount_paid_cents = invoice.get("amount_paid") or 0
@@ -343,6 +399,7 @@ async def _handle_invoice_paid(
             amount=platform_amount,
             direction=LEDGER_DIRECTION_CREDIT,
             reference=reference,
+            auto_commit=False,
         )
     if creator_amount > 0:
         await create_ledger_entry(
@@ -352,7 +409,27 @@ async def _handle_invoice_paid(
             amount=creator_amount,
             direction=LEDGER_DIRECTION_CREDIT,
             reference=reference,
+            auto_commit=False,
         )
+
+
+async def _handle_invoice_payment_failed(
+    session: AsyncSession, invoice: stripe.Invoice
+) -> None:
+    """Set local subscription to past_due on failed invoice payment."""
+    sub_id = invoice.get("subscription")
+    if not sub_id:
+        return
+    result = await session.execute(
+        select(Subscription).where(Subscription.stripe_subscription_id == sub_id)
+    )
+    sub = result.scalar_one_or_none()
+    if not sub:
+        return
+    if sub.status == "canceled":
+        return
+    sub.status = "past_due"
+    await session.flush()
 
 
 async def _handle_subscription_created(
@@ -380,38 +457,258 @@ def _is_handled_event_type(typ: str) -> bool:
         "customer.subscription.updated",
         "customer.subscription.deleted",
         "invoice.paid",
+        "invoice.payment_succeeded",
+        "invoice.payment_failed",
+        "payment_intent.succeeded",
+        "payment_intent.payment_failed",
+        "payment_intent.canceled",
+        "charge.refunded",
+        "charge.dispute.created",
     )
 
 
-async def handle_stripe_event(session: AsyncSession, event: stripe.Event) -> None:
-    """Dispatch webhook event to handlers (called only when event was new). Unknown types logged and ignored."""
+async def _handle_payment_intent_succeeded(
+    session: AsyncSession, pi: dict
+) -> None:
+    """Handle payment_intent.succeeded for tips and PPV. Idempotent by PI id."""
+    metadata = pi.get("metadata") or {}
+    pi_type = metadata.get("type")
+    amount = pi.get("amount") or 0
+    currency = (pi.get("currency") or "usd").lower()
+    settings = get_settings()
+    fee_pct = Decimal(str(settings.platform_fee_percent)) / 100
+    amount_dec = Decimal(amount) / 100
+    fee_cents = int((amount_dec * fee_pct * 100).quantize(Decimal("1")))
+    gross_cents = amount
+    net_cents = gross_cents - fee_cents
+
+    if pi_type == "TIP":
+        tip_id = metadata.get("tip_id")
+        creator_id_str = metadata.get("creator_id")
+        if not tip_id or not creator_id_str:
+            logger.warning("payment_intent.succeeded TIP missing metadata tip_id=%s creator_id=%s", tip_id, creator_id_str)
+            return
+        result = await session.execute(
+            select(Tip).where(Tip.id == UUID(tip_id), Tip.stripe_payment_intent_id == pi.get("id"))
+        )
+        tip = result.scalar_one_or_none()
+        if not tip:
+            logger.warning("tip not found or already processed tip_id=%s", tip_id)
+            return
+        if tip.status == "SUCCEEDED":
+            return  # idempotent
+        tip.status = "SUCCEEDED"
+        await create_ledger_event(
+            session,
+            creator_id=UUID(creator_id_str),
+            type="TIP",
+            gross_cents=gross_cents,
+            fee_cents=fee_cents,
+            net_cents=net_cents,
+            currency=currency,
+            reference_type="tip",
+            reference_id=tip_id,
+        )
+        ref = f"stripe_pi:{pi.get('id')}"
+        if net_cents > 0:
+            await create_ledger_entry(
+                session,
+                account_id=creator_pending_account_id(creator_id_str),
+                currency=currency,
+                amount=Decimal(net_cents) / 100,
+                direction=LEDGER_DIRECTION_CREDIT,
+                reference=ref,
+                auto_commit=False,
+            )
+        if fee_cents > 0:
+            await create_ledger_entry(
+                session,
+                account_id=PLATFORM_ACCOUNT_ID,
+                currency=currency,
+                amount=Decimal(fee_cents) / 100,
+                direction=LEDGER_DIRECTION_CREDIT,
+                reference=ref,
+                auto_commit=False,
+            )
+    elif pi_type in ("PPV_UNLOCK", "PPV_MESSAGE_UNLOCK"):
+        purchase_id = metadata.get("purchase_id")
+        result = None
+        if purchase_id:
+            result = await session.execute(
+                select(PpvPurchase).where(
+                    PpvPurchase.id == UUID(purchase_id),
+                    PpvPurchase.stripe_payment_intent_id == pi.get("id"),
+                )
+            )
+        else:
+            result = await session.execute(
+                select(PpvPurchase).where(
+                    PpvPurchase.stripe_payment_intent_id == pi.get("id"),
+                )
+            )
+        purchase = result.scalar_one_or_none() if result is not None else None
+        if not purchase:
+            logger.warning("ppv_purchase not found or already processed purchase_id=%s", purchase_id)
+            return
+        if purchase.status == "SUCCEEDED":
+            return
+        purchase.status = "SUCCEEDED"
+        latest_charge = pi.get("latest_charge")
+        if latest_charge:
+            purchase.stripe_charge_id = str(latest_charge)
+        creator_id_str = metadata.get("creator_id") or str(purchase.creator_id)
+        await create_ledger_event(
+            session,
+            creator_id=UUID(creator_id_str),
+            type="PPV_UNLOCK",
+            gross_cents=gross_cents,
+            fee_cents=fee_cents,
+            net_cents=net_cents,
+            currency=currency,
+            reference_type="ppv_purchase",
+            reference_id=purchase_id,
+        )
+        ref = f"stripe_pi:{pi.get('id')}"
+        if net_cents > 0:
+            await create_ledger_entry(
+                session,
+                account_id=creator_pending_account_id(creator_id_str),
+                currency=currency,
+                amount=Decimal(net_cents) / 100,
+                direction=LEDGER_DIRECTION_CREDIT,
+                reference=ref,
+                auto_commit=False,
+            )
+        if fee_cents > 0:
+            await create_ledger_entry(
+                session,
+                account_id=PLATFORM_ACCOUNT_ID,
+                currency=currency,
+                amount=Decimal(fee_cents) / 100,
+                direction=LEDGER_DIRECTION_CREDIT,
+                reference=ref,
+                auto_commit=False,
+            )
+    await session.flush()
+
+
+async def _handle_payment_intent_failed_or_canceled(
+    session: AsyncSession, pi: dict
+) -> None:
+    """Mark tip or ppv as CANCELED."""
+    metadata = pi.get("metadata") or {}
+    pi_type = metadata.get("type")
+    if pi_type == "TIP":
+        tip_id = metadata.get("tip_id")
+        if tip_id:
+            result = await session.execute(select(Tip).where(Tip.id == UUID(tip_id)))
+            tip = result.scalar_one_or_none()
+            if tip and tip.status == "REQUIRES_PAYMENT":
+                tip.status = "CANCELED"
+    elif pi_type in ("PPV_UNLOCK", "PPV_MESSAGE_UNLOCK"):
+        purchase_id = metadata.get("purchase_id")
+        if purchase_id:
+            result = await session.execute(select(PpvPurchase).where(PpvPurchase.id == UUID(purchase_id)))
+            purchase = result.scalar_one_or_none()
+            if purchase and purchase.status == "REQUIRES_PAYMENT":
+                purchase.status = "CANCELED"
+    await session.flush()
+
+
+async def _handle_charge_refunded(session: AsyncSession, charge: dict) -> None:
+    charge_id = charge.get("id")
+    if not charge_id:
+        return
+    result = await session.execute(
+        select(PpvPurchase).where(PpvPurchase.stripe_charge_id == str(charge_id))
+    )
+    purchase = result.scalar_one_or_none()
+    if not purchase:
+        return
+    if purchase.status == "REFUNDED":
+        return
+    purchase.status = "REFUNDED"
+    await session.flush()
+
+
+async def _handle_charge_dispute_created(session: AsyncSession, dispute: dict) -> None:
+    """
+    Handle charge.dispute.created: freeze access for the disputed charge.
+    Log for admin review. In production, this should trigger an alert.
+    """
+    charge_id = dispute.get("charge")
+    reason = dispute.get("reason", "unknown")
+    amount = dispute.get("amount", 0)
+    logger.warning(
+        "stripe_dispute_created charge_id=%s reason=%s amount=%s",
+        charge_id,
+        reason,
+        amount,
+    )
+    if not charge_id:
+        return
+    # Check if it's a PPV purchase and freeze it
+    result = await session.execute(
+        select(PpvPurchase).where(PpvPurchase.stripe_charge_id == str(charge_id))
+    )
+    purchase = result.scalar_one_or_none()
+    if purchase:
+        purchase.status = "DISPUTED"
+        logger.warning(
+            "ppv_purchase_disputed purchase_id=%s charge_id=%s",
+            purchase.id,
+            charge_id,
+        )
+    # Also check subscriptions related to this charge
+    # Disputes on subscription invoices should flag the subscription
+    await session.flush()
+
+
+async def handle_stripe_event(
+    session: AsyncSession,
+    event: stripe.Event,
+) -> str:
+    """Dispatch webhook event handlers and return outcome: processed|ignored|error."""
     typ = event.get("type") or ""
     event_id = event.get("id") or ""
     if _is_handled_event_type(typ):
-        if typ == "checkout.session.completed":
-            await _handle_checkout_session_completed(session, event)
-        elif typ == "customer.subscription.created":
-            await _handle_subscription_created(session, event)
-        elif typ == "customer.subscription.updated":
-            await _handle_subscription_updated(session, event["data"]["object"])
-        elif typ == "customer.subscription.deleted":
-            await _handle_subscription_deleted(session, event["data"]["object"])
-        elif typ == "invoice.paid":
-            await _handle_invoice_paid(session, event["data"]["object"])
-        logger.info(
-            "stripe webhook handled event_id=%s event_type=%s",
-            event_id,
-            typ,
-        )
+        try:
+            if typ == "checkout.session.completed":
+                await _handle_checkout_session_completed(session, event)
+            elif typ == "customer.subscription.created":
+                await _handle_subscription_created(session, event)
+            elif typ == "customer.subscription.updated":
+                await _handle_subscription_updated(session, event["data"]["object"])
+            elif typ == "customer.subscription.deleted":
+                await _handle_subscription_deleted(session, event["data"]["object"])
+            elif typ in ("invoice.paid", "invoice.payment_succeeded"):
+                await _handle_invoice_paid(session, event["data"]["object"])
+            elif typ == "invoice.payment_failed":
+                await _handle_invoice_payment_failed(session, event["data"]["object"])
+            elif typ == "payment_intent.succeeded":
+                await _handle_payment_intent_succeeded(session, event["data"]["object"])
+            elif typ in ("payment_intent.payment_failed", "payment_intent.canceled"):
+                await _handle_payment_intent_failed_or_canceled(session, event["data"]["object"])
+            elif typ == "charge.refunded":
+                await _handle_charge_refunded(session, event["data"]["object"])
+            elif typ == "charge.dispute.created":
+                await _handle_charge_dispute_created(session, event["data"]["object"])
+            logger.info("stripe webhook handled event_id=%s event_type=%s", event_id, typ)
+            return "processed"
+        except Exception:
+            # Dead-letter logging: log the failure for investigation
+            logger.exception(
+                "stripe webhook handler failed event_id=%s event_type=%s",
+                event_id,
+                typ,
+            )
+            raise
     else:
-        logger.info(
-            "stripe webhook ignored event type event_id=%s event_type=%s",
-            event_id,
-            typ,
-        )
+        logger.info("stripe webhook ignored event type event_id=%s event_type=%s", event_id, typ)
+        return "ignored"
 
 
-def _subscription_active_filter():
+def _subscription_active_filter() -> Any:
     """Condition: status active and (current_period_end is None or in future)."""
     now = datetime.now(timezone.utc)
     return or_(

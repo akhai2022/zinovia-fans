@@ -170,7 +170,7 @@ async def list_creator_posts(
         include_locked=include_locked,
     )
     items = [
-        PostOut(**(_post_to_out_locked(p, reason) if is_locked else _post_to_out(p)))
+        PostOut(**(_post_to_out_locked(p, reason or "") if is_locked else _post_to_out(p)))
         for p, is_locked, reason in posts_with_lock
     ]
     return PostPage(items=items, total=total, page=page, page_size=page_size)

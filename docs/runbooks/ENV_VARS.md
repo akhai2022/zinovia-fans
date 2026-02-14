@@ -1,0 +1,43 @@
+# Environment Variables
+
+## Phase 1 Feature Flags (API)
+- `ENABLE_LIKES` (default `false`)
+- `ENABLE_COMMENTS` (default `false`)
+- `ENABLE_NOTIFICATIONS` (default `false`)
+- `ENABLE_VAULT` (default `false`)
+- `ENABLE_SCHEDULED_POSTS` (default `false`)
+- `ENABLE_PPVM` (default `false`)
+
+## Phase 1 Rate Limits (API)
+- `RATE_LIMIT_LIKES_PER_MIN` (default `60`)
+- `RATE_LIMIT_COMMENTS_PER_MIN` (default `30`)
+- `PPV_INTENT_RATE_LIMIT_PER_MIN` (default `10`)
+- `DEFAULT_CURRENCY` (default `usd`)
+- `MIN_PPV_CENTS` (default `100`)
+- `MAX_PPV_CENTS` (default `20000`)
+
+## Phase 2/3 Feature Flags (API + Web placeholders)
+- `ENABLE_PROMOTIONS`
+- `ENABLE_DM_BROADCAST`
+- `ENABLE_PPV_POSTS`
+- `ENABLE_MODERATION`
+- `ENABLE_ANALYTICS`
+- `ENABLE_MOBILE_NAV_POLISH`
+
+Web equivalents:
+- `NEXT_PUBLIC_ENABLE_PROMOTIONS`
+- `NEXT_PUBLIC_ENABLE_DM_BROADCAST`
+- `NEXT_PUBLIC_ENABLE_PPV_POSTS`
+- `NEXT_PUBLIC_ENABLE_MODERATION`
+- `NEXT_PUBLIC_ENABLE_ANALYTICS`
+- `NEXT_PUBLIC_ENABLE_MOBILE_NAV_POLISH`
+- `NEXT_PUBLIC_ENABLE_PPVM`
+
+## Existing Required Core Vars
+- `DATABASE_URL`
+- `REDIS_URL`
+- `JWT_SECRET`
+- `STORAGE` + S3/MinIO storage vars
+- `CORS_ORIGINS`
+- `COOKIE_SECURE`, `COOKIE_SAMESITE`, `COOKIE_DOMAIN`
+

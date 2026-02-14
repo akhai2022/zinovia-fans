@@ -18,26 +18,29 @@ const WATERMARK_SRC = "/brand/zinovia-verified.svg";
  */
 export function PostMediaImage({
   assetId,
+  variant,
   className,
   watermark = false,
 }: {
   assetId: string;
+  variant?: "thumb" | "grid" | "full" | "poster";
   className?: string;
   /** Show "Validated by Zinovia Fans" badge bottom-right (e.g. profile grid only) */
   watermark?: boolean;
 }) {
-  const [url, setUrl] = useState<string | null>(() => signedUrlCache.get(assetId) ?? null);
+  const cacheKey = variant ? `${assetId}:${variant}` : assetId;
+  const [url, setUrl] = useState<string | null>(() => signedUrlCache.get(cacheKey) ?? null);
 
   useEffect(() => {
-    if (signedUrlCache.has(assetId)) {
-      setUrl(signedUrlCache.get(assetId)!);
+    if (signedUrlCache.has(cacheKey)) {
+      setUrl(signedUrlCache.get(cacheKey)!);
       return;
     }
     let cancelled = false;
-    MediaService.mediaDownloadUrl(assetId)
+    MediaService.mediaDownloadUrl(assetId, variant ?? null)
       .then((res) => {
         if (!cancelled && res.download_url) {
-          signedUrlCache.set(assetId, res.download_url);
+          signedUrlCache.set(cacheKey, res.download_url);
           setUrl(res.download_url);
         }
       })
@@ -47,7 +50,7 @@ export function PostMediaImage({
     return () => {
       cancelled = true;
     };
-  }, [assetId]);
+  }, [assetId, cacheKey, variant]);
 
   const placeholder = (
     <div

@@ -40,9 +40,9 @@ function ToastViewport({ toasts }: { toasts: ToastItem[] }) {
         <div
           key={t.id}
           className={cn(
-            "pointer-events-auto rounded-brand border border-border bg-card px-4 py-3 text-sm text-card-foreground shadow-lg",
-            t.variant === "success" && "border-green-500/50 bg-green-50 dark:bg-green-950/30",
-            t.variant === "error" && "border-destructive/50 bg-destructive/10 text-destructive"
+            "pointer-events-auto rounded-brand border border-border bg-card px-4 py-3 text-sm text-card-foreground shadow-premium-md",
+            t.variant === "success" && "border-success/30 bg-success/10 text-success",
+            t.variant === "error" && "border-destructive/30 bg-destructive/10 text-destructive"
           )}
         >
           {t.message}

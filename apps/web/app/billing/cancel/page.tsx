@@ -18,7 +18,7 @@ function CancelContent() {
     <Page className="flex min-h-[50vh] flex-col items-center justify-center gap-6">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          <h1 className="font-display text-premium-h3 font-semibold text-foreground">
             Payment canceled
           </h1>
         </CardHeader>
@@ -30,7 +30,7 @@ function CancelContent() {
             <Button asChild>
               <Link href={returnTo}>{returnLabel}</Link>
             </Button>
-            <Button variant="outline" asChild>
+            <Button variant="secondary" asChild>
               <Link href="/feed">Feed</Link>
             </Button>
           </div>

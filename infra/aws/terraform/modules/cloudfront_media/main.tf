@@ -45,6 +45,17 @@ resource "aws_cloudfront_distribution" "media" {
 
   aliases = var.domain_aliases
 
+  dynamic "logging_config" {
+    for_each = var.logs_bucket_domain != null ? [1] : []
+    content {
+      bucket          = var.logs_bucket_domain
+      prefix          = var.logs_prefix
+      include_cookies = false
+    }
+  }
+
+  web_acl_id = var.web_acl_id
+
   tags = { Name = "${var.name_prefix}-media-cdn" }
 }
 

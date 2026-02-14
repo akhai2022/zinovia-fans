@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
+from app.modules.auth.constants import DEFAULT_USER_ROLE
 from app.modules.auth.models import Profile, User
 from app.modules.auth.security import create_access_token, hash_password, verify_password
 
@@ -15,6 +16,28 @@ async def create_user(
     session: AsyncSession, email: str, password: str, display_name: str
 ) -> User:
     user = User(email=email, password_hash=hash_password(password))
+    profile = Profile(user=user, display_name=display_name)
+    session.add_all([user, profile])
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise AppError(status_code=400, detail="email_already_registered") from exc
+    await session.refresh(user)
+    return user
+
+
+async def register_creator(
+    session: AsyncSession, email: str, password: str
+) -> User:
+    """Create creator (user with role=creator, onboarding_state=CREATED)."""
+    display_name = email.split("@")[0] or "Creator"
+    user = User(
+        email=email,
+        password_hash=hash_password(password),
+        role=DEFAULT_USER_ROLE,
+        onboarding_state="CREATED",
+    )
     profile = Profile(user=user, display_name=display_name)
     session.add_all([user, profile])
     try:

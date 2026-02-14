@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,28 +12,39 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        populate_by_name=True,
     )
 
-    environment: Literal["local", "staging", "production"] = "local"
+    environment: Literal["local", "production", "prod"] = "local"
 
     database_url: str = Field(alias="DATABASE_URL")
-    redis_url: str = Field(alias="REDIS_URL")
+    redis_url: str = Field(default="", alias="REDIS_URL")
 
-    minio_endpoint: str = Field(alias="MINIO_ENDPOINT")
+    # Storage: minio (local) or s3 (AWS ECS). When s3, use S3_BUCKET + IAM role.
+    storage: Literal["minio", "s3"] = Field(default="minio", alias="STORAGE")
+    s3_bucket: str | None = Field(default=None, alias="S3_BUCKET")
+    aws_region: str | None = Field(default=None, alias="AWS_REGION")
+
+    minio_endpoint: str = Field(default="", alias="MINIO_ENDPOINT")
     minio_public_endpoint: str | None = Field(default=None, alias="MINIO_PUBLIC_ENDPOINT")
-    minio_access_key: str = Field(alias="MINIO_ACCESS_KEY")
-    minio_secret_key: str = Field(alias="MINIO_SECRET_KEY")
-    minio_bucket: str = Field(alias="MINIO_BUCKET")
-    minio_secure: bool = Field(alias="MINIO_SECURE")
+    minio_access_key: str = Field(default="", alias="MINIO_ACCESS_KEY")
+    minio_secret_key: str = Field(default="", alias="MINIO_SECRET_KEY")
+    minio_bucket: str = Field(default="", alias="MINIO_BUCKET")
+    minio_secure: bool = Field(default=False, alias="MINIO_SECURE")
 
     jwt_secret: str = Field(alias="JWT_SECRET")
-    jwt_algorithm: str = Field(alias="JWT_ALGORITHM")
-    jwt_expire_minutes: int = Field(alias="JWT_EXPIRE_MINUTES")
+    jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
+    jwt_expire_minutes: int = Field(default=60 * 24 * 7, alias="JWT_EXPIRE_MINUTES")
 
-    cookie_secure: bool = Field(alias="COOKIE_SECURE")
+    cookie_secure: bool = Field(default=False, alias="COOKIE_SECURE")
+    cookie_samesite: Literal["lax", "strict", "none"] = Field(
+        default="lax",
+        alias="COOKIE_SAMESITE",
+    )
+    cookie_domain: str | None = Field(default=None, alias="COOKIE_DOMAIN")
     csrf_secret: str = Field(alias="CSRF_SECRET")
 
-    # CORS: comma-separated origins (e.g. http://localhost:3000 for local dev; include 127.0.0.1 if used)
+    # CORS: comma-separated origins (localhost:3000 for local dev; include 127.0.0.1 if used)
     cors_origins: str = Field(
         default="http://localhost:3000,http://127.0.0.1:3000",
         alias="CORS_ORIGINS",
@@ -41,6 +52,10 @@ class Settings(BaseSettings):
 
     stripe_secret_key: str = Field(default="sk_test_placeholder", alias="STRIPE_SECRET_KEY")
     stripe_webhook_secret: str = Field(default="", alias="STRIPE_WEBHOOK_SECRET")
+    stripe_webhook_secret_previous: str = Field(
+        default="",
+        alias="STRIPE_WEBHOOK_SECRET_PREVIOUS",
+    )
     stripe_webhook_test_bypass: bool = Field(default=False, alias="STRIPE_WEBHOOK_TEST_BYPASS")
     checkout_success_url: str = Field(
         default="http://localhost:3000/billing/success",
@@ -51,9 +66,47 @@ class Settings(BaseSettings):
         alias="CHECKOUT_CANCEL_URL",
     )
     platform_fee_percent: float = Field(default=10, alias="PLATFORM_FEE_PERCENT", ge=0, le=100)
-    media_url_ttl_seconds: int = Field(alias="MEDIA_URL_TTL_SECONDS")
-    rate_limit_max: int = Field(alias="RATE_LIMIT_MAX")
-    rate_limit_window_seconds: int = Field(alias="RATE_LIMIT_WINDOW_SECONDS")
+    tip_min_cents: int = Field(default=100, alias="TIP_MIN_CENTS", ge=1)
+    tip_max_cents: int = Field(default=10_000_00, alias="TIP_MAX_CENTS", ge=100)  # $10k
+    rate_limit_messages_per_min: int = Field(
+        default=30, alias="RATE_LIMIT_MESSAGES_PER_MIN", ge=1
+    )
+    rate_limit_payments_per_min: int = Field(
+        default=10, alias="RATE_LIMIT_PAYMENTS_PER_MIN", ge=1
+    )
+    rate_limit_likes_per_min: int = Field(
+        default=60, alias="RATE_LIMIT_LIKES_PER_MIN", ge=1
+    )
+    rate_limit_comments_per_min: int = Field(
+        default=30, alias="RATE_LIMIT_COMMENTS_PER_MIN", ge=1
+    )
+    message_max_length: int = Field(default=2000, alias="MESSAGE_MAX_LENGTH", ge=1)
+    media_url_ttl_seconds: int = Field(default=900, alias="MEDIA_URL_TTL_SECONDS")
+    rate_limit_max: int = Field(default=10, alias="RATE_LIMIT_MAX")
+    rate_limit_window_seconds: int = Field(default=60, alias="RATE_LIMIT_WINDOW_SECONDS")
+
+    # Image upload max size (bytes). Video has separate media_max_video_bytes.
+    media_max_image_bytes: int = Field(
+        default=26_214_400,  # 25 MiB
+        ge=1,
+        alias="MEDIA_MAX_IMAGE_BYTES",
+    )
+
+    # Creator onboarding (Feature 1)
+    kyc_webhook_hmac_secret: str = Field(
+        alias="KYC_WEBHOOK_HMAC_SECRET",
+        default="dev-secret-change-in-prod",
+    )
+    app_base_url: str = Field(alias="APP_BASE_URL", default="http://localhost:3000")
+    api_base_url: str = Field(alias="API_BASE_URL", default="http://localhost:8000")
+    public_web_base_url: str = Field(
+        alias="PUBLIC_WEB_BASE_URL", default="http://localhost:3000"
+    )
+    mail_provider: Literal["console", "ses"] = Field(
+        alias="MAIL_PROVIDER", default="console"
+    )
+    # Default matches production sender; can be overridden via MAIL_FROM env var.
+    mail_from: str = Field(alias="MAIL_FROM", default="noreply@zinovia.ai")
 
     # Watermark for derived image variants (footer only; originals unchanged)
     media_watermark_text: str = Field(
@@ -122,6 +175,60 @@ class Settings(BaseSettings):
         alias="MEDIA_VIDEO_POSTER_MAX_WIDTH",
     )
 
+    # AI image: temporary MVP gate for non-admin to apply to landing.hero
+    allow_brand_asset_write: bool = Field(
+        default=False,
+        alias="ALLOW_BRAND_ASSET_WRITE",
+    )
+    enable_likes: bool = Field(default=False, alias="ENABLE_LIKES")
+    enable_comments: bool = Field(default=False, alias="ENABLE_COMMENTS")
+    enable_notifications: bool = Field(default=False, alias="ENABLE_NOTIFICATIONS")
+    enable_vault: bool = Field(default=False, alias="ENABLE_VAULT")
+    enable_scheduled_posts: bool = Field(default=False, alias="ENABLE_SCHEDULED_POSTS")
+    enable_promotions: bool = Field(default=False, alias="ENABLE_PROMOTIONS")
+    enable_dm_broadcast: bool = Field(default=False, alias="ENABLE_DM_BROADCAST")
+    enable_ppv_posts: bool = Field(default=False, alias="ENABLE_PPV_POSTS")
+    enable_ppvm: bool = Field(default=False, alias="ENABLE_PPVM")
+    enable_moderation: bool = Field(default=False, alias="ENABLE_MODERATION")
+    enable_analytics: bool = Field(default=False, alias="ENABLE_ANALYTICS")
+    enable_mobile_nav_polish: bool = Field(default=False, alias="ENABLE_MOBILE_NAV_POLISH")
+    # Allow mock KYC provider in production (temporary; disable once real provider integrated).
+    enable_mock_kyc: bool = Field(default=False, alias="ENABLE_MOCK_KYC")
+    default_currency: str = Field(default="eur", alias="DEFAULT_CURRENCY")
+
+    # Observability
+    sentry_dsn: str = Field(default="", alias="SENTRY_DSN")
+    sentry_traces_sample_rate: float = Field(default=0.1, alias="SENTRY_TRACES_SAMPLE_RATE")
+    git_sha: str = Field(default="", alias="GIT_SHA")
+    min_ppv_cents: int = Field(default=100, alias="MIN_PPV_CENTS", ge=1)
+    max_ppv_cents: int = Field(default=20000, alias="MAX_PPV_CENTS", ge=1)
+    ppv_intent_rate_limit_per_min: int = Field(
+        default=10,
+        alias="PPV_INTENT_RATE_LIMIT_PER_MIN",
+        ge=1,
+    )
+
+    @model_validator(mode="after")
+    def validate_storage_config(self) -> Settings:
+        if self.cookie_samesite == "none" and not self.cookie_secure:
+            raise ValueError("COOKIE_SECURE must be true when COOKIE_SAMESITE=none")
+        if self.storage == "s3":
+            if not self.s3_bucket:
+                raise ValueError("S3_BUCKET is required when STORAGE=s3")
+        else:  # minio
+            required = (
+                self.minio_endpoint,
+                self.minio_access_key,
+                self.minio_secret_key,
+                self.minio_bucket,
+            )
+            if not all(required):
+                raise ValueError(
+                    "MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, "
+                    "MINIO_BUCKET are required when STORAGE=minio"
+                )
+        return self
+
     @property
     def is_production(self) -> bool:
         return self.environment == "production"
@@ -129,7 +236,10 @@ class Settings(BaseSettings):
     def media_watermark_variant_list(self) -> list[str]:
         return [v.strip() for v in self.media_watermark_variants.split(",") if v.strip()]
 
+    def cors_origins_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    return Settings()  # type: ignore[call-arg]

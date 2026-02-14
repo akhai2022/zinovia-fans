@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CreatorHeader, LockedOverlay } from "@/components/premium";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { createComment, getLikeSummary, likePost, listComments, unlikePost } from "@/features/engagement/api";
 import type { PostItem } from "@/types/creator";
 import type { PostOut, PostWithCreator } from "../api";
 import { PostMediaImage } from "./PostMediaImage";
@@ -30,9 +32,59 @@ export function FeedCard({
   const { addToast } = useToast();
   const isWithCreator = "creator" in post && post.creator;
   const creatorInfo = creator ?? (isWithCreator ? (post as PostWithCreator).creator : null);
+  const [likeCount, setLikeCount] = useState(0);
+  const [viewerLiked, setViewerLiked] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentInput, setCommentInput] = useState("");
+  const [comments, setComments] = useState<Array<{ id: string; body: string; created_at: string }>>([]);
 
   const onActionComingSoon = () => {
     addToast("Coming soon", "default");
+  };
+
+  useEffect(() => {
+    getLikeSummary(post.id)
+      .then((res) => {
+        setLikeCount(res.count);
+        setViewerLiked(res.viewer_liked);
+      })
+      .catch(() => {});
+    listComments(post.id)
+      .then((res) => {
+        setCommentCount(res.total);
+        setComments(res.items);
+      })
+      .catch(() => {});
+  }, [post.id]);
+
+  const onToggleLike = async () => {
+    const nextLiked = !viewerLiked;
+    setViewerLiked(nextLiked);
+    setLikeCount((prev) => Math.max(0, prev + (nextLiked ? 1 : -1)));
+    try {
+      if (nextLiked) {
+        await likePost(post.id);
+      } else {
+        await unlikePost(post.id);
+      }
+    } catch {
+      setViewerLiked(!nextLiked);
+      setLikeCount((prev) => Math.max(0, prev + (nextLiked ? -1 : 1)));
+      addToast("Unable to update like", "error");
+    }
+  };
+
+  const onSubmitComment = async () => {
+    if (!commentInput.trim()) return;
+    try {
+      const created = await createComment(post.id, commentInput);
+      setComments((prev) => [created, ...prev].slice(0, 5));
+      setCommentCount((prev) => prev + 1);
+      setCommentInput("");
+    } catch {
+      addToast("Unable to send comment", "error");
+    }
   };
 
   return (
@@ -71,6 +123,7 @@ export function FeedCard({
                     <PostMediaImage
                       key={assetId}
                       assetId={assetId}
+                      variant={locked ? "thumb" : undefined}
                       className="min-w-0 flex-1 object-cover"
                     />
                   ))}
@@ -100,20 +153,20 @@ export function FeedCard({
             >
               <button
                 type="button"
-                onClick={onActionComingSoon}
+                onClick={onToggleLike}
                 className="font-medium text-brand hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring focus-visible:ring-offset-2 rounded cursor-pointer"
                 aria-label="Like"
               >
-                Like
+                {viewerLiked ? "Liked" : "Like"} ({likeCount})
               </button>
               <span className="text-muted-foreground" aria-hidden>·</span>
               <button
                 type="button"
-                onClick={onActionComingSoon}
+                onClick={() => setCommentsOpen((v) => !v)}
                 className="text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring focus-visible:ring-offset-2 rounded cursor-pointer"
                 aria-label="Comment"
               >
-                Comment
+                Comment ({commentCount})
               </button>
               <span className="text-muted-foreground" aria-hidden>·</span>
               <button
@@ -125,6 +178,34 @@ export function FeedCard({
                 Share
               </button>
             </div>
+            {commentsOpen && (
+              <div className="mt-3 rounded-md border border-border p-2">
+                <div className="flex gap-2">
+                  <input
+                    value={commentInput}
+                    onChange={(e) => setCommentInput(e.target.value)}
+                    placeholder="Write a comment..."
+                    className="h-9 flex-1 rounded border border-input bg-background px-2 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={onSubmitComment}
+                    className="rounded bg-primary px-3 text-xs text-primary-foreground"
+                  >
+                    Send
+                  </button>
+                </div>
+                {comments.length > 0 && (
+                  <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                    {comments.map((comment) => (
+                      <li key={comment.id} className="rounded bg-muted/40 px-2 py-1">
+                        {comment.body}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
         </LockedOverlay>
       </CardContent>

@@ -39,14 +39,30 @@ resource "aws_s3_bucket_lifecycle_configuration" "media" {
   }
 }
 
-# CORS for signed URLs and Range requests (MP4)
+# Server access logging (P1-6). Use enable_logging to avoid count depending on computed values.
+resource "aws_s3_bucket_logging" "media" {
+  count         = var.enable_logging ? 1 : 0
+  bucket        = aws_s3_bucket.media.id
+  target_bucket = var.logs_bucket_id
+  target_prefix = "s3-media/"
+}
+
+# CORS for presigned PUT uploads and Range requests (MP4)
 resource "aws_s3_bucket_cors_configuration" "media" {
   bucket = aws_s3_bucket.media.id
   cors_rule {
-    allowed_headers = ["*"]
-    allowed_methods = ["GET", "HEAD"]
-    allowed_origins = ["*"]
-    expose_headers  = ["Content-Type", "Content-Length", "Content-Range", "Accept-Ranges", "ETag"]
+    allowed_headers = ["*", "Content-Type", "x-amz-*", "Authorization"]
+    allowed_methods = ["GET", "HEAD", "PUT", "POST"]
+    allowed_origins = [
+      "https://zinovia.ai",
+      "https://www.zinovia.ai",
+      "https://app.zinovia.ai",
+      "https://stg-app.zinovia.ai",
+      "https://stg-api.zinovia.ai",
+      "http://localhost:3000",
+      "http://127.0.0.1:3000"
+    ]
+    expose_headers  = ["ETag", "x-amz-request-id", "x-amz-id-2", "Content-Type", "Content-Length", "Content-Range", "Accept-Ranges"]
     max_age_seconds = 3600
   }
 }

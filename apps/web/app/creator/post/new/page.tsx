@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { listVaultMedia, type MediaMineItem } from "@/features/engagement/api";
 import "@/lib/api";
 
 export interface UploadedImage {
@@ -31,6 +32,11 @@ export default function NewPostPage() {
   const [showManualIds, setShowManualIds] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "error" | "ok">("idle");
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [publishAt, setPublishAt] = useState("");
+  const [vaultItems, setVaultItems] = useState<MediaMineItem[]>([]);
+  const [vaultLoading, setVaultLoading] = useState(false);
+  const [vaultSelection, setVaultSelection] = useState<string[]>([]);
 
   const handleImageUpload = (assetId: string, previewUrl?: string | null) => {
     setUploadedImages((prev) => [...prev, { assetId, previewUrl: previewUrl ?? null }]);
@@ -49,8 +55,8 @@ export default function NewPostPage() {
       .map((s) => s.trim())
       .filter(Boolean);
     const fromUpload = uploadedImages.map((u) => u.assetId);
-    const imageAssetIds = [...fromUpload, ...manualIds];
-    const videoIds = videoAssetId ? [videoAssetId] : [];
+    const imageAssetIds = [...fromUpload, ...manualIds, ...vaultSelection];
+    const videoIds = videoAssetId ? [videoAssetId] : (vaultSelection.length > 0 ? [vaultSelection[0]] : []);
     if (type === "IMAGE" && imageAssetIds.length === 0) {
       setErrorDetail("Image posts require at least one image (upload or paste asset IDs).");
       setStatus("error");
@@ -69,12 +75,13 @@ export default function NewPostPage() {
       return;
     }
     const assetIds = type === "VIDEO" ? videoIds : imageAssetIds;
-    const body: PostCreate = {
+    const body: PostCreate & { publish_at?: string | null } = {
       type,
       caption: caption || null,
       visibility,
       nsfw,
       asset_ids: assetIds,
+      publish_at: scheduleEnabled && publishAt ? new Date(publishAt).toISOString() : null,
     };
     try {
       await PostsService.postsCreate(body);
@@ -83,6 +90,17 @@ export default function NewPostPage() {
     } catch (err: unknown) {
       setStatus("error");
       setErrorDetail(err instanceof Error ? err.message : "Failed to create post");
+    }
+  };
+
+  const loadVault = async () => {
+    setVaultLoading(true);
+    try {
+      const mediaType = type === "VIDEO" ? "video" : "image";
+      const res = await listVaultMedia(undefined, mediaType);
+      setVaultItems(res.items);
+    } finally {
+      setVaultLoading(false);
     }
   };
 
@@ -135,6 +153,19 @@ export default function NewPostPage() {
               <Label htmlFor="nsfw" className="text-base">NSFW</Label>
               <Switch id="nsfw" checked={nsfw} onCheckedChange={setNsfw} />
             </div>
+            <div className="space-y-2 rounded-brand border border-border p-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="schedule" className="text-base">Schedule post</Label>
+                <Switch id="schedule" checked={scheduleEnabled} onCheckedChange={setScheduleEnabled} />
+              </div>
+              {scheduleEnabled && (
+                <Input
+                  type="datetime-local"
+                  value={publishAt}
+                  onChange={(e) => setPublishAt(e.target.value)}
+                />
+              )}
+            </div>
             {type === "IMAGE" && (
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -180,6 +211,35 @@ export default function NewPostPage() {
                   )}
                 </div>
                 <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={loadVault} disabled={vaultLoading}>
+                      {vaultLoading ? "Loading vault…" : "Choose from Vault"}
+                    </Button>
+                  </div>
+                  {vaultItems.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {vaultItems.map((item) => {
+                        const active = vaultSelection.includes(item.id);
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() =>
+                              setVaultSelection((prev) =>
+                                prev.includes(item.id)
+                                  ? prev.filter((id) => id !== item.id)
+                                  : [...prev, item.id]
+                              )
+                            }
+                            className={`rounded border p-2 text-left text-xs ${active ? "border-primary bg-primary/10" : "border-border"}`}
+                          >
+                            <p className="truncate">{item.id.slice(0, 8)}</p>
+                            <p className="text-muted-foreground">{new Date(item.created_at).toLocaleDateString()}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={() => setShowManualIds((v) => !v)}
@@ -224,6 +284,23 @@ export default function NewPostPage() {
                   >
                     Remove video
                   </Button>
+                )}
+                <Button type="button" variant="outline" size="sm" onClick={loadVault} disabled={vaultLoading}>
+                  {vaultLoading ? "Loading vault…" : "Choose from Vault"}
+                </Button>
+                {vaultItems.length > 0 && (
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {vaultItems.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setVaultSelection([item.id])}
+                        className={`rounded border p-2 text-left text-xs ${vaultSelection[0] === item.id ? "border-primary bg-primary/10" : "border-border"}`}
+                      >
+                        <p className="truncate">{item.id}</p>
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
             )}

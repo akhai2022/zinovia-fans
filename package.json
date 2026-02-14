@@ -1,6 +1,9 @@
 {
   "name": "zinovia-fans",
   "private": true,
+  "engines": {
+    "node": ">=18"
+  },
   "workspaces": [
     "apps/web",
     "packages/contracts"

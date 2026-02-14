@@ -18,6 +18,9 @@ async def check_db() -> bool:
 
 async def check_redis() -> bool:
     settings = get_settings()
+    if not (settings.redis_url or "").strip():
+        # Redis is optional in no-worker deployments.
+        return True
     client = Redis.from_url(str(settings.redis_url))
     try:
         result = await client.ping()
@@ -25,4 +28,4 @@ async def check_redis() -> bool:
     except Exception:
         return False
     finally:
-        await client.aclose()
+        await client.aclose()  # type: ignore[attr-defined]

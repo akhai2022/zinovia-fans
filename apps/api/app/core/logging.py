@@ -8,7 +8,7 @@ from pythonjsonlogger import jsonlogger
 
 
 class RequestIdFilter(logging.Filter):
-    def __init__(self, request_id_getter) -> None:
+    def __init__(self, request_id_getter: Any) -> None:
         super().__init__()
         self._request_id_getter = request_id_getter
 
@@ -17,7 +17,7 @@ class RequestIdFilter(logging.Filter):
         return True
 
 
-def configure_logging(request_id_getter) -> None:
+def configure_logging(request_id_getter: Any) -> None:
     handler = logging.StreamHandler(sys.stdout)
     formatter = jsonlogger.JsonFormatter(
         "%(asctime)s %(levelname)s %(name)s %(message)s %(request_id)s"
