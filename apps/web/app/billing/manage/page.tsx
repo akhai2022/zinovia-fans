@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Page } from "@/components/brand/Page";
 import {
   Card,
@@ -33,6 +34,7 @@ type BillingStatus = {
 };
 
 export default function BillingManagePage() {
+  const router = useRouter();
   const [status, setStatus] = useState<BillingStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
@@ -46,11 +48,16 @@ export default function BillingManagePage() {
       setStatus(data);
       setError(null);
     } catch (err) {
+      const { kind } = getApiErrorMessage(err);
+      if (kind === "unauthorized") {
+        router.replace("/login?next=/billing/manage");
+        return;
+      }
       setError(getApiErrorMessage(err).message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     fetchStatus();

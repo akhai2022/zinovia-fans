@@ -21,12 +21,15 @@ from app.modules.billing.models import Subscription
 from app.modules.billing.schemas import (
     BillingHealthOut,
     BillingStatusOut,
+    CancelSubscriptionOut,
     CheckoutSubscriptionCreate,
     CheckoutSubscriptionOut,
     SubscriptionStatusItem,
     WebhookAck,
 )
 from app.modules.billing.service import (
+    _get_stripe_key,
+    cancel_subscription,
     create_checkout_session,
     handle_stripe_event,
     mark_stripe_event_processed,
@@ -153,17 +156,18 @@ async def stripe_webhook(
         try:
             event_id = body.get("id") or body.get("event_id")
             event_type = body.get("type", "")
-            if event_id and event_type:
-                import stripe
-                event = stripe.Event.construct_from(body, None)
-                return await _process_stripe_event_once(
-                    session,
-                    request_id=request_id,
-                    event_id=event_id,
-                    event_type=event_type,
-                    event_payload=None,
-                    event_obj=event,
-                )
+            if not event_id or not event_type:
+                raise AppError(status_code=400, detail="test_bypass_missing_id_or_type")
+            import stripe
+            event = stripe.Event.construct_from(body, None)
+            return await _process_stripe_event_once(
+                session,
+                request_id=request_id,
+                event_id=event_id,
+                event_type=event_type,
+                event_payload=body,
+                event_obj=event,
+            )
         except AppError:
             raise
         except Exception as exc:
@@ -199,7 +203,7 @@ async def stripe_webhook(
         request_id=request_id,
         event_id=event.id,
         event_type=event.type,
-        event_payload=None,
+        event_payload=event.to_dict_recursive() if hasattr(event, "to_dict_recursive") else None,
         event_obj=event,
     )
 
@@ -219,10 +223,8 @@ async def billing_portal(
     """Create a Stripe Customer Portal session for the current user."""
     import stripe as stripe_lib
 
+    api_key = _get_stripe_key()
     settings = get_settings()
-    if not (settings.stripe_secret_key or "").strip():
-        raise AppError(status_code=501, detail="Stripe not configured")
-    stripe_lib.api_key = settings.stripe_secret_key
 
     # Find customer ID from an existing subscription
     sub_result = await session.execute(
@@ -241,6 +243,7 @@ async def billing_portal(
     portal_session = stripe_lib.billing_portal.Session.create(
         customer=customer_id,
         return_url=portal_return_url,
+        api_key=api_key,
     )
     return {"portal_url": portal_session.url}
 
@@ -277,6 +280,27 @@ async def billing_status(
             )
             for row in rows
         ],
+    )
+
+
+@router.post(
+    "/subscriptions/{subscription_id}/cancel",
+    response_model=CancelSubscriptionOut,
+    status_code=200,
+    operation_id="billing_cancel_subscription",
+)
+async def cancel_subscription_endpoint(
+    subscription_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+) -> CancelSubscriptionOut:
+    """Cancel a subscription at period end. Fan retains access until current_period_end."""
+    sub = await cancel_subscription(session, subscription_id, current_user.id)
+    return CancelSubscriptionOut(
+        subscription_id=sub.id,
+        status=sub.status,
+        cancel_at_period_end=sub.cancel_at_period_end,
+        current_period_end=sub.current_period_end,
     )
 
 

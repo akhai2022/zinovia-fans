@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AiImagesService, type AiImageJobOut } from "@/features/ai/api";
 import { Page } from "@/components/brand/Page";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import "@/lib/api";
 
 export default function AiImagesListPage() {
+  const router = useRouter();
   const [jobs, setJobs] = useState<AiImageJobOut[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,9 +19,16 @@ export default function AiImagesListPage() {
   useEffect(() => {
     AiImagesService.list()
       .then(setJobs)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
+      .catch((e) => {
+        const status = (e as { status?: number })?.status;
+        if (status === 401) {
+          router.replace("/login?next=/ai/images");
+          return;
+        }
+        setError(e instanceof Error ? e.message : "Failed to load");
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [router]);
 
   if (loading) {
     return (

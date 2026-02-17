@@ -1,152 +1,177 @@
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { LandingHero } from "@/components/landing/LandingHero";
-import { AsSeenIn } from "@/components/landing/AsSeenIn";
 import { FeaturedCreators } from "@/components/landing/FeaturedCreators";
 import { SubscribeInviteVideo } from "@/components/landing/SubscribeInviteVideo";
-import { StatsStrip } from "@/components/landing/StatsStrip";
-import { Testimonials } from "@/components/landing/Testimonials";
 import { SafetyPrivacy } from "@/components/landing/SafetyPrivacy";
 import { ScrollReveal } from "@/components/landing/ScrollReveal";
+import { getDictionary } from "@/lib/i18n/dictionaries";
+import { DEFAULT_LOCALE, LOCALE_COOKIE, SUPPORTED_LOCALES, type Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/lib/i18n/types";
 
-function TrustIcon() {
-  return (
-    <svg className="h-4 w-4 shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-    </svg>
-  );
+const FEATURE_ICONS = [
+  "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z",
+  "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z",
+  "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z",
+  "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
+  "M13 10V3L4 14h7v7l9-11h-7z",
+  "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
+];
+
+function getFeatures(t: Dictionary["features"]) {
+  return [
+    { title: t.subscriptionsTitle, description: t.subscriptionsDesc },
+    { title: t.paidUnlocksTitle, description: t.paidUnlocksDesc },
+    { title: t.directMessagesTitle, description: t.directMessagesDesc },
+    { title: t.tipsTitle, description: t.tipsDesc },
+    { title: t.fastPayoutsTitle, description: t.fastPayoutsDesc },
+    { title: t.analyticsTitle, description: t.analyticsDesc },
+  ];
 }
 
-function ProfileIcon() {
-  return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-    </svg>
-  );
+function getHowItWorks(t: Dictionary["howItWorks"]) {
+  return [
+    { step: "01", title: t.step1Title, description: t.step1Desc },
+    { step: "02", title: t.step2Title, description: t.step2Desc },
+    { step: "03", title: t.step3Title, description: t.step3Desc },
+  ];
 }
 
-function ContentIcon() {
-  return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
-    </svg>
-  );
+function getFaq(t: Dictionary["faq"]) {
+  return [
+    { q: t.q1, a: t.a1 },
+    { q: t.q2, a: t.a2 },
+    { q: t.q3, a: t.a3 },
+    { q: t.q4, a: t.a4 },
+    { q: t.q5, a: t.a5 },
+  ];
 }
 
-function PayoutIcon() {
-  return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
-    </svg>
-  );
-}
+export default async function HomePage() {
+  const localeCookie = cookies().get(LOCALE_COOKIE)?.value ?? DEFAULT_LOCALE;
+  const locale: Locale = (SUPPORTED_LOCALES as readonly string[]).includes(localeCookie)
+    ? (localeCookie as Locale)
+    : DEFAULT_LOCALE;
+  const t = await getDictionary(locale);
 
-const HOW_IT_WORKS = [
-  ["Create your profile", "Set your identity, upload your media, and configure pricing.", ProfileIcon],
-  ["Publish premium content", "Share posts, media, and paid unlock experiences in minutes.", ContentIcon],
-  ["Get paid securely", "Receive recurring subscription revenue and one-time purchases.", PayoutIcon],
-] as const;
+  const FEATURES = getFeatures(t.features);
+  const HOW_IT_WORKS = getHowItWorks(t.howItWorks);
+  const FAQ = getFaq(t.faq);
 
-export default function HomePage() {
   return (
     <main className="hero-bg">
       <LandingHero />
 
-      <AsSeenIn />
-
-      {/* Trust strip */}
-      <section id="trust" className="mx-auto w-full max-w-6xl section-pad px-4 sm:px-6" aria-label="Trust indicators">
-        <div className="grid gap-3 rounded-2xl border border-white/10 bg-card/80 p-5 text-sm text-muted-foreground backdrop-blur-sm sm:grid-cols-3 sm:text-center">
-          <p className="flex items-center gap-2 sm:justify-center">
-            <TrustIcon />
-            Stripe-powered checkout
-          </p>
-          <p className="flex items-center gap-2 sm:justify-center">
-            <TrustIcon />
-            Verified creator identity
-          </p>
-          <p className="flex items-center gap-2 sm:justify-center">
-            <TrustIcon />
-            Secure private media delivery
-          </p>
-        </div>
-      </section>
-
-      <FeaturedCreators />
-
-      <SubscribeInviteVideo />
-
-      <StatsStrip />
-
-      {/* How it works */}
       <ScrollReveal>
-        <section id="how-it-works" className="mx-auto w-full max-w-6xl section-pad px-4 sm:px-6" aria-labelledby="how-heading">
-          <h2 id="how-heading" className="font-display text-premium-h2 font-semibold text-foreground">
-            How it works
-          </h2>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            {HOW_IT_WORKS.map(([title, copy, Icon]) => (
-              <Card key={title} className="card-hover-lift space-y-3 rounded-2xl border border-white/10 p-6 shadow-premium-sm">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-plum/10 text-brand-plum">
-                  <Icon />
+        <FeaturedCreators />
+      </ScrollReveal>
+
+      {/* Features grid */}
+      <ScrollReveal>
+        <section className="mx-auto w-full max-w-6xl section-pad px-4 sm:px-6" aria-labelledby="features-heading">
+          <div className="text-center">
+            <h2 id="features-heading" className="font-display text-premium-h2 font-bold text-foreground">
+              {t.features.heading}
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
+              {t.features.subheading}
+            </p>
+          </div>
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map(({ title, description }, i) => (
+              <div
+                key={title}
+                className="card-hover-lift flex flex-col gap-4 rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-6"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10 text-violet-400">
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" d={FEATURE_ICONS[i]} />
+                  </svg>
                 </div>
-                <h3 className="text-base font-semibold text-foreground">{title}</h3>
-                <p className="text-sm leading-relaxed text-muted-foreground prose-width">{copy}</p>
-              </Card>
+                <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+              </div>
             ))}
           </div>
         </section>
       </ScrollReveal>
 
-      {/* Pricing */}
       <ScrollReveal>
-        <section id="pricing" className="mx-auto w-full max-w-6xl section-pad px-4 sm:px-6" aria-labelledby="pricing-heading">
-          <h2 id="pricing-heading" className="font-display text-premium-h2 font-semibold text-foreground">
-            Simple pricing
-          </h2>
-          <div className="mt-8 grid gap-4 md:grid-cols-2">
-            <Card className="card-hover-lift space-y-3 rounded-2xl border border-white/10 p-6 shadow-premium-sm">
-              <Badge variant="primary" className="w-fit">Starter</Badge>
-              <p className="text-3xl font-semibold text-foreground">€0</p>
-              <p className="text-sm leading-relaxed text-muted-foreground prose-width">
-                Publish your profile and start building your audience — no upfront cost.
-              </p>
-            </Card>
-            <Card className="card-hover-lift space-y-3 rounded-2xl border border-brand-plum/20 p-6 shadow-premium-md">
-              <Badge variant="accent" className="w-fit">Growth</Badge>
-              <p className="text-3xl font-semibold text-foreground">Platform fee on earnings</p>
-              <p className="text-sm leading-relaxed text-muted-foreground prose-width">
-                Subscriptions, paid unlocks, and private messaging tools — all included.
-              </p>
-            </Card>
+        <SubscribeInviteVideo />
+      </ScrollReveal>
+
+      {/* How it works */}
+      <ScrollReveal>
+        <section className="mx-auto w-full max-w-6xl section-pad px-4 sm:px-6" aria-labelledby="how-heading">
+          <div className="text-center">
+            <h2 id="how-heading" className="font-display text-premium-h2 font-bold text-foreground">
+              {t.howItWorks.heading}
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
+              {t.howItWorks.subheading}
+            </p>
+          </div>
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
+            {HOW_IT_WORKS.map(({ step, title, description }) => (
+              <div key={step} className="relative rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-6">
+                <span className="text-gradient-brand text-4xl font-bold">{step}</span>
+                <h3 className="mt-3 text-base font-semibold text-foreground">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
+              </div>
+            ))}
           </div>
         </section>
       </ScrollReveal>
 
       <ScrollReveal>
-        <Testimonials />
+        <SafetyPrivacy t={t.safety} />
       </ScrollReveal>
 
+      {/* FAQ */}
       <ScrollReveal>
-        <SafetyPrivacy />
+        <section className="mx-auto w-full max-w-4xl section-pad px-4 sm:px-6" aria-labelledby="faq-heading">
+          <div className="text-center">
+            <h2 id="faq-heading" className="font-display text-premium-h2 font-bold text-foreground">
+              {t.faq.heading}
+            </h2>
+          </div>
+          <div className="mt-10 divide-y divide-white/[0.06]">
+            {FAQ.map(({ q, a }) => (
+              <details key={q} className="group py-5">
+                <summary className="flex cursor-pointer items-center justify-between text-sm font-medium text-foreground">
+                  {q}
+                  <svg
+                    className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-45"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                </summary>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{a}</p>
+              </details>
+            ))}
+          </div>
+        </section>
       </ScrollReveal>
 
       {/* Final CTA */}
-      <section id="cta" className="mx-auto w-full max-w-6xl section-pad px-4 pb-20 text-center sm:px-6" aria-labelledby="cta-heading">
-        <h2 id="cta-heading" className="font-display text-premium-h2 font-semibold text-foreground">
-          Ready to start?
+      <section className="mx-auto w-full max-w-6xl section-pad px-4 pb-24 text-center sm:px-6" aria-labelledby="cta-heading">
+        <h2 id="cta-heading" className="font-display text-premium-h2 font-bold text-foreground">
+          {t.cta.heading}
         </h2>
-        <p className="mx-auto mt-3 max-w-[55ch] text-premium-body text-muted-foreground">
-          Join Zinovia.ai today — whether you&apos;re a creator launching your brand or a fan looking for exclusive content.
+        <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
+          {t.cta.description}
         </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <Button size="lg" className="btn-cta-primary" asChild>
-            <Link href="/signup">Create your account</Link>
+        <div className="mt-8 flex flex-wrap justify-center gap-4">
+          <Button size="lg" className="btn-cta-primary h-12 px-8 text-base" asChild>
+            <Link href="/signup">{t.cta.ctaStart}</Link>
           </Button>
-          <Button size="lg" variant="secondary" asChild>
-            <Link href="/creators">Explore creators</Link>
+          <Button size="lg" variant="secondary" className="h-12 px-8 text-base" asChild>
+            <Link href="/creators">{t.cta.ctaExplore}</Link>
           </Button>
         </div>
       </section>

@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import logging
 from typing import Any
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from uuid import uuid4
 from uuid import UUID
 
 import stripe
+import sqlalchemy as sa
 from sqlalchemy import or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,8 +26,18 @@ from app.modules.billing.constants import (
     creator_pending_account_id,
 )
 from app.modules.billing.models import CreatorPlan, StripeEvent, Subscription
-from app.modules.ledger.constants import LEDGER_DIRECTION_CREDIT
+from app.modules.ledger.constants import LEDGER_DIRECTION_CREDIT, LEDGER_DIRECTION_DEBIT
 from app.modules.ledger.service import create_ledger_entry, create_ledger_event
+from app.modules.audit.service import (
+    log_audit_event,
+    ACTION_DISPUTE_CLOSED,
+    ACTION_DISPUTE_CREATED,
+    ACTION_PAYMENT_FAILED,
+    ACTION_PAYMENT_SUCCEEDED,
+    ACTION_REFUND,
+    ACTION_SUBSCRIPTION_CANCELED,
+    ACTION_SUBSCRIPTION_CREATED,
+)
 from app.modules.payments.models import PpvPurchase, Tip
 
 STRIPE_KEY_PLACEHOLDER = "sk_test_placeholder"
@@ -105,17 +116,24 @@ async def get_stripe_event_processed_at(
     return result.scalar_one_or_none()
 
 
+def _get_stripe_key() -> str:
+    """Return the configured Stripe secret key or raise."""
+    settings = get_settings()
+    key = (settings.stripe_secret_key or "").strip()
+    if not key or key == STRIPE_KEY_PLACEHOLDER:
+        raise AppError(status_code=501, detail="Stripe not configured in this environment")
+    return key
+
+
 def _ensure_stripe_price(plan: CreatorPlan) -> str:
     """Create Stripe Product and Price if plan has no stripe_price_id; return price id."""
-    settings = get_settings()
-    if not settings.stripe_secret_key or settings.stripe_secret_key == STRIPE_KEY_PLACEHOLDER:
-        raise AppError(status_code=501, detail="Stripe not configured in this environment")
-    stripe.api_key = settings.stripe_secret_key
+    api_key = _get_stripe_key()
     if plan.stripe_price_id:
         return plan.stripe_price_id
     product = stripe.Product.create(
         name="Creator subscription",
         metadata={"creator_user_id": str(plan.creator_user_id)},
+        api_key=api_key,
     )
     unit_amount = int(Decimal(plan.price) * 100)
     price = stripe.Price.create(
@@ -124,6 +142,7 @@ def _ensure_stripe_price(plan: CreatorPlan) -> str:
         currency=plan.currency.lower(),
         recurring={"interval": "month"},
         metadata={"creator_user_id": str(plan.creator_user_id)},
+        api_key=api_key,
     )
     if plan.stripe_product_id != product.id:
         plan.stripe_product_id = product.id
@@ -194,9 +213,9 @@ async def create_checkout_session(
     if not plan.active or not plan.stripe_price_id:
         raise AppError(status_code=400, detail="creator_plan_inactive")
     settings = get_settings()
+    api_key = _get_stripe_key()
     success_url = success_url or settings.checkout_success_url
     cancel_url = cancel_url or settings.checkout_cancel_url
-    stripe.api_key = settings.stripe_secret_key
     metadata: dict[str, str] = {
         "fan_user_id": str(fan_user_id),
         "creator_user_id": str(creator_user_id),
@@ -212,6 +231,8 @@ async def create_checkout_session(
         cancel_url=cancel_url,
         metadata=metadata,
         subscription_data={"metadata": metadata},
+        automatic_tax={"enabled": True},
+        api_key=api_key,
     )
     logger.info(
         "stripe checkout created fan_user_id=%s creator_user_id=%s correlation_id=%s",
@@ -252,7 +273,7 @@ async def _handle_checkout_session_completed(
     current_period_end = None
     cancel_at_period_end = False
     if sub_id:
-        stripe_sub = stripe.Subscription.retrieve(sub_id)
+        stripe_sub = stripe.Subscription.retrieve(sub_id, api_key=_get_stripe_key())
         status = (stripe_sub.get("status") or "active").lower()
         current_period_end = _period_end_from_stripe(stripe_sub.get("current_period_end"))
         cancel_at_period_end = bool(stripe_sub.get("cancel_at_period_end"))
@@ -383,7 +404,7 @@ async def _handle_invoice_paid(
 
     settings = get_settings()
     amount_paid_cents = invoice.get("amount_paid") or 0
-    currency = (invoice.get("currency") or "usd").lower()
+    currency = (invoice.get("currency") or "eur").lower()
     amount = Decimal(amount_paid_cents) / 100
     if amount <= 0:
         return
@@ -464,6 +485,7 @@ def _is_handled_event_type(typ: str) -> bool:
         "payment_intent.canceled",
         "charge.refunded",
         "charge.dispute.created",
+        "charge.dispute.closed",
     )
 
 
@@ -474,7 +496,7 @@ async def _handle_payment_intent_succeeded(
     metadata = pi.get("metadata") or {}
     pi_type = metadata.get("type")
     amount = pi.get("amount") or 0
-    currency = (pi.get("currency") or "usd").lower()
+    currency = (pi.get("currency") or "eur").lower()
     settings = get_settings()
     fee_pct = Decimal(str(settings.platform_fee_percent)) / 100
     amount_dec = Decimal(amount) / 100
@@ -616,27 +638,96 @@ async def _handle_payment_intent_failed_or_canceled(
 
 
 async def _handle_charge_refunded(session: AsyncSession, charge: dict) -> None:
+    """Handle charge.refunded for PPV purchases and tips. Creates debit ledger entries to reverse earnings."""
     charge_id = charge.get("id")
+    payment_intent_id = charge.get("payment_intent")
     if not charge_id:
         return
+
+    refund_amount_cents = charge.get("amount_refunded") or 0
+    currency = (charge.get("currency") or "eur").lower()
+    settings = get_settings()
+    fee_pct = Decimal(str(settings.platform_fee_percent)) / 100
+
+    # Check PPV purchases
     result = await session.execute(
         select(PpvPurchase).where(PpvPurchase.stripe_charge_id == str(charge_id))
     )
     purchase = result.scalar_one_or_none()
-    if not purchase:
+    if purchase and purchase.status != "REFUNDED":
+        purchase.status = "REFUNDED"
+        ref = f"refund:{charge_id}"
+        amount_dec = Decimal(refund_amount_cents) / 100
+        creator_debit = (amount_dec * (1 - fee_pct)).quantize(Decimal("0.01"))
+        platform_debit = (amount_dec * fee_pct).quantize(Decimal("0.01"))
+        if creator_debit > 0:
+            await create_ledger_entry(
+                session,
+                account_id=creator_pending_account_id(str(purchase.creator_id)),
+                currency=currency,
+                amount=creator_debit,
+                direction=LEDGER_DIRECTION_DEBIT,
+                reference=ref,
+                auto_commit=False,
+            )
+        if platform_debit > 0:
+            await create_ledger_entry(
+                session,
+                account_id=PLATFORM_ACCOUNT_ID,
+                currency=currency,
+                amount=platform_debit,
+                direction=LEDGER_DIRECTION_DEBIT,
+                reference=ref,
+                auto_commit=False,
+            )
+        await session.flush()
         return
-    if purchase.status == "REFUNDED":
-        return
-    purchase.status = "REFUNDED"
+
+    # Check tips (matched by stripe_payment_intent_id)
+    if payment_intent_id:
+        tip_result = await session.execute(
+            select(Tip).where(Tip.stripe_payment_intent_id == str(payment_intent_id))
+        )
+        tip = tip_result.scalar_one_or_none()
+        if tip and tip.status != "REFUNDED":
+            tip.status = "REFUNDED"
+            ref = f"refund:{charge_id}"
+            amount_dec = Decimal(refund_amount_cents) / 100
+            creator_debit = (amount_dec * (1 - fee_pct)).quantize(Decimal("0.01"))
+            platform_debit = (amount_dec * fee_pct).quantize(Decimal("0.01"))
+            if creator_debit > 0:
+                await create_ledger_entry(
+                    session,
+                    account_id=creator_pending_account_id(str(tip.creator_id)),
+                    currency=currency,
+                    amount=creator_debit,
+                    direction=LEDGER_DIRECTION_DEBIT,
+                    reference=ref,
+                    auto_commit=False,
+                )
+            if platform_debit > 0:
+                await create_ledger_entry(
+                    session,
+                    account_id=PLATFORM_ACCOUNT_ID,
+                    currency=currency,
+                    amount=platform_debit,
+                    direction=LEDGER_DIRECTION_DEBIT,
+                    reference=ref,
+                    auto_commit=False,
+                )
+            await session.flush()
+            return
+
     await session.flush()
 
 
 async def _handle_charge_dispute_created(session: AsyncSession, dispute: dict) -> None:
     """
     Handle charge.dispute.created: freeze access for the disputed charge.
-    Log for admin review. In production, this should trigger an alert.
+    Covers PPV purchases, tips, and subscriptions.
     """
     charge_id = dispute.get("charge")
+    payment_intent_id = dispute.get("payment_intent")
     reason = dispute.get("reason", "unknown")
     amount = dispute.get("amount", 0)
     logger.warning(
@@ -647,20 +738,161 @@ async def _handle_charge_dispute_created(session: AsyncSession, dispute: dict) -
     )
     if not charge_id:
         return
-    # Check if it's a PPV purchase and freeze it
+
+    # Check PPV purchases
     result = await session.execute(
         select(PpvPurchase).where(PpvPurchase.stripe_charge_id == str(charge_id))
     )
     purchase = result.scalar_one_or_none()
     if purchase:
         purchase.status = "DISPUTED"
-        logger.warning(
-            "ppv_purchase_disputed purchase_id=%s charge_id=%s",
-            purchase.id,
-            charge_id,
+        logger.warning("ppv_purchase_disputed purchase_id=%s charge_id=%s", purchase.id, charge_id)
+        await session.flush()
+        return
+
+    # Check tips (via payment_intent)
+    if payment_intent_id:
+        tip_result = await session.execute(
+            select(Tip).where(Tip.stripe_payment_intent_id == str(payment_intent_id))
         )
-    # Also check subscriptions related to this charge
-    # Disputes on subscription invoices should flag the subscription
+        tip = tip_result.scalar_one_or_none()
+        if tip:
+            tip.status = "DISPUTED"
+            logger.warning("tip_disputed tip_id=%s charge_id=%s", tip.id, charge_id)
+            await session.flush()
+            return
+
+    # Check subscriptions (charge may come from a subscription invoice)
+    # Try to find the subscription via Stripe API if payment_intent is available
+    if payment_intent_id:
+        try:
+            api_key = _get_stripe_key()
+            pi = stripe.PaymentIntent.retrieve(payment_intent_id, api_key=api_key)
+            invoice_id = pi.get("invoice")
+            if invoice_id:
+                inv = stripe.Invoice.retrieve(invoice_id, api_key=api_key)
+                stripe_sub_id = inv.get("subscription")
+                if stripe_sub_id:
+                    sub_result = await session.execute(
+                        select(Subscription).where(
+                            Subscription.stripe_subscription_id == str(stripe_sub_id)
+                        )
+                    )
+                    sub = sub_result.scalar_one_or_none()
+                    if sub:
+                        sub.status = "disputed"
+                        logger.warning(
+                            "subscription_disputed subscription_id=%s charge_id=%s",
+                            sub.id, charge_id,
+                        )
+        except Exception:
+            logger.exception("failed to resolve subscription for dispute charge_id=%s", charge_id)
+
+    await session.flush()
+
+
+async def _handle_charge_dispute_closed(session: AsyncSession, dispute: dict) -> None:
+    """Handle charge.dispute.closed: update status based on dispute outcome."""
+    charge_id = dispute.get("charge")
+    payment_intent_id = dispute.get("payment_intent")
+    status = dispute.get("status", "")  # won, lost, needs_response, etc.
+    logger.info("stripe_dispute_closed charge_id=%s status=%s", charge_id, status)
+    if not charge_id:
+        return
+
+    if status == "won":
+        # Dispute won: restore original status
+        result = await session.execute(
+            select(PpvPurchase).where(
+                PpvPurchase.stripe_charge_id == str(charge_id),
+                PpvPurchase.status == "DISPUTED",
+            )
+        )
+        purchase = result.scalar_one_or_none()
+        if purchase:
+            purchase.status = "SUCCEEDED"
+
+        if payment_intent_id:
+            tip_result = await session.execute(
+                select(Tip).where(
+                    Tip.stripe_payment_intent_id == str(payment_intent_id),
+                    Tip.status == "DISPUTED",
+                )
+            )
+            tip = tip_result.scalar_one_or_none()
+            if tip:
+                tip.status = "SUCCEEDED"
+
+            # Restore disputed subscription linked to this payment_intent
+            try:
+                api_key = _get_stripe_key()
+                pi = stripe.PaymentIntent.retrieve(payment_intent_id, api_key=api_key)
+                invoice_id = pi.get("invoice")
+                if invoice_id:
+                    inv = stripe.Invoice.retrieve(invoice_id, api_key=api_key)
+                    stripe_sub_id = inv.get("subscription")
+                    if stripe_sub_id:
+                        sub_result = await session.execute(
+                            select(Subscription).where(
+                                Subscription.stripe_subscription_id == str(stripe_sub_id),
+                                Subscription.status == "disputed",
+                            )
+                        )
+                        sub = sub_result.scalar_one_or_none()
+                        if sub:
+                            sub.status = "active"
+            except Exception:
+                logger.exception("failed to restore subscription after dispute won charge_id=%s", charge_id)
+
+    elif status == "lost":
+        # Dispute lost: create debit ledger entries to reverse earnings
+        currency = (dispute.get("currency") or "eur").lower()
+        amount_cents = dispute.get("amount") or 0
+        settings = get_settings()
+        fee_pct = Decimal(str(settings.platform_fee_percent)) / 100
+        amount_dec = Decimal(amount_cents) / 100
+        ref = f"dispute_lost:{charge_id}"
+
+        # Find the creator to debit
+        creator_id_str = None
+        result = await session.execute(
+            select(PpvPurchase).where(PpvPurchase.stripe_charge_id == str(charge_id))
+        )
+        purchase = result.scalar_one_or_none()
+        if purchase:
+            creator_id_str = str(purchase.creator_id)
+        elif payment_intent_id:
+            tip_result = await session.execute(
+                select(Tip).where(Tip.stripe_payment_intent_id == str(payment_intent_id))
+            )
+            tip = tip_result.scalar_one_or_none()
+            if tip:
+                creator_id_str = str(tip.creator_id)
+
+        if creator_id_str and amount_dec > 0:
+            creator_debit = (amount_dec * (1 - fee_pct)).quantize(Decimal("0.01"))
+            platform_debit = (amount_dec * fee_pct).quantize(Decimal("0.01"))
+            if creator_debit > 0:
+                await create_ledger_entry(
+                    session,
+                    account_id=creator_pending_account_id(creator_id_str),
+                    currency=currency,
+                    amount=creator_debit,
+                    direction=LEDGER_DIRECTION_DEBIT,
+                    reference=ref,
+                    auto_commit=False,
+                )
+            if platform_debit > 0:
+                await create_ledger_entry(
+                    session,
+                    account_id=PLATFORM_ACCOUNT_ID,
+                    currency=currency,
+                    amount=platform_debit,
+                    direction=LEDGER_DIRECTION_DEBIT,
+                    reference=ref,
+                    auto_commit=False,
+                )
+
     await session.flush()
 
 
@@ -673,26 +905,51 @@ async def handle_stripe_event(
     event_id = event.get("id") or ""
     if _is_handled_event_type(typ):
         try:
+            audit_action: str | None = None
+            audit_metadata: dict[str, Any] = {"stripe_event_id": event_id, "event_type": typ}
             if typ == "checkout.session.completed":
                 await _handle_checkout_session_completed(session, event)
+                audit_action = ACTION_SUBSCRIPTION_CREATED
+                meta = (event.get("data", {}).get("object", {}).get("metadata") or {})
+                audit_metadata["fan_user_id"] = meta.get("fan_user_id")
+                audit_metadata["creator_user_id"] = meta.get("creator_user_id")
             elif typ == "customer.subscription.created":
                 await _handle_subscription_created(session, event)
             elif typ == "customer.subscription.updated":
                 await _handle_subscription_updated(session, event["data"]["object"])
             elif typ == "customer.subscription.deleted":
                 await _handle_subscription_deleted(session, event["data"]["object"])
+                audit_action = ACTION_SUBSCRIPTION_CANCELED
             elif typ in ("invoice.paid", "invoice.payment_succeeded"):
                 await _handle_invoice_paid(session, event["data"]["object"])
+                audit_action = ACTION_PAYMENT_SUCCEEDED
             elif typ == "invoice.payment_failed":
                 await _handle_invoice_payment_failed(session, event["data"]["object"])
+                audit_action = ACTION_PAYMENT_FAILED
             elif typ == "payment_intent.succeeded":
                 await _handle_payment_intent_succeeded(session, event["data"]["object"])
+                audit_action = ACTION_PAYMENT_SUCCEEDED
             elif typ in ("payment_intent.payment_failed", "payment_intent.canceled"):
                 await _handle_payment_intent_failed_or_canceled(session, event["data"]["object"])
+                audit_action = ACTION_PAYMENT_FAILED
             elif typ == "charge.refunded":
                 await _handle_charge_refunded(session, event["data"]["object"])
+                audit_action = ACTION_REFUND
             elif typ == "charge.dispute.created":
                 await _handle_charge_dispute_created(session, event["data"]["object"])
+                audit_action = ACTION_DISPUTE_CREATED
+            elif typ == "charge.dispute.closed":
+                await _handle_charge_dispute_closed(session, event["data"]["object"])
+                audit_action = ACTION_DISPUTE_CLOSED
+            if audit_action:
+                await log_audit_event(
+                    session,
+                    action=audit_action,
+                    resource_type="stripe_event",
+                    resource_id=event_id,
+                    metadata=audit_metadata,
+                    auto_commit=False,
+                )
             logger.info("stripe webhook handled event_id=%s event_type=%s", event_id, typ)
             return "processed"
         except Exception:
@@ -709,23 +966,33 @@ async def handle_stripe_event(
 
 
 def _subscription_active_filter() -> Any:
-    """Condition: status active and (current_period_end is None or in future)."""
+    """Condition: (status active OR past_due within grace period) and period not ended."""
     now = datetime.now(timezone.utc)
-    return or_(
+    settings = get_settings()
+    grace_cutoff = now - timedelta(hours=settings.subscription_grace_period_hours)
+    period_valid = or_(
         Subscription.current_period_end.is_(None),
         Subscription.current_period_end > now,
     )
+    status_valid = or_(
+        Subscription.status == "active",
+        # past_due within grace period: allow access if updated_at is recent
+        sa.and_(
+            Subscription.status == "past_due",
+            Subscription.updated_at >= grace_cutoff,
+        ),
+    )
+    return sa.and_(period_valid, status_valid)
 
 
 async def is_active_subscriber(
     session: AsyncSession, fan_user_id: UUID, creator_user_id: UUID
 ) -> bool:
-    """True if fan has an active subscription to creator (status active, period not ended)."""
+    """True if fan has an active (or past_due within grace period) subscription to creator."""
     result = await session.execute(
         select(Subscription).where(
             Subscription.fan_user_id == fan_user_id,
             Subscription.creator_user_id == creator_user_id,
-            Subscription.status == "active",
             _subscription_active_filter(),
         )
     )
@@ -739,8 +1006,48 @@ async def get_subscribed_creator_ids(
     result = await session.execute(
         select(Subscription.creator_user_id).where(
             Subscription.fan_user_id == fan_user_id,
-            Subscription.status == "active",
             _subscription_active_filter(),
         )
     )
     return {row[0] for row in result.all()}
+
+
+async def cancel_subscription(
+    session: AsyncSession,
+    subscription_id: UUID,
+    fan_user_id: UUID,
+) -> Subscription:
+    """Cancel a subscription at period end. Fan retains access until current_period_end."""
+    result = await session.execute(
+        select(Subscription).where(
+            Subscription.id == subscription_id,
+            Subscription.fan_user_id == fan_user_id,
+        )
+    )
+    sub = result.scalar_one_or_none()
+    if not sub:
+        raise AppError(status_code=404, detail="subscription_not_found")
+    if sub.status in ("canceled", "disputed"):
+        raise AppError(status_code=400, detail="subscription_not_cancelable")
+    if not sub.stripe_subscription_id:
+        raise AppError(status_code=400, detail="subscription_not_cancelable")
+
+    api_key = _get_stripe_key()
+    stripe.Subscription.modify(
+        sub.stripe_subscription_id,
+        cancel_at_period_end=True,
+        api_key=api_key,
+    )
+    sub.cancel_at_period_end = True
+    await log_audit_event(
+        session,
+        action=ACTION_SUBSCRIPTION_CANCELED,
+        actor_id=fan_user_id,
+        resource_type="subscription",
+        resource_id=str(subscription_id),
+        metadata={"stripe_subscription_id": sub.stripe_subscription_id},
+        auto_commit=False,
+    )
+    await session.commit()
+    await session.refresh(sub)
+    return sub

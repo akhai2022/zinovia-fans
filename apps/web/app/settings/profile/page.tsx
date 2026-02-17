@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ApiError } from "@zinovia/contracts";
 import {
   CreatorsService,
@@ -50,6 +51,7 @@ const PROFILE_ERROR_MESSAGES: Record<string, string> = {
 };
 
 export default function SettingsProfilePage() {
+  const router = useRouter();
   const { addToast } = useToast();
   const [handle, setHandle] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -73,8 +75,14 @@ export default function SettingsProfilePage() {
         setBannerMediaId(profile.banner_media_id ?? null);
         setPrefillStatus("ok");
       })
-      .catch(() => setPrefillStatus("error"));
-  }, []);
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) {
+          router.replace("/login?next=/settings/profile");
+          return;
+        }
+        setPrefillStatus("error");
+      });
+  }, [router]);
 
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();

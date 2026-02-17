@@ -51,6 +51,7 @@ export function PostMediaVideo({ assetId, className }: PostMediaVideoProps) {
       src={videoUrl}
       className={className}
       playsInline
+      {...{ referrerPolicy: "no-referrer" } as React.VideoHTMLAttributes<HTMLVideoElement>}
     />
   );
 }

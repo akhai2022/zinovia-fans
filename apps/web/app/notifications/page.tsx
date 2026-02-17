@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { listNotifications, markAllNotificationsRead, markNotificationRead, type NotificationOut } from "@/features/engagement/api";
 import { Page } from "@/components/brand/Page";
 import { Button } from "@/components/ui/button";
 
 export default function NotificationsPage() {
+  const router = useRouter();
   const [items, setItems] = useState<NotificationOut[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +19,12 @@ export default function NotificationsPage() {
     try {
       const res = await listNotifications();
       setItems(res.items);
-    } catch {
+    } catch (err) {
+      const status = (err as { status?: number })?.status;
+      if (status === 401) {
+        router.replace("/login?next=/notifications");
+        return;
+      }
       setError("Unable to load notifications.");
     } finally {
       setLoading(false);

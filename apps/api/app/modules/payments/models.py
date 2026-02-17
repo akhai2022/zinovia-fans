@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Any
 
 import sqlalchemy as sa
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -61,6 +61,10 @@ class PpvPurchase(TimestampMixin, Base):
 
     conversation: Mapped["Conversation"] = relationship(
         "Conversation", back_populates="ppv_purchases"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("purchaser_id", "message_media_id", name="uq_ppv_purchase_purchaser_media"),
     )
 
 

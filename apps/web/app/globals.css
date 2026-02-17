@@ -4,74 +4,51 @@
 
 @layer base {
   :root {
-    --bg: #f7f8fb;
-    --surface: #ffffff;
-    --surface-2: #f2f4f8;
-    --text: #0b0f1a;
-    --text-2: #4b5563;
-    --border: #e5e7eb;
-    --primary: #635bff;
-    --primary-hover: #5148ff;
-    --accent: #ff4d6d;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #ef4444;
-
-    --color-bg: 247 248 251;
-    --color-surface: 255 255 255;
-    --color-surface-alt: 242 244 248;
-    --color-text-primary: 11 15 26;
-    --color-text-secondary: 75 85 99;
-    --color-border: 229 231 235;
-    --color-primary: 99 91 255;
-    --color-primary-hover: 81 72 255;
-    --color-accent: 255 77 109;
+    --color-bg: 10 10 14;
+    --color-surface: 18 18 24;
+    --color-surface-alt: 26 26 34;
+    --color-text-primary: 245 245 250;
+    --color-text-secondary: 156 163 175;
+    --color-border: 40 40 52;
+    --color-primary: 139 92 246;
+    --color-primary-hover: 124 58 237;
+    --color-accent: 236 72 153;
     --color-success: 16 185 129;
     --color-warning: 245 158 11;
     --color-danger: 239 68 68;
 
-    --radius-sm: 0.625rem;
-    --radius-md: 0.875rem;
-    --radius-lg: 1.125rem;
-    --radius-xl: 1.125rem;
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.25rem;
     --radius-brand: var(--radius-md);
 
-    /* Avoid network fetch during Docker builds: use system font stack. */
-    --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
-      Arial, "Apple Color Emoji", "Segoe UI Emoji";
-    --font-display: var(--font-sans);
+    /* --font-sans and --font-display are set by next/font classes on <html>.
+       Tailwind fontFamily config provides system-ui fallbacks. */
 
-    --font-size-h1: clamp(2rem, 4vw, 3.25rem);
-    --font-size-h2: clamp(1.5rem, 2.5vw, 2.125rem);
-    --font-size-h3: 1.25rem;
-    --font-size-body: 1rem;
+    --font-size-h1: clamp(2.5rem, 5vw, 4rem);
+    --font-size-h2: clamp(1.75rem, 3vw, 2.75rem);
+    --font-size-h3: clamp(1.125rem, 1.5vw, 1.5rem);
+    --font-size-body: 1.0625rem;
     --font-size-body-sm: 0.9375rem;
     --font-size-small: 0.8125rem;
     --font-size-label: 0.75rem;
 
-    --shadow-sm: 0 2px 8px rgba(11, 15, 26, 0.04);
-    --shadow-md: 0 10px 24px rgba(11, 15, 26, 0.06);
-    --shadow-lg: 0 22px 44px rgba(11, 15, 26, 0.1);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 10px 24px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 22px 44px rgba(0, 0, 0, 0.5);
 
-    --hero-glow:
-      radial-gradient(circle at 18% 20%, rgba(99, 91, 255, 0.16), transparent 35%),
-      radial-gradient(circle at 82% 4%, rgba(99, 91, 255, 0.12), transparent 30%);
-
-    /* Zinovia brand gradient — single source for hero, buttons, accents */
-    --brand-gradient: linear-gradient(135deg, #7c3aed 0%, #a855f7 40%, #c084fc 70%, #e879f9 100%);
-    --brand-gradient-subtle-bg: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(168, 85, 247, 0.06) 50%, rgba(232, 121, 249, 0.04) 100%);
-    /* Luxury accents */
-    --brand-gold: #d4af37;
+    --brand-gradient: linear-gradient(135deg, #7c3aed 0%, #a855f7 35%, #ec4899 70%, #f43f5e 100%);
+    --brand-gradient-subtle-bg: linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(168, 85, 247, 0.07) 50%, rgba(236, 72, 153, 0.05) 100%);
     --brand-plum: #7c3aed;
-    --color-brand-gold: 212 175 55;
+    --brand-gold: #d4af37;
     --color-brand-plum: 124 58 237;
-    /* Section spacing — more breathing room on desktop */
-    --section-padding-y: clamp(2.5rem, 5vw, 5rem);
+    --color-brand-gold: 212 175 55;
+
+    --section-padding-y: clamp(3rem, 6vw, 6rem);
     --section-padding-x: clamp(1rem, 3vw, 1.5rem);
-    /* Body copy max width for readability (55–65ch) */
     --prose-max-width: 60ch;
 
-    /* Compatibility aliases for existing classes/components */
     --background: var(--color-bg);
     --foreground: var(--color-text-primary);
     --card: var(--color-surface);
@@ -88,84 +65,47 @@
     --radius: var(--radius-brand);
   }
 
-  h1, h2, h3 {
-    text-wrap: balance;
-  }
-
-  p {
-    text-wrap: pretty;
-  }
-
-  * {
-    @apply border-border;
-  }
-
-  html {
-    scroll-behavior: smooth;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    html { scroll-behavior: auto; }
-  }
+  h1, h2, h3 { text-wrap: balance; }
+  p { text-wrap: pretty; }
+  * { @apply border-border; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    background-color: rgb(var(--color-bg));
+    color: rgb(var(--color-text-primary));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   :focus-visible {
     outline: 2px solid rgb(var(--color-primary));
     outline-offset: 2px;
   }
-
-  /* Dark / hero backgrounds: ensure focus ring is visible */
-  .hero-bg :focus-visible,
-  .dark :focus-visible {
-    outline-color: rgba(212, 175, 55, 0.9);
-    box-shadow: 0 0 0 2px rgb(var(--color-bg)), 0 0 0 4px rgba(212, 175, 55, 0.5);
-  }
 }
 
 @layer utilities {
-  .hero-bg {
-    background-color: rgb(var(--color-bg));
-    background-image: var(--hero-glow);
+  .hero-bg { background-color: rgb(var(--color-bg)); }
+
+  .section-pad {
+    padding-top: var(--section-padding-y);
+    padding-bottom: var(--section-padding-y);
+    padding-left: var(--section-padding-x);
+    padding-right: var(--section-padding-x);
   }
 
-  /* Subtle noise/grain overlay for luxury feel — slightly stronger, not noisy */
-  .hero-grain {
-    position: relative;
-  }
-  .hero-grain::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.075'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 0;
-  }
+  .prose-width { max-width: var(--prose-max-width); }
 
-  .hero-bg-grid {
-    background-image: radial-gradient(rgba(124, 58, 237, 0.06) 1px, transparent 1px);
-    background-size: 24px 24px;
-  }
-
-  /* Aurora: premium gradient + blur behind hero media */
-  @keyframes aurora-shift {
-    0%, 100% { opacity: 0.5; transform: scale(1) translate(0, 0); }
-    50% { opacity: 0.85; transform: scale(1.06) translate(2%, 2%); }
-  }
-  .aurora-bg {
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.16) 0%, rgba(168, 85, 247, 0.12) 35%, rgba(212, 175, 55, 0.1) 65%, rgba(124, 58, 237, 0.08) 100%);
-    filter: blur(32px);
-    animation: aurora-shift 12s ease-in-out infinite;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .aurora-bg { animation: none; }
+  .text-gradient-brand {
+    background: var(--brand-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
   .card-hover-lift {
     transition: box-shadow 200ms cubic-bezier(0.2, 0.8, 0.2, 1), transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
-
   .card-hover-lift:hover {
     box-shadow: var(--shadow-lg);
     transform: translateY(-2px);
@@ -175,78 +115,60 @@
     .card-hover-lift:hover { transform: none; }
   }
 
-  /* Soft borders for premium sections */
-  .border-soft {
-    border: 1px solid rgb(255 255 255 / 0.1);
-  }
-  .dark .border-soft,
-  .border-soft-on-dark {
-    border: 1px solid rgb(255 255 255 / 0.1);
-  }
-
-  /* Landing section padding — breathing room (py-14 md:py-20) */
-  .section-pad {
-    padding-top: 3.5rem;
-    padding-bottom: 3.5rem;
-    padding-left: var(--section-padding-x);
-    padding-right: var(--section-padding-x);
-  }
-  @media (min-width: 768px) {
-    .section-pad {
-      padding-top: 5rem;
-      padding-bottom: 5rem;
-    }
-  }
-
-  /* Body copy max width */
-  .prose-width {
-    max-width: var(--prose-max-width);
-  }
-
-  /* Primary CTA: slight lift + glow on hover */
   .btn-cta-primary {
-    transition: transform 160ms ease-out, box-shadow 200ms ease-out;
+    background: var(--brand-gradient);
+    color: #fff;
+    font-weight: 600;
+    border: none;
+    transition: transform 160ms ease-out, box-shadow 200ms ease-out, opacity 200ms ease-out;
   }
   .btn-cta-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(124, 58, 237, 0.35);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 32px rgba(139, 92, 246, 0.4);
+    opacity: 0.92;
   }
-  .btn-cta-primary:active {
-    transform: translateY(0);
-  }
+  .btn-cta-primary:active { transform: translateY(0); }
   @media (prefers-reduced-motion: reduce) {
     .btn-cta-primary:hover { transform: none; }
   }
 
-  /* Scroll reveal — CSS only (visibility + translate when in view) */
+  .btn-primary { background: rgb(var(--color-primary)); color: #fff; }
+  .btn-primary:hover { background: rgb(var(--color-primary-hover)); }
+
+  .btn-secondary {
+    border: 1px solid rgb(var(--color-border));
+    background: rgb(var(--color-surface));
+    color: rgb(var(--color-text-primary));
+  }
+  .btn-secondary:hover { background: rgb(var(--color-surface-alt)); }
+
   .scroll-reveal {
     opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform: translateY(24px);
+    transition: opacity 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
-  .scroll-reveal.is-visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  .scroll-reveal.is-visible { opacity: 1; transform: translateY(0); }
   @media (prefers-reduced-motion: reduce) {
     .scroll-reveal { opacity: 1; transform: none; transition: none; }
-    .scroll-reveal.is-visible { opacity: 1; transform: none; }
   }
+
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .animate-marquee { animation: marquee 25s linear infinite; }
+  @media (prefers-reduced-motion: reduce) { .animate-marquee { animation: none; } }
 
   @keyframes gradient-border-spin {
     0%, 100% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
   }
-  /* Single brand gradient (plum + gold) for borders and highlights */
   .gradient-border-wrap {
-    background: linear-gradient(135deg, #7c3aed, #a855f7, #d4af37, #7c3aed);
+    background: linear-gradient(135deg, #7c3aed, #a855f7, #ec4899, #7c3aed);
     background-size: 200% 200%;
-    animation: gradient-border-spin 8s ease infinite;
+    animation: gradient-border-spin 6s ease infinite;
   }
-  @media (prefers-reduced-motion: reduce) {
-    .gradient-border-wrap { animation: none; }
-  }
-
+  @media (prefers-reduced-motion: reduce) { .gradient-border-wrap { animation: none; } }
 
   .card-premium {
     border: 1px solid rgb(var(--color-border));
@@ -254,33 +176,28 @@
     box-shadow: var(--shadow-md);
   }
 
-  .btn-primary {
-    background: rgb(var(--color-primary));
-    color: rgb(var(--color-surface));
+  .ring-brand { box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3); }
+
+  .hero-grain { position: relative; }
+  .hero-grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
   }
 
-  .btn-primary:hover {
-    background: rgb(var(--color-primary-hover));
+  @keyframes aurora-shift {
+    0%, 100% { opacity: 0.4; transform: scale(1) translate(0, 0); }
+    50% { opacity: 0.7; transform: scale(1.05) translate(2%, 2%); }
   }
+  .aurora-bg {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.2) 0%, rgba(168, 85, 247, 0.15) 35%, rgba(236, 72, 153, 0.12) 65%, rgba(124, 58, 237, 0.1) 100%);
+    filter: blur(40px);
+    animation: aurora-shift 12s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) { .aurora-bg { animation: none; } }
 
-  .btn-secondary {
-    border: 1px solid rgb(var(--color-border));
-    background: rgb(var(--color-surface));
-    color: rgb(var(--color-text-primary));
-  }
-
-  .btn-secondary:hover {
-    background: rgb(var(--color-surface-alt));
-  }
-
-  .text-gradient-brand {
-    background: var(--brand-gradient);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-
-  .ring-brand {
-    box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.2);
-  }
+  .border-soft { border: 1px solid rgb(255 255 255 / 0.06); }
 }

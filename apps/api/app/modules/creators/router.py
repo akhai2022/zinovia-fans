@@ -26,6 +26,7 @@ from app.modules.creators.service import (
     get_following_page,
     get_posts_count,
     get_profile_by_user_id,
+    get_sitemap_creators,
     unfollow_creator,
     update_creator_profile,
 )
@@ -58,6 +59,15 @@ async def list_creators(
         for user_id, handle, display_name, avatar_media_id, followers_count, posts_count in items_tuples
     ]
     return CreatorDiscoverPage(items=items, total=total, page=page, page_size=page_size)
+
+
+@router.get("/sitemap", operation_id="creators_sitemap")
+async def creators_sitemap(
+    session: AsyncSession = Depends(get_async_session),
+) -> list[dict[str, str]]:
+    """Public endpoint: returns [{handle, updated_at}] for all discoverable creators. Used by sitemap.xml generation."""
+    rows = await get_sitemap_creators(session)
+    return [{"handle": handle, "updated_at": updated_at} for handle, updated_at in rows]
 
 
 @router.get("/me/following", response_model=CreatorFollowingPage, operation_id="creators_me_following")

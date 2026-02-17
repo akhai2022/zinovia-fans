@@ -24,7 +24,7 @@ export default function ForgotPasswordPage() {
     try {
       await apiFetch("/auth/forgot-password", {
         method: "POST",
-        body: { email, password: "placeholder" },
+        body: { email },
       });
       setSent(true);
     } catch (err) {

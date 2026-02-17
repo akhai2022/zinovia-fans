@@ -55,3 +55,10 @@ class SubscriptionStatusItem(BaseModel):
 class BillingStatusOut(BaseModel):
     fan_user_id: UUID
     items: list[SubscriptionStatusItem]
+
+
+class CancelSubscriptionOut(BaseModel):
+    subscription_id: UUID
+    status: str
+    cancel_at_period_end: bool
+    current_period_end: datetime | None = None

@@ -10,7 +10,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -44,6 +44,10 @@ def verify_webhook_hmac(payload: bytes, signature: str) -> bool:
 async def create_email_verification_token(
     session: AsyncSession, user_id: UUID
 ) -> str:
+    # Invalidate any existing tokens for this user before creating a new one
+    await session.execute(
+        delete(EmailVerificationToken).where(EmailVerificationToken.user_id == user_id)
+    )
     token = secrets.token_urlsafe(48)
     expires = datetime.now(UTC) + timedelta(hours=24)
     evt = EmailVerificationToken(

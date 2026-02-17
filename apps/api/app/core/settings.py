@@ -6,6 +6,8 @@ from typing import Literal
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+STRIPE_KEY_PLACEHOLDER = "sk_test_placeholder"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -15,7 +17,7 @@ class Settings(BaseSettings):
         populate_by_name=True,
     )
 
-    environment: Literal["local", "production", "prod"] = "local"
+    environment: Literal["local", "staging", "production", "prod"] = "local"
 
     database_url: str = Field(alias="DATABASE_URL")
     redis_url: str = Field(default="", alias="REDIS_URL")
@@ -32,9 +34,15 @@ class Settings(BaseSettings):
     minio_bucket: str = Field(default="", alias="MINIO_BUCKET")
     minio_secure: bool = Field(default=False, alias="MINIO_SECURE")
 
+    # CloudFront signed URL delivery (optional; falls back to S3 presigned if not set)
+    cloudfront_domain: str | None = Field(default=None, alias="CLOUDFRONT_DOMAIN")
+    cloudfront_key_pair_id: str | None = Field(default=None, alias="CLOUDFRONT_KEY_PAIR_ID")
+    cloudfront_private_key_pem: str | None = Field(default=None, alias="CLOUDFRONT_PRIVATE_KEY_PEM")
+    cloudfront_url_ttl_seconds: int = Field(default=600, alias="CLOUDFRONT_URL_TTL_SECONDS")
+
     jwt_secret: str = Field(alias="JWT_SECRET")
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
-    jwt_expire_minutes: int = Field(default=60 * 24 * 7, alias="JWT_EXPIRE_MINUTES")
+    jwt_expire_minutes: int = Field(default=60, alias="JWT_EXPIRE_MINUTES")
 
     cookie_secure: bool = Field(default=False, alias="COOKIE_SECURE")
     cookie_samesite: Literal["lax", "strict", "none"] = Field(
@@ -102,9 +110,11 @@ class Settings(BaseSettings):
     public_web_base_url: str = Field(
         alias="PUBLIC_WEB_BASE_URL", default="http://localhost:3000"
     )
-    mail_provider: Literal["console", "ses"] = Field(
+    mail_provider: Literal["console", "ses", "mailpit"] = Field(
         alias="MAIL_PROVIDER", default="console"
     )
+    mailpit_host: str = Field(default="localhost", alias="MAILPIT_HOST")
+    mailpit_port: int = Field(default=1025, alias="MAILPIT_PORT")
     # Default matches production sender; can be overridden via MAIL_FROM env var.
     mail_from: str = Field(alias="MAIL_FROM", default="noreply@zinovia.ai")
 
@@ -208,6 +218,14 @@ class Settings(BaseSettings):
         ge=1,
     )
 
+    # Minimum password length for both signup and reset (single source of truth).
+    password_min_length: int = Field(default=10, alias="PASSWORD_MIN_LENGTH", ge=8)
+
+    # Subscription grace period for past_due status (hours).
+    subscription_grace_period_hours: int = Field(
+        default=72, alias="SUBSCRIPTION_GRACE_PERIOD_HOURS", ge=0
+    )
+
     @model_validator(mode="after")
     def validate_storage_config(self) -> Settings:
         if self.cookie_samesite == "none" and not self.cookie_secure:
@@ -227,11 +245,37 @@ class Settings(BaseSettings):
                     "MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, "
                     "MINIO_BUCKET are required when STORAGE=minio"
                 )
+        # Production safety: email provider must be SES
+        if self.is_production and self.mail_provider in ("console", "mailpit"):
+            raise ValueError(
+                f"MAIL_PROVIDER={self.mail_provider} is not allowed in production. Use 'ses'."
+            )
+        # Production safety: webhook test bypass must be off
+        if self.is_production and self.stripe_webhook_test_bypass:
+            raise ValueError(
+                "STRIPE_WEBHOOK_TEST_BYPASS must be false in production."
+            )
+        # Production safety: cookie must be secure
+        if self.is_production and not self.cookie_secure:
+            raise ValueError(
+                "COOKIE_SECURE must be true in production."
+            )
+        # Stripe key environment enforcement
+        key = (self.stripe_secret_key or "").strip()
+        if key and key != STRIPE_KEY_PLACEHOLDER:
+            if self.is_production and not key.startswith("sk_live_"):
+                raise ValueError(
+                    "Production requires a live Stripe key (sk_live_*)."
+                )
+            if not self.is_production and key.startswith("sk_live_"):
+                raise ValueError(
+                    "Non-production environments must not use a live Stripe key (sk_live_*)."
+                )
         return self
 
     @property
     def is_production(self) -> bool:
-        return self.environment == "production"
+        return self.environment in ("production", "prod")
 
     def media_watermark_variant_list(self) -> list[str]:
         return [v.strip() for v in self.media_watermark_variants.split(",") if v.strip()]

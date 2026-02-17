@@ -1,12 +1,20 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 
 import { Page } from "@/components/brand/Page";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ApiClientError, apiFetchServer } from "@/lib/api/client";
 import { CreatorGrid } from "./CreatorGrid";
+
+export const metadata: Metadata = {
+  title: "Browse Creators | Zinovia",
+  description:
+    "Discover and subscribe to exclusive creators on Zinovia. Browse profiles, follow favourites, and unlock premium content.",
+  alternates: { canonical: "https://zinovia.ai/creators" },
+};
 
 export type CreatorItem = {
   creator_id: string;

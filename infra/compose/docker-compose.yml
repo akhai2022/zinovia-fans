@@ -62,6 +62,17 @@ services:
       mc anonymous set none local/$$MINIO_BUCKET;
       "
 
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8025/"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   api:
     build:
       context: ../..

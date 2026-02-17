@@ -19,11 +19,13 @@ def _ensure_enabled() -> None:
         raise AppError(status_code=503, detail="ppv_disabled")
 
 
-def _ensure_stripe() -> None:
+def _get_stripe_key() -> str:
+    """Return the configured Stripe secret key or raise."""
     settings = get_settings()
-    if not settings.stripe_secret_key or settings.stripe_secret_key == "sk_test_placeholder":
+    key = (settings.stripe_secret_key or "").strip()
+    if not key or key == "sk_test_placeholder":
         raise AppError(status_code=501, detail="stripe_not_configured")
-    stripe.api_key = settings.stripe_secret_key
+    return key
 
 
 async def _check_intent_rate_limit(session: AsyncSession, purchaser_id: UUID) -> None:
@@ -89,7 +91,7 @@ async def create_ppv_message_media_intent(
     message_media_id: UUID,
 ) -> dict:
     _ensure_enabled()
-    _ensure_stripe()
+    api_key = _get_stripe_key()
     await _check_intent_rate_limit(session, purchaser_id)
     settings = get_settings()
 
@@ -155,6 +157,7 @@ async def create_ppv_message_media_intent(
         amount=existing.amount_cents,
         currency=existing.currency,
         metadata=metadata,
+        api_key=api_key,
     )
     existing.stripe_payment_intent_id = pi.id
     existing.status = "REQUIRES_PAYMENT"

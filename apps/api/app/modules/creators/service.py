@@ -231,6 +231,20 @@ async def update_creator_profile(
     return profile
 
 
+async def get_sitemap_creators(
+    session: AsyncSession,
+) -> list[tuple[str, str]]:
+    """Return (handle, updated_at) for all discoverable creators. Used by sitemap generation."""
+    query = (
+        select(Profile.handle, Profile.updated_at)
+        .join(User, User.id == Profile.user_id)
+        .where(*_discoverable_where())
+        .order_by(Profile.updated_at.desc())
+    )
+    rows = (await session.execute(query)).all()
+    return [(r[0] or "", r[1].isoformat() if r[1] else "") for r in rows]
+
+
 async def follow_creator(
     session: AsyncSession, fan_user_id: UUID, creator_user_id: UUID
 ) -> bool:

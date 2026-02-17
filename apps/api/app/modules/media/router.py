@@ -31,6 +31,7 @@ from app.modules.media.service import (
     validate_media_upload,
 )
 from app.modules.media.storage import get_storage_client
+from app.modules.audit.service import log_audit_event, ACTION_MEDIA_UPLOADED
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +80,14 @@ async def create_upload_url(
         except Exception as e:
             logger.warning("Failed to enqueue generate_derived_variants: %s", e)
 
+    await log_audit_event(
+        session,
+        action=ACTION_MEDIA_UPLOADED,
+        actor_id=user.id,
+        resource_type="media",
+        resource_id=str(media.id),
+        metadata={"content_type": payload.content_type, "size_bytes": payload.size_bytes},
+    )
     return UploadUrlResponse(asset_id=media.id, upload_url=upload_url)
 
 

@@ -64,7 +64,7 @@ export function PostMediaImage({
 
   return (
     <div className="relative h-full w-full">
-      <img src={url} alt="" className={className} />
+      <img src={url} alt="" className={className} referrerPolicy="no-referrer" />
       {watermark && (
         <div
           className="absolute bottom-1.5 right-1.5 flex items-center opacity-90"

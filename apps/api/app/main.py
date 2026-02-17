@@ -62,7 +62,14 @@ def create_app() -> FastAPI:
         allow_origins=cors_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["*"],
+        allow_headers=[
+            "Content-Type",
+            "Authorization",
+            "X-Request-Id",
+            "X-CSRF-Token",
+            "X-Idempotency-Key",
+            "Cookie",
+        ],
     )
 
     configure_logging(get_request_id)
@@ -77,6 +84,50 @@ def create_app() -> FastAPI:
         stripe_mode(),
         settings.storage,
     )
+
+    # --- Paths exempt from CSRF (webhooks receive POST from external services) ---
+    _CSRF_EXEMPT_PREFIXES = (
+        "/billing/webhooks/",
+        "/webhooks/",
+        "/health",
+        "/ready",
+    )
+
+    @app.middleware("http")
+    async def security_headers_middleware(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        if settings.is_production:
+            response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+        return response
+
+    @app.middleware("http")
+    async def csrf_middleware(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        """Double-submit cookie CSRF protection for state-changing methods."""
+        if request.method in ("GET", "HEAD", "OPTIONS"):
+            return await call_next(request)
+        path = request.url.path
+        if any(path.startswith(prefix) for prefix in _CSRF_EXEMPT_PREFIXES):
+            return await call_next(request)
+        cookie_token = request.cookies.get("csrf_token")
+        header_token = request.headers.get("X-CSRF-Token")
+        if cookie_token and header_token and cookie_token == header_token:
+            return await call_next(request)
+        # Allow requests without any CSRF cookie (e.g., first login, signup)
+        # CSRF only enforced when the cookie exists (set after login)
+        if not cookie_token:
+            return await call_next(request)
+        return JSONResponse(
+            status_code=403,
+            content={"error": "csrf_validation_failed", "detail": "Missing or mismatched CSRF token"},
+        )
 
     @app.middleware("http")
     async def request_id_middleware(

@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, Numeric, String, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, Numeric, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -49,6 +49,7 @@ class LedgerEntry(TimestampMixin, Base):
             f"direction IN ('{LEDGER_DIRECTION_CREDIT}', '{LEDGER_DIRECTION_DEBIT}')",
             name="ck_ledger_direction",
         ),
+        UniqueConstraint("account_id", "reference", name="uq_ledger_entry_account_reference"),
     )
 
 

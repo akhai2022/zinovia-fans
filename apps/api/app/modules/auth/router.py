@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -11,7 +13,7 @@ from app.db.session import get_async_session
 from app.modules.auth.deps import get_current_user
 from app.modules.auth.models import User
 from app.modules.auth.rate_limit import check_rate_limit
-from app.modules.auth.schemas import ProfileOut, TokenResponse, UserCreate, UserLogin, UserOut
+from app.modules.auth.schemas import ProfileOut, ResetPasswordRequest, TokenResponse, UserCreate, UserLogin, UserOut
 from app.modules.auth.service import (
     authenticate_user,
     create_token_for_user,
@@ -35,6 +37,15 @@ from app.modules.onboarding.service import (
 from app.modules.onboarding.mail import (
     VerificationEmailDeliveryError,
     send_verification_email,
+)
+from app.modules.audit.service import (
+    log_audit_event,
+    ACTION_LOGIN,
+    ACTION_LOGOUT,
+    ACTION_PASSWORD_RESET,
+    ACTION_PASSWORD_RESET_REQUEST,
+    ACTION_SIGNUP,
+    ACTION_VERIFY_EMAIL,
 )
 
 router = APIRouter()
@@ -80,7 +91,7 @@ async def register(
             "email_delivery_status": email_delivery_status,
             "email_delivery_error_code": email_delivery_error_code,
         }
-    result, _ = await get_or_create_idempotency_response(
+    result, created = await get_or_create_idempotency_response(
         session=session,
         key=idempotency_key,
         creator_id=None,
@@ -88,6 +99,15 @@ async def register(
         request_body=payload.model_dump_json(),
         create_response=_do,
     )
+    if created and result.get("creator_id"):
+        await log_audit_event(
+            session,
+            action=ACTION_SIGNUP,
+            actor_id=UUID(result["creator_id"]),
+            resource_type="user",
+            resource_id=result["creator_id"],
+            metadata={"role": "creator"},
+        )
     return CreatorRegisterResponse(**result)
 
 
@@ -165,6 +185,14 @@ async def verify_email(
             "email_verified",
             {"token_consumed": True},
         )
+        await log_audit_event(
+            session,
+            action=ACTION_VERIFY_EMAIL,
+            actor_id=user.id,
+            resource_type="user",
+            resource_id=str(user.id),
+            auto_commit=False,
+        )
         return {"creator_id": str(user.id), "state": "EMAIL_VERIFIED"}
     result, _ = await get_or_create_idempotency_response(
         session=session,
@@ -187,6 +215,14 @@ async def signup(
     payload: UserCreate, session: AsyncSession = Depends(get_async_session)
 ) -> UserOut:
     user = await create_user(session, payload.email, payload.password, payload.display_name)
+    await log_audit_event(
+        session,
+        action=ACTION_SIGNUP,
+        actor_id=user.id,
+        resource_type="user",
+        resource_id=str(user.id),
+        metadata={"role": "fan"},
+    )
     result = await session.execute(select(User).options(selectinload(User.profile)).where(User.id == user.id))
     user = result.scalar_one()
     return UserOut(
@@ -221,8 +257,6 @@ async def forgot_password(
 
     token = await create_password_reset_token(session, payload.email)
     if token:
-        # In production, send email with reset link.
-        # For now, log the token and return success regardless.
         settings = get_settings()
         reset_url = f"{settings.public_web_base_url}/reset-password?token={token}"
         try:
@@ -230,6 +264,13 @@ async def forgot_password(
             await send_password_reset_email(payload.email, reset_url)
         except Exception:
             pass  # Swallow to avoid user enumeration
+        await log_audit_event(
+            session,
+            action=ACTION_PASSWORD_RESET_REQUEST,
+            resource_type="user",
+            metadata={"email_hash": str(hash(payload.email))},
+            ip_address=client_ip,
+        )
     return {"status": "ok", "message": "If an account exists with that email, a reset link has been sent."}
 
 
@@ -240,20 +281,17 @@ async def forgot_password(
     summary="Reset password using token",
 )
 async def reset_password(
-    request: Request,
+    payload: ResetPasswordRequest,
     session: AsyncSession = Depends(get_async_session),
 ) -> dict:
     from app.modules.auth.password_reset import consume_password_reset_token
 
-    body = await request.json()
-    token = body.get("token")
-    new_password = body.get("new_password")
-    if not token or not new_password:
-        raise AppError(status_code=400, detail="token_and_password_required")
-    if len(new_password) < 10:
-        raise AppError(status_code=400, detail="password_too_short")
-
-    await consume_password_reset_token(session, token, new_password)
+    await consume_password_reset_token(session, payload.token, payload.new_password)
+    await log_audit_event(
+        session,
+        action=ACTION_PASSWORD_RESET,
+        resource_type="user",
+    )
     return {"status": "ok", "message": "Password has been reset. You can now sign in."}
 
 
@@ -264,13 +302,35 @@ async def login(
     request: Request,
     session: AsyncSession = Depends(get_async_session),
 ) -> TokenResponse:
+    import secrets as _secrets
+
     client_ip = request.client.host if request.client else "unknown"
     rate_limit_key = f"login:{client_ip}:{payload.email}"
     if not await check_rate_limit(rate_limit_key):
         raise AppError(status_code=429, detail="rate_limit_exceeded")
     user = await authenticate_user(session, payload.email, payload.password)
     token = create_token_for_user(user)
+    await log_audit_event(
+        session,
+        action=ACTION_LOGIN,
+        actor_id=user.id,
+        resource_type="user",
+        resource_id=str(user.id),
+        ip_address=client_ip,
+    )
+    settings = get_settings()
     response.set_cookie("access_token", token, **_cookie_settings())  # type: ignore[arg-type]
+    # Set CSRF double-submit cookie (readable by JS, not httponly)
+    csrf_token = _secrets.token_urlsafe(32)
+    response.set_cookie(
+        "csrf_token",
+        csrf_token,
+        httponly=False,
+        secure=settings.cookie_secure,
+        samesite=settings.cookie_samesite,
+        path="/",
+        max_age=settings.jwt_expire_minutes * 60,
+    )
     return TokenResponse(access_token=token)
 
 
@@ -281,8 +341,23 @@ async def login(
     summary="Logout",
     description="Clears the session cookie. Frontend should call this then setUser(null).",
 )
-async def logout(response: Response) -> dict:
+async def logout(
+    response: Response,
+    request: Request,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(get_current_user),
+) -> dict:
+    client_ip = request.client.host if request.client else None
+    await log_audit_event(
+        session,
+        action=ACTION_LOGOUT,
+        actor_id=user.id,
+        resource_type="user",
+        resource_id=str(user.id),
+        ip_address=client_ip,
+    )
     response.delete_cookie("access_token", path="/")
+    response.delete_cookie("csrf_token", path="/")
     return {"status": "ok"}
 
 

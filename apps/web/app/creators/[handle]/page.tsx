@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 
 import { FollowButton } from "@/features/creators/components/FollowButton";
 import { CreatorAvatarAsset } from "@/features/creators/components/CreatorAvatarAsset";
@@ -15,8 +16,52 @@ import { ApiClientError, apiFetchServer } from "@/lib/api/client";
 import { SubscribeCheckoutButton } from "@/features/billing/components/SubscribeCheckoutButton";
 import { CreatorPostsSection } from "./CreatorPostsSection";
 
+const SITE_URL = "https://zinovia.ai";
+
 function normalizeHandle(raw: string): string {
   return raw.replace(/^@/, "").trim().toLowerCase() || raw;
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { handle: string };
+}): Promise<Metadata> {
+  const handle = normalizeHandle(
+    typeof params.handle === "string" ? params.handle : params.handle[0]
+  );
+  try {
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+    const res = await fetch(`${apiBase}/creators/${encodeURIComponent(handle)}`, {
+      next: { revalidate: 600 },
+    });
+    if (!res.ok) return { title: `@${handle} | Zinovia` };
+    const creator = await res.json();
+    const title = `${creator.display_name} (@${creator.handle}) | Zinovia`;
+    const description = creator.bio
+      ? creator.bio.slice(0, 160)
+      : `Subscribe to ${creator.display_name}'s exclusive content on Zinovia.`;
+    const url = `${SITE_URL}/creators/${creator.handle}`;
+    return {
+      title,
+      description,
+      alternates: { canonical: url },
+      openGraph: {
+        title,
+        description,
+        url,
+        siteName: "Zinovia Fans",
+        type: "profile",
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+      },
+    };
+  } catch {
+    return { title: `@${handle} | Zinovia` };
+  }
 }
 
 type CreatorProfile = {

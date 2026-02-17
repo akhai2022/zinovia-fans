@@ -3,104 +3,73 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
-/** High-quality photography from /public/assets — duplicated for 6 cards. */
-const FEATURED_IMAGES = [
-  "/assets/zinovia_creator_glam_4x5.jpg",
-  "/assets/zinovia_creator_star_4x5.jpg",
-  "/assets/zinovia_collage_promo_v2.png",
-  "/assets/zinovia_creator_glam_4x5.jpg",
-  "/assets/zinovia_creator_star_4x5.jpg",
-  "/assets/zinovia_collage_promo_v2.png",
+const CREATORS = [
+  { name: "Alex Rivera", handle: "@alexrivera", niche: "Fitness", image: "/assets/creator_fitness.jpg" },
+  { name: "Jordan Blake", handle: "@jordanblake", niche: "Art", image: "/assets/creator_art.jpg" },
+  { name: "Sam Taylor", handle: "@samtaylor", niche: "Lifestyle", image: "/assets/creator_lifestyle.jpg" },
+  { name: "Casey Lee", handle: "@caseylee", niche: "Music", image: "/assets/creator_music.jpg" },
+  { name: "Morgan James", handle: "@morganjames", niche: "Travel", image: "/assets/creator_travel.jpg" },
+  { name: "Riley Quinn", handle: "@rileyquinn", niche: "Fashion", image: "/assets/creator_fashion.jpg" },
 ];
 
-const FEATURED = [
-  { name: "Alex Rivera", price: "9.99", tags: ["Fitness", "Lifestyle"], image: FEATURED_IMAGES[0] },
-  { name: "Jordan Blake", price: "9.99", tags: ["Creative", "Art"], image: FEATURED_IMAGES[1] },
-  { name: "Sam Taylor", price: "9.99", tags: ["Wellness", "Mindfulness"], image: FEATURED_IMAGES[2] },
-  { name: "Casey Lee", price: "9.99", tags: ["Fitness", "Nutrition"], image: FEATURED_IMAGES[3] },
-  { name: "Morgan James", price: "9.99", tags: ["Lifestyle", "Travel"], image: FEATURED_IMAGES[4] },
-  { name: "Riley Quinn", price: "9.99", tags: ["Creative", "Music"], image: FEATURED_IMAGES[5] },
-];
-
-function CreatorCard({
-  name,
-  price,
-  tags,
-  image,
-}: {
-  name: string;
-  price: string;
-  tags: string[];
-  image: string;
-}) {
+function CreatorCard({ name, handle, niche, image, subscribeLabel }: typeof CREATORS[number] & { subscribeLabel: string }) {
   return (
-    <Card
+    <div
       className={cn(
-        "group relative flex flex-shrink-0 flex-col overflow-hidden rounded-2xl border border-white/10 shadow-premium-md",
-        "transition-all duration-300 ease-premium-out",
-        "hover:-translate-y-1 hover:shadow-premium-lg motion-reduce:hover:translate-y-0",
-        "w-[280px] sm:w-[300px] md:w-full"
+        "group relative flex-shrink-0 overflow-hidden rounded-2xl",
+        "w-[220px] sm:w-[240px] md:w-full",
+        "border border-white/[0.06] bg-[rgb(18,18,24)]",
+        "transition-all duration-300",
+        "hover:-translate-y-1 hover:border-white/10 hover:shadow-lg",
+        "motion-reduce:hover:translate-y-0"
       )}
     >
-      {/* Shine overlay on hover — sweep animation */}
-      <div
-        className="pointer-events-none absolute inset-0 z-10 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-hover:animate-card-shine motion-reduce:animate-none"
-        aria-hidden
-        style={{
-          background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.08) 45%, rgba(255,255,255,0.15) 50%, transparent 55%)",
-          backgroundSize: "200% 100%",
-        }}
-      />
-      <div className="relative aspect-[4/5] w-full overflow-hidden bg-muted [contain:layout]">
+      <div className="relative aspect-[3/4] w-full overflow-hidden">
         <Image
           src={image}
-          alt={`${name} — creator profile`}
+          alt={name}
           fill
-          quality={90}
-          className="object-cover transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
-          sizes="(max-width: 768px) 70vw, 340px"
+          quality={85}
+          className="object-cover transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none"
+          sizes="(max-width: 768px) 50vw, 240px"
         />
-      </div>
-      <div className="flex flex-col gap-3 p-4">
-        <p className="font-semibold text-foreground">{name}</p>
-        <p className="text-sm font-medium text-foreground">
-          €{price}
-          <span className="font-normal text-muted-foreground">/mo</span>
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          {tags.map((tag) => (
-            <span
-              key={tag}
-              className="rounded-md bg-brand-plum/10 px-2 py-0.5 text-xs font-medium text-foreground/80"
-            >
-              {tag}
-            </span>
-          ))}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 p-4">
+          <p className="font-semibold text-white">{name}</p>
+          <p className="text-sm text-white/60">{handle}</p>
         </div>
-        <Button size="sm" className="btn-cta-primary mt-1 w-full" asChild>
-          <Link href="/creators">Subscribe</Link>
+      </div>
+      <div className="flex items-center justify-between px-4 py-3">
+        <span className="rounded-full bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-400">
+          {niche}
+        </span>
+        <Button size="sm" className="btn-cta-primary h-8 px-4 text-xs" asChild>
+          <Link href="/creators">{subscribeLabel}</Link>
         </Button>
       </div>
-    </Card>
+    </div>
   );
 }
 
 export function FeaturedCreators() {
+  const { t } = useTranslation();
+
   return (
-    <section className="mx-auto w-full max-w-6xl section-pad px-4 sm:px-6" aria-labelledby="featured-creators-heading">
-      <h2 id="featured-creators-heading" className="font-display text-premium-h2 font-semibold text-foreground">
-        Featured creators
-      </h2>
-      <p className="mt-2 max-w-[55ch] text-premium-body text-muted-foreground prose-width">
-        Support creators you love and get exclusive content.
-      </p>
-      {/* Mobile: horizontal scroll; Desktop: 3-col grid */}
-      <div className="mt-8 flex gap-4 overflow-x-auto pb-2 scrollbar-thin md:grid md:grid-cols-3 md:overflow-visible md:gap-6 md:pb-0">
-        {FEATURED.map((creator) => (
-          <CreatorCard key={creator.name} {...creator} />
+    <section className="mx-auto w-full max-w-6xl section-pad px-4 sm:px-6" aria-labelledby="featured-heading">
+      <div className="text-center">
+        <h2 id="featured-heading" className="font-display text-premium-h2 font-bold text-foreground">
+          {t.featuredCreators.heading}
+        </h2>
+        <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
+          {t.featuredCreators.subheading}
+        </p>
+      </div>
+      <div className="mt-10 flex gap-4 overflow-x-auto pb-2 md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:pb-0 lg:grid-cols-6">
+        {CREATORS.map((c) => (
+          <CreatorCard key={c.handle} {...c} subscribeLabel={t.featuredCreators.subscribe} />
         ))}
       </div>
     </section>

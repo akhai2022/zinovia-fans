@@ -91,9 +91,28 @@ class S3Storage(StorageClient):
         ))
 
 
+class CloudFrontStorage(StorageClient):
+    """Uploads via S3 presigned PUT, downloads via CloudFront signed URL."""
+
+    def __init__(self) -> None:
+        settings = get_settings()
+        if not settings.s3_bucket:
+            raise ValueError("S3_BUCKET is required for CloudFrontStorage")
+        self._s3 = S3Storage()
+
+    def create_signed_upload_url(self, object_key: str, content_type: str) -> str:
+        return self._s3.create_signed_upload_url(object_key, content_type)
+
+    def create_signed_download_url(self, object_key: str) -> str:
+        from app.modules.media.cloudfront_signer import generate_signed_url
+        return generate_signed_url(object_key)
+
+
 def get_storage_client() -> StorageClient:
-    """Select storage by STORAGE env or S3_BUCKET presence. S3 for AWS ECS; MinIO for local."""
+    """Select storage by STORAGE env or S3_BUCKET presence. CloudFront > S3 > MinIO."""
     settings = get_settings()
     if settings.storage == "s3" or settings.s3_bucket:
+        if settings.cloudfront_domain and settings.cloudfront_key_pair_id:
+            return CloudFrontStorage()
         return S3Storage()
     return MinioStorage()

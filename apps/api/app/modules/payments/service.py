@@ -18,11 +18,13 @@ logger = logging.getLogger(__name__)
 STRIPE_KEY_PLACEHOLDER = "sk_test_placeholder"
 
 
-def _ensure_stripe() -> None:
+def _get_stripe_key() -> str:
+    """Return the configured Stripe secret key or raise."""
     settings = get_settings()
-    if not settings.stripe_secret_key or settings.stripe_secret_key == STRIPE_KEY_PLACEHOLDER:
+    key = (settings.stripe_secret_key or "").strip()
+    if not key or key == STRIPE_KEY_PLACEHOLDER:
         raise AppError(status_code=501, detail="stripe_not_configured")
-    stripe.api_key = settings.stripe_secret_key
+    return key
 
 
 async def create_tip_intent(
@@ -47,7 +49,7 @@ async def create_tip_intent(
     if amount_cents > settings.tip_max_cents:
         raise AppError(status_code=400, detail="amount_above_maximum")
 
-    _ensure_stripe()
+    api_key = _get_stripe_key()
 
     tip = Tip(
         tipper_id=tipper_id,
@@ -70,6 +72,7 @@ async def create_tip_intent(
             "creator_id": str(creator_id),
             "tip_id": str(tip.id),
         },
+        api_key=api_key,
     )
     tip.stripe_payment_intent_id = pi.id
     await session.commit()

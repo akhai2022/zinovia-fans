@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, UniqueConstraint
 from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -53,3 +53,7 @@ class Subscription(TimestampMixin, Base):
     cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, default=False)
     stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True, index=True)
     stripe_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("fan_user_id", "creator_user_id", name="uq_subscription_fan_creator"),
+    )

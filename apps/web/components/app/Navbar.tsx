@@ -16,19 +16,8 @@ import { Drawer } from "@/components/ui/drawer";
 import { listNotifications } from "@/features/engagement/api";
 import { logout } from "@/lib/api/auth";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 import "@/lib/api";
-
-const NAV_LINKS_PUBLIC = [
-  { href: "/", label: "Home" },
-  { href: "/feed", label: "Feed" },
-  { href: "/creators", label: "Creators" },
-] as const;
-
-const NAV_LINKS_AUTH = [
-  { href: "/messages", label: "Messages" },
-  { href: "/creator/post/new", label: "New post" },
-  { href: "/settings/profile", label: "Settings" },
-] as const;
 
 export function Navbar({
   initialSession,
@@ -39,9 +28,22 @@ export function Navbar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useTranslation();
   const [user, setUser] = useState<UserOut | null>(initialSession);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const NAV_LINKS_PUBLIC = [
+    { href: "/", label: t.nav.home },
+    { href: "/feed", label: t.nav.feed },
+    { href: "/creators", label: t.nav.creators },
+  ];
+
+  const NAV_LINKS_AUTH = [
+    { href: "/messages", label: t.nav.messages },
+    { href: "/creator/post/new", label: t.nav.newPost },
+    { href: "/settings/profile", label: t.nav.settings },
+  ];
 
   useEffect(() => {
     setUser(initialSession);
@@ -64,13 +66,11 @@ export function Navbar({
       // Fallback to local UI reset even if API logout fails.
     }
     setUser(null);
-    // Full navigation to "/" clears all client state (SWR cache, etc.)
-    // and prevents back-button from showing authenticated content.
     window.location.href = "/";
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <header className="sticky top-0 z-40 w-full border-b border-white/[0.06] bg-[rgb(10,10,14)]/95 backdrop-blur supports-[backdrop-filter]:bg-[rgb(10,10,14)]/80">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link
           href="/"
@@ -90,7 +90,7 @@ export function Navbar({
                 size="sm"
                 asChild
                 className={cn(
-                  active && "bg-muted text-foreground"
+                  active && "bg-white/10 text-foreground"
                 )}
               >
                 <Link href={href}>{label}</Link>
@@ -106,7 +106,7 @@ export function Navbar({
                   size="sm"
                   asChild
                   className={cn(
-                    (pathname === link.href || pathname.startsWith(link.href + "/")) && "bg-muted text-foreground"
+                    (pathname === link.href || pathname.startsWith(link.href + "/")) && "bg-white/10 text-foreground"
                   )}
                 >
                   <Link href={link.href}>{link.label}</Link>
@@ -114,7 +114,7 @@ export function Navbar({
               ))}
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/notifications">
-                  Notifications{unreadNotifications > 0 ? ` (${unreadNotifications})` : ""}
+                  {t.nav.notifications}{unreadNotifications > 0 ? ` (${unreadNotifications})` : ""}
                 </Link>
               </Button>
             </>
@@ -135,38 +135,38 @@ export function Navbar({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
-                  <Link href="/me">Me</Link>
+                  <Link href="/me">{t.nav.me}</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/messages">Messages</Link>
+                  <Link href="/messages">{t.nav.messages}</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/settings/profile">Settings</Link>
+                  <Link href="/settings/profile">{t.nav.settings}</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/billing/manage">Subscriptions</Link>
+                  <Link href="/billing/manage">{t.nav.subscriptions}</Link>
                 </DropdownMenuItem>
                 {user?.role === "admin" && (
                   <DropdownMenuItem asChild>
-                    <Link href="/admin">Admin</Link>
+                    <Link href="/admin">{t.nav.admin}</Link>
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem onClick={handleLogout}>
-                  Logout
+                  {t.nav.logout}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <div className="flex items-center gap-2">
               <Button variant="secondary" size="sm" asChild>
-                <Link href="/login">Login</Link>
+                <Link href="/login">{t.nav.login}</Link>
               </Button>
               <Button size="sm" asChild>
-                <Link href="/signup">Sign up</Link>
+                <Link href="/signup">{t.nav.signup}</Link>
               </Button>
               {sessionUnavailable && (
                 <span className="text-xs text-muted-foreground" title="Session check failed; API may be temporarily unavailable.">
-                  reconnecting…
+                  {t.nav.reconnecting}
                 </span>
               )}
             </div>
@@ -185,7 +185,7 @@ export function Navbar({
             <path d="M4 12H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             <path d="M4 17H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
-          Menu
+          {t.nav.menu}
         </Button>
       </div>
       <Drawer open={mobileOpen} onClose={() => setMobileOpen(false)} title="Navigation">
@@ -206,23 +206,23 @@ export function Navbar({
               onClick={() => setMobileOpen(false)}
               className="block rounded-brand border border-border bg-card px-3 py-2 text-sm font-medium text-foreground"
             >
-              Notifications{unreadNotifications > 0 ? ` (${unreadNotifications})` : ""}
+              {t.nav.notifications}{unreadNotifications > 0 ? ` (${unreadNotifications})` : ""}
             </Link>
           )}
           {!user && (
             <div className="grid grid-cols-2 gap-2 pt-2">
               <Button className="btn-cta-primary" asChild>
-                <Link href="/signup" onClick={() => setMobileOpen(false)}>Start Subscribing</Link>
+                <Link href="/signup" onClick={() => setMobileOpen(false)}>{t.nav.startSubscribing}</Link>
               </Button>
               <Button variant="secondary" asChild>
-                <Link href="/creators" onClick={() => setMobileOpen(false)}>Explore Creators</Link>
+                <Link href="/creators" onClick={() => setMobileOpen(false)}>{t.nav.exploreCreators}</Link>
               </Button>
               <Link
                 href="/login"
                 onClick={() => setMobileOpen(false)}
                 className="col-span-2 rounded-brand border border-border py-2 text-center text-sm font-medium text-muted-foreground hover:text-foreground"
               >
-                Login
+                {t.nav.login}
               </Link>
             </div>
           )}

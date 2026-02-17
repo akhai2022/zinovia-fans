@@ -10,7 +10,7 @@ from app.modules.auth.constants import TOKEN_TYPE_BEARER
 
 class UserCreate(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=8)
+    password: str = Field(min_length=10)
     display_name: str
 
 
@@ -36,6 +36,11 @@ class UserOut(BaseModel):
     profile: ProfileOut | None
     created_at: datetime
     updated_at: datetime
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(min_length=10)
 
 
 class TokenResponse(BaseModel):

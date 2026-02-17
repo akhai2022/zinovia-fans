@@ -1,7 +1,7 @@
 """Billing constants."""
 
 DEFAULT_PLAN_PRICE = "4.99"
-DEFAULT_PLAN_CURRENCY = "usd"
+DEFAULT_PLAN_CURRENCY = "eur"
 PLATFORM_ACCOUNT_ID = "platform"
 
 

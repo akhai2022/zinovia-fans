@@ -1,17 +1,22 @@
-const STATS = [
-  { value: "10K+", label: "Creators earning" },
-  { value: "48hr", label: "Payout speed" },
-  { value: "92%", label: "Subscriber retention" },
-];
+import type { Dictionary } from "@/lib/i18n/types";
 
-export function StatsStrip() {
+export function StatsStrip({ t }: { t: Dictionary["stats"] }) {
+  const STATS = [
+    { value: t.creatorsValue, label: t.creatorsLabel },
+    { value: t.payoutValue, label: t.payoutLabel },
+    { value: t.retentionValue, label: t.retentionLabel },
+    { value: t.totalPayoutsValue, label: t.totalPayoutsLabel },
+  ];
+
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 md:py-12" aria-label="Platform stats">
-      <div className="grid grid-cols-3 gap-4 rounded-2xl border border-white/10 bg-card/80 py-8 backdrop-blur-sm md:gap-8 md:py-12">
+    <section className="mx-auto w-full max-w-6xl px-4 sm:px-6" aria-label="Platform statistics">
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.03] md:grid-cols-4">
         {STATS.map(({ value, label }) => (
-          <div key={label} className="text-center">
-            <p className="font-display text-2xl font-semibold text-foreground md:text-3xl">{value}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{label}</p>
+          <div key={label} className="bg-[rgb(14,14,18)] px-6 py-8 text-center md:py-10">
+            <p className="font-display text-3xl font-bold text-foreground md:text-4xl">
+              {value}
+            </p>
+            <p className="mt-1.5 text-sm text-muted-foreground">{label}</p>
           </div>
         ))}
       </div>

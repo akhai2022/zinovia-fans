@@ -40,8 +40,10 @@ function MePageContent() {
         setUser(data);
         setStatus("loaded");
       })
-      .catch(() => setStatus("error"));
-  }, []);
+      .catch(() => {
+        router.replace("/login?next=/me");
+      });
+  }, [router]);
 
   useEffect(() => {
     if (status !== "loaded" || !user || searchParams.get("from") !== "signup") return;
@@ -67,9 +69,7 @@ function MePageContent() {
           </CardContent>
         </Card>
       )}
-      {status === "error" && (
-        <p className="mt-4 text-muted-foreground">Not authenticated.</p>
-      )}
+      {status === "error" && null}
       {status === "loaded" && user && (
         <Card className="mt-4">
           <CardHeader>

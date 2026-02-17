@@ -24,7 +24,7 @@ export function ScrollReveal({ children, className }: { children: ReactNode; cla
           if (entry.isIntersecting) entry.target.classList.add("is-visible");
         });
       },
-      { rootMargin: "0px 0px -40px 0px", threshold: 0.1 }
+      { rootMargin: "0px 0px -60px 0px", threshold: 0.1 }
     );
     observer.observe(el);
     return () => observer.disconnect();

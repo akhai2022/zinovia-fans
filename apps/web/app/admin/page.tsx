@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Page } from "@/components/brand/Page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +39,7 @@ type CreatorsPage = { items: AdminCreator[]; total: number };
 type PostsPage = { items: AdminPost[]; total: number };
 
 export default function AdminPage() {
+  const router = useRouter();
   const [tab, setTab] = useState<"creators" | "posts">("creators");
   const [creators, setCreators] = useState<AdminCreator[]>([]);
   const [posts, setPosts] = useState<AdminPost[]>([]);
@@ -53,9 +55,14 @@ export default function AdminPage() {
       setCreators(data.items);
       setError(null);
     } catch (err) {
+      const { kind } = getApiErrorMessage(err);
+      if (kind === "unauthorized") {
+        router.replace("/login?next=/admin");
+        return;
+      }
       setError(getApiErrorMessage(err).message);
     }
-  }, []);
+  }, [router]);
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -66,9 +73,14 @@ export default function AdminPage() {
       setPosts(data.items);
       setError(null);
     } catch (err) {
+      const { kind } = getApiErrorMessage(err);
+      if (kind === "unauthorized") {
+        router.replace("/login?next=/admin");
+        return;
+      }
       setError(getApiErrorMessage(err).message);
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (tab === "creators") fetchCreators();

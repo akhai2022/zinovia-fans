@@ -1,5 +1,3 @@
-import { v4 as uuidv4 } from "uuid";
-
 /**
  * Shared UUID helpers.
  *
@@ -7,16 +5,12 @@ import { v4 as uuidv4 } from "uuid";
  * Use `uuidClient()` in client components and `uuidServer()` in server-only code.
  */
 function fallbackUuid(): string {
-  try {
-    return uuidv4();
-  } catch {
-    // Last-resort fallback for extremely constrained runtimes.
-    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (char) => {
-      const random = Math.floor(Math.random() * 16);
-      const value = char === "x" ? random : (random & 0x3) | 0x8;
-      return value.toString(16);
-    });
-  }
+  // Math.random()-based v4 UUID for extremely constrained runtimes.
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (char) => {
+    const random = Math.floor(Math.random() * 16);
+    const value = char === "x" ? random : (random & 0x3) | 0x8;
+    return value.toString(16);
+  });
 }
 
 function webCryptoUuid(): string | null {
