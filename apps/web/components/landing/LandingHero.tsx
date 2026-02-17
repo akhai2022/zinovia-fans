@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/lib/i18n";
+import { BLUR } from "@/lib/blur-placeholders";
 
 const HERO_IMAGES = [
   "/assets/hero_creator_1.jpg",
@@ -77,6 +78,8 @@ export function LandingHero() {
                     quality={90}
                     className="object-cover"
                     sizes="420px"
+                    placeholder="blur"
+                    blurDataURL={BLUR[HERO_IMAGES[0]]}
                   />
                 </div>
               </div>
@@ -92,6 +95,8 @@ export function LandingHero() {
                       quality={90}
                       className="object-cover"
                       sizes="260px"
+                      placeholder="blur"
+                      blurDataURL={BLUR[HERO_IMAGES[1]]}
                     />
                   </div>
                 </div>
@@ -105,6 +110,8 @@ export function LandingHero() {
                       quality={90}
                       className="object-cover"
                       sizes="260px"
+                      placeholder="blur"
+                      blurDataURL={BLUR[HERO_IMAGES[2]]}
                     />
                   </div>
                 </div>

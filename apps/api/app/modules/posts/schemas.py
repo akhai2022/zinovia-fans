@@ -50,6 +50,16 @@ class PostCreate(BaseModel):
     publish_at: datetime | None = None
 
 
+class PostUpdate(BaseModel):
+    """Update post body (partial)."""
+
+    caption: str | None = None
+    visibility: str | None = Field(
+        default=None,
+        pattern=f"^({VISIBILITY_PUBLIC}|{VISIBILITY_FOLLOWERS}|{VISIBILITY_SUBSCRIBERS})$",
+    )
+
+
 class PostOut(BaseModel):
     """Post as returned by API (asset_ids only; client uses download endpoint)."""
 

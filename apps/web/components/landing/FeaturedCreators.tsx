@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
+import { BLUR } from "@/lib/blur-placeholders";
 
 const CREATORS = [
   { name: "Alex Rivera", handle: "@alexrivera", niche: "Fitness", image: "/assets/creator_fitness.jpg" },
@@ -35,6 +36,8 @@ function CreatorCard({ name, handle, niche, image, subscribeLabel }: typeof CREA
           quality={85}
           className="object-cover transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none"
           sizes="(max-width: 768px) 50vw, 240px"
+          placeholder="blur"
+          blurDataURL={BLUR[image]}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-4">

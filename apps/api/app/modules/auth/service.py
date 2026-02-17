@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
-from app.modules.auth.constants import DEFAULT_USER_ROLE
+from app.modules.auth.constants import CREATOR_ROLE, FAN_ROLE
 from app.modules.auth.models import Profile, User
 from app.modules.auth.security import create_access_token, hash_password, verify_password
 
@@ -15,7 +15,7 @@ from app.modules.auth.security import create_access_token, hash_password, verify
 async def create_user(
     session: AsyncSession, email: str, password: str, display_name: str
 ) -> User:
-    user = User(email=email, password_hash=hash_password(password))
+    user = User(email=email, password_hash=hash_password(password), role=FAN_ROLE)
     profile = Profile(user=user, display_name=display_name)
     session.add_all([user, profile])
     try:
@@ -35,7 +35,7 @@ async def register_creator(
     user = User(
         email=email,
         password_hash=hash_password(password),
-        role=DEFAULT_USER_ROLE,
+        role=CREATOR_ROLE,
         onboarding_state="CREATED",
     )
     profile = Profile(user=user, display_name=display_name)

@@ -41,6 +41,10 @@ class MinioStorage(StorageClient):
         self._ttl = timedelta(seconds=settings.media_url_ttl_seconds)
 
     def create_signed_upload_url(self, object_key: str, content_type: str) -> str:
+        # Note: Minio presigned PUT does not enforce Content-Type like S3.
+        # Protection relies on: (1) backend validates content_type before URL generation,
+        # (2) Celery worker verifies MIME magic bytes after upload.
+        # Minio is only used in local dev; production uses S3/CloudFront.
         url = self._client.presigned_put_object(
             self._bucket,
             object_key,

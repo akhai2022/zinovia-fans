@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n";
+import { BLUR } from "@/lib/blur-placeholders";
 
 export function SubscribeInviteVideo() {
   const { t } = useTranslation();
@@ -27,6 +28,8 @@ export function SubscribeInviteVideo() {
             quality={90}
             className="object-cover opacity-60"
             sizes="(max-width: 768px) 100vw, 900px"
+            placeholder="blur"
+            blurDataURL={BLUR["/assets/hero_abstract.jpg"]}
           />
 
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-black/10" aria-hidden />
@@ -46,6 +49,8 @@ export function SubscribeInviteVideo() {
                   quality={80}
                   className="object-cover"
                   sizes="160px"
+                  placeholder="blur"
+                  blurDataURL={BLUR[src]}
                 />
               </div>
             ))}

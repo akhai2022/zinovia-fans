@@ -10,6 +10,8 @@ import { getApiErrorMessage } from "@/lib/errors";
 import "@/lib/api";
 
 const ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
+/** Mirror server default (MEDIA_MAX_IMAGE_BYTES); reject oversized files early. */
+const MAX_IMAGE_BYTES = 26_214_400; // 25 MiB
 const MAX_OBJECT_KEY_LENGTH = 255;
 
 function makeObjectKey(file: File): string {
@@ -41,6 +43,12 @@ export function ImageUploadField({
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
+
+    if (file.size > MAX_IMAGE_BYTES) {
+      setErrorMessage("Image is too large (max 25 MB).");
+      setStatus("error");
+      return;
+    }
 
     setStatus("uploading");
     setErrorMessage(null);

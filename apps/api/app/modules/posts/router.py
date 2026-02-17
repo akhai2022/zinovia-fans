@@ -20,6 +20,7 @@ from app.modules.posts.schemas import (
     PostCreate,
     PostLikeSummary,
     PostOut,
+    PostUpdate,
     PostWithCreator,
 )
 from app.modules.posts.service import (
@@ -27,12 +28,14 @@ from app.modules.posts.service import (
     create_comment,
     create_post,
     delete_comment,
+    delete_post,
     get_feed_page,
     get_post_like_summary,
     like_post,
     list_comments_page,
     publish_post_now,
     unlike_post,
+    update_post,
 )
 
 router = APIRouter()
@@ -100,6 +103,32 @@ async def create(
     )
     data = _post_to_out(post)
     return PostOut(**data)
+
+
+@router.patch("/{post_id}", response_model=PostOut, operation_id="posts_update")
+async def update(
+    post_id: UUID,
+    payload: PostUpdate,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(require_creator_with_profile),
+) -> PostOut:
+    post = await update_post(
+        session,
+        post_id,
+        current_user.id,
+        caption=payload.caption,
+        visibility=payload.visibility,
+    )
+    return PostOut(**_post_to_out(post))
+
+
+@router.delete("/{post_id}", status_code=204, operation_id="posts_delete")
+async def delete(
+    post_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(require_creator_with_profile),
+) -> None:
+    await delete_post(session, post_id, current_user.id)
 
 
 @router.post("/{post_id}/like", operation_id="posts_like")

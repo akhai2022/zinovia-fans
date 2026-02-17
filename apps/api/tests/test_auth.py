@@ -26,7 +26,7 @@ async def test_signup_returns_201(async_client: AsyncClient) -> None:
     data = r.json()
     assert data["email"] == email
     assert "id" in data
-    assert data["role"] == "creator"  # DEFAULT_USER_ROLE
+    assert data["role"] == "fan"  # Fan signup assigns fan role
     assert data["is_active"] is True
     assert "created_at" in data
     assert "updated_at" in data

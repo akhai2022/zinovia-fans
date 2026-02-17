@@ -599,6 +599,56 @@ async def delete_comment(session: AsyncSession, comment_id: UUID, requester_id: 
         await session.commit()
 
 
+async def delete_post(session: AsyncSession, post_id: UUID, creator_user_id: UUID) -> None:
+    """Delete a post and all its associations. Creator-only."""
+    post = (
+        await session.execute(
+            select(Post).where(Post.id == post_id, Post.creator_user_id == creator_user_id)
+            .options(selectinload(Post.media))
+        )
+    ).scalar_one_or_none()
+    if not post:
+        raise AppError(status_code=404, detail="post_not_found")
+    from sqlalchemy import delete as sa_delete
+    for pm in list(post.media):
+        await session.delete(pm)
+    await session.execute(sa_delete(PostLike).where(PostLike.post_id == post_id))
+    await session.execute(sa_delete(PostComment).where(PostComment.post_id == post_id))
+    await session.delete(post)
+    await session.commit()
+    logger.info("post_deleted post_id=%s creator=%s", post_id, creator_user_id)
+
+
+async def update_post(
+    session: AsyncSession,
+    post_id: UUID,
+    creator_user_id: UUID,
+    *,
+    caption: str | None = ...,  # type: ignore[assignment]
+    visibility: str | None = None,
+) -> Post:
+    """Update mutable fields of a post (caption, visibility). Creator-only."""
+    post = (
+        await session.execute(
+            select(Post).where(Post.id == post_id, Post.creator_user_id == creator_user_id)
+            .options(selectinload(Post.media))
+        )
+    ).scalar_one_or_none()
+    if not post:
+        raise AppError(status_code=404, detail="post_not_found")
+    if caption is not ...:
+        post.caption = caption
+    if visibility is not None:
+        if visibility not in (VISIBILITY_PUBLIC, VISIBILITY_FOLLOWERS, VISIBILITY_SUBSCRIBERS):
+            raise AppError(status_code=400, detail="invalid_visibility")
+        post.visibility = visibility
+    await session.commit()
+    result = await session.execute(
+        select(Post).where(Post.id == post.id).options(selectinload(Post.media))
+    )
+    return result.scalar_one()
+
+
 async def publish_post_now(session: AsyncSession, post_id: UUID, creator_user_id: UUID) -> Post:
     post = (
         await session.execute(
