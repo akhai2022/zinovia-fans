@@ -99,6 +99,87 @@ resource "aws_route53_record" "ses_mail_from_txt" {
   records = ["v=spf1 include:amazonses.com -all"]
 }
 
+resource "aws_route53_record" "dmarc" {
+  count   = var.enable_route53 ? 1 : 0
+  zone_id = local.zone_id
+  name    = "_dmarc.${var.domain_name}"
+  type    = "TXT"
+  ttl     = 600
+  records = ["v=DMARC1; p=none; rua=mailto:dmarc@${var.domain_name}"]
+}
+
+# -----------------------------------------------------------------------------
+# SES configuration set (delivery metrics + suppression)
+# -----------------------------------------------------------------------------
+resource "aws_sesv2_configuration_set" "main" {
+  count                  = var.enable_route53 ? 1 : 0
+  configuration_set_name = "${local.name_prefix}-mail"
+
+  reputation_options {
+    reputation_metrics_enabled = true
+  }
+
+  sending_options {
+    sending_enabled = true
+  }
+
+  suppression_options {
+    suppressed_reasons = ["BOUNCE", "COMPLAINT"]
+  }
+}
+
+resource "aws_sesv2_configuration_set_event_destination" "cloudwatch" {
+  count                  = var.enable_route53 ? 1 : 0
+  configuration_set_name = aws_sesv2_configuration_set.main[0].configuration_set_name
+  event_destination_name = "cloudwatch-metrics"
+
+  event_destination {
+    enabled              = true
+    matching_event_types = ["SEND", "DELIVERY", "BOUNCE", "COMPLAINT", "REJECT"]
+
+    cloud_watch_destination {
+      dimension_configuration {
+        default_dimension_value = "default"
+        dimension_name          = "EmailType"
+        dimension_value_source  = "MESSAGE_TAG"
+      }
+    }
+  }
+}
+
+# -----------------------------------------------------------------------------
+# CloudWatch alarms for SES bounce and complaint rates
+# -----------------------------------------------------------------------------
+resource "aws_cloudwatch_metric_alarm" "ses_bounce_rate" {
+  count               = var.enable_route53 ? 1 : 0
+  alarm_name          = "${local.name_prefix}-ses-bounce-rate"
+  alarm_description   = "SES bounce rate exceeds 2% — investigate immediately"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 1
+  datapoints_to_alarm = 1
+  metric_name         = "Reputation.BounceRate"
+  namespace           = "AWS/SES"
+  period              = 300
+  statistic           = "Average"
+  threshold           = 0.02
+  treat_missing_data  = "notBreaching"
+}
+
+resource "aws_cloudwatch_metric_alarm" "ses_complaint_rate" {
+  count               = var.enable_route53 ? 1 : 0
+  alarm_name          = "${local.name_prefix}-ses-complaint-rate"
+  alarm_description   = "SES complaint rate exceeds 0.1% — investigate immediately"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 1
+  datapoints_to_alarm = 1
+  metric_name         = "Reputation.ComplaintRate"
+  namespace           = "AWS/SES"
+  period              = 300
+  statistic           = "Average"
+  threshold           = 0.001
+  treat_missing_data  = "notBreaching"
+}
+
 # -----------------------------------------------------------------------------
 # DB password (stored in Secrets Manager via secrets module)
 # -----------------------------------------------------------------------------
@@ -1059,6 +1140,7 @@ resource "aws_ecs_task_definition" "api" {
         { name = "CORS_ORIGINS", value = local.cors_origins },
         { name = "MAIL_PROVIDER", value = local.mail_provider },
         { name = "MAIL_FROM", value = local.mail_from },
+        { name = "SES_CONFIGURATION_SET", value = var.enable_route53 ? aws_sesv2_configuration_set.main[0].configuration_set_name : "" },
         { name = "MEDIA_URL_TTL_SECONDS", value = "3600" },
         { name = "RATE_LIMIT_MAX", value = "60" },
         { name = "RATE_LIMIT_WINDOW_SECONDS", value = "60" },

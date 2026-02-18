@@ -117,6 +117,7 @@ class Settings(BaseSettings):
     mailpit_port: int = Field(default=1025, alias="MAILPIT_PORT")
     # Default matches production sender; can be overridden via MAIL_FROM env var.
     mail_from: str = Field(alias="MAIL_FROM", default="noreply@zinovia.ai")
+    ses_configuration_set: str = Field(alias="SES_CONFIGURATION_SET", default="")
 
     # Watermark for derived image variants (footer only; originals unchanged)
     media_watermark_text: str = Field(

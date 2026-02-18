@@ -93,14 +93,17 @@ class SesMailProvider:
         settings = get_settings()
         self._region = settings.aws_region or "us-east-1"
         self._mail_from = settings.mail_from
+        self._configuration_set = settings.ses_configuration_set or ""
         self._client = boto3.client("sesv2", region_name=self._region)
+        # Build List-Unsubscribe target from web base URL.
+        web_base = (settings.public_web_base_url or settings.app_base_url).rstrip("/")
+        self._unsubscribe_url = f"{web_base}/settings/profile"
 
     async def _send_email(
         self, *, recipient: str, subject: str, text_body: str, html_body: str, email_type: str
     ) -> None:
         try:
-            response = await asyncio.to_thread(
-                self._client.send_email,
+            kwargs: dict = dict(
                 FromEmailAddress=self._mail_from,
                 Destination={"ToAddresses": [recipient]},
                 Content={
@@ -110,8 +113,19 @@ class SesMailProvider:
                             "Text": {"Data": text_body, "Charset": "UTF-8"},
                             "Html": {"Data": html_body, "Charset": "UTF-8"},
                         },
+                        "Headers": [
+                            {"Name": "List-Unsubscribe", "Value": f"<{self._unsubscribe_url}>"},
+                            {"Name": "List-Unsubscribe-Post", "Value": "List-Unsubscribe=One-Click"},
+                        ],
                     }
                 },
+                EmailTags=[{"Name": "EmailType", "Value": email_type}],
+            )
+            if self._configuration_set:
+                kwargs["ConfigurationSetName"] = self._configuration_set
+            response = await asyncio.to_thread(
+                self._client.send_email,
+                **kwargs,
             )
             logger.info(
                 "%s email delivered",
@@ -154,15 +168,15 @@ class SesMailProvider:
         verify_link = _build_verify_link(payload.token)
         await self._send_email(
             recipient=payload.recipient,
-            subject="Verify your Zinovia account",
+            subject="Verify your Zinovia Fans account",
             text_body=(
-                "Welcome to Zinovia.\n\n"
+                "Welcome to Zinovia Fans.\n\n"
                 "Please verify your email using this link:\n"
                 f"{verify_link}\n\n"
                 "This link expires in 24 hours."
             ),
             html_body=(
-                "<p>Welcome to Zinovia.</p>"
+                "<p>Welcome to Zinovia Fans.</p>"
                 "<p>Please verify your email using this link:</p>"
                 f'<p><a href="{verify_link}">{verify_link}</a></p>'
                 "<p>This link expires in 24 hours.</p>"
@@ -173,16 +187,16 @@ class SesMailProvider:
     async def send_password_reset_email(self, payload: PasswordResetEmailPayload) -> None:
         await self._send_email(
             recipient=payload.recipient,
-            subject="Reset your Zinovia password",
+            subject="Reset your password — Zinovia Fans",
             text_body=(
-                "You requested a password reset for your Zinovia account.\n\n"
+                "You requested a password reset for your Zinovia Fans account.\n\n"
                 "Use this link to set a new password:\n"
                 f"{payload.reset_url}\n\n"
                 "This link expires in 1 hour. If you didn't request this, "
                 "you can safely ignore this email."
             ),
             html_body=(
-                "<p>You requested a password reset for your Zinovia account.</p>"
+                "<p>You requested a password reset for your Zinovia Fans account.</p>"
                 "<p>Use this link to set a new password:</p>"
                 f'<p><a href="{payload.reset_url}">{payload.reset_url}</a></p>'
                 "<p>This link expires in 1 hour. If you didn't request this, "
@@ -212,6 +226,10 @@ class MailpitProvider:
         msg["Subject"] = subject
         msg["From"] = self._mail_from
         msg["To"] = recipient
+        settings = get_settings()
+        web_base = (settings.public_web_base_url or settings.app_base_url).rstrip("/")
+        msg["List-Unsubscribe"] = f"<{web_base}/settings/profile>"
+        msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
         msg.attach(MIMEText(text_body, "plain", "utf-8"))
         msg.attach(MIMEText(html_body, "html", "utf-8"))
 
@@ -234,15 +252,15 @@ class MailpitProvider:
         verify_link = _build_verify_link(payload.token)
         await self._send_email(
             recipient=payload.recipient,
-            subject="Verify your Zinovia account",
+            subject="Verify your Zinovia Fans account",
             text_body=(
-                "Welcome to Zinovia.\n\n"
+                "Welcome to Zinovia Fans.\n\n"
                 "Please verify your email using this link:\n"
                 f"{verify_link}\n\n"
                 "This link expires in 24 hours."
             ),
             html_body=(
-                "<p>Welcome to Zinovia.</p>"
+                "<p>Welcome to Zinovia Fans.</p>"
                 "<p>Please verify your email using this link:</p>"
                 f'<p><a href="{verify_link}">{verify_link}</a></p>'
                 "<p>This link expires in 24 hours.</p>"
@@ -253,16 +271,16 @@ class MailpitProvider:
     async def send_password_reset_email(self, payload: PasswordResetEmailPayload) -> None:
         await self._send_email(
             recipient=payload.recipient,
-            subject="Reset your Zinovia password",
+            subject="Reset your password — Zinovia Fans",
             text_body=(
-                "You requested a password reset for your Zinovia account.\n\n"
+                "You requested a password reset for your Zinovia Fans account.\n\n"
                 "Use this link to set a new password:\n"
                 f"{payload.reset_url}\n\n"
                 "This link expires in 1 hour. If you didn't request this, "
                 "you can safely ignore this email."
             ),
             html_body=(
-                "<p>You requested a password reset for your Zinovia account.</p>"
+                "<p>You requested a password reset for your Zinovia Fans account.</p>"
                 "<p>Use this link to set a new password:</p>"
                 f'<p><a href="{payload.reset_url}">{payload.reset_url}</a></p>'
                 "<p>This link expires in 1 hour. If you didn't request this, "
