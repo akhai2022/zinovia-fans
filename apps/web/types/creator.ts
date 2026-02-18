@@ -11,6 +11,7 @@ export interface CreatorSummary {
   handle: string;
   display_name: string;
   avatar_asset_id?: string | null;
+  verified?: boolean;
 }
 
 export interface PostItem {

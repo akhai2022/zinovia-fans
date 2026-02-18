@@ -19,6 +19,7 @@ class CreatorProfilePublic(BaseModel):
     banner_media_id: UUID | None
     discoverable: bool
     nsfw: bool
+    verified: bool = False
     followers_count: int
     posts_count: int = 0
     is_following: bool = False
@@ -45,6 +46,7 @@ class CreatorFollowedItem(BaseModel):
     handle: str
     display_name: str
     avatar_media_id: UUID | None
+    verified: bool = False
     created_at: datetime
 
 
@@ -64,6 +66,7 @@ class CreatorDiscoverItem(BaseModel):
     handle: str
     display_name: str
     avatar_media_id: UUID | None
+    verified: bool = False
     followers_count: int
     posts_count: int
 

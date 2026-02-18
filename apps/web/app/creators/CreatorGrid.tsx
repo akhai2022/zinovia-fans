@@ -235,6 +235,11 @@ export function CreatorGrid({
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-display font-medium text-foreground">
                         {creator.display_name || creator.handle}
+                        {creator.verified && (
+                          <span className="ml-1.5 inline-block shrink-0 rounded-full bg-success-bg px-1.5 py-0.5 align-middle text-[10px] uppercase tracking-wide text-success-500">
+                            Verified
+                          </span>
+                        )}
                       </p>
                       <p className="truncate text-sm text-muted-foreground">
                         @{creator.handle}

@@ -155,6 +155,7 @@ async def get_discoverable_creators_page(
             Profile.avatar_asset_id,
             followers_subq,
             posts_subq,
+            Profile.verified,
         )
         .join(User, User.id == Profile.user_id)
         .where(*main_where)
@@ -163,9 +164,9 @@ async def get_discoverable_creators_page(
         .limit(limit)
     )
     rows = (await session.execute(query)).all()
-    # Each row: (user_id, handle, display_name, avatar_asset_id, followers_count, posts_count)
+    # Each row: (user_id, handle, display_name, avatar_asset_id, followers_count, posts_count, verified)
     items = [
-        (r[0], r[1] or "", r[2], r[3], r[4] or 0, r[5] or 0)
+        (r[0], r[1] or "", r[2], r[3], r[4] or 0, r[5] or 0, r[6] or False)
         for r in rows
     ]
     return items, total

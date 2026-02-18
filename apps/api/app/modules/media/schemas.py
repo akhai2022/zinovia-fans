@@ -42,3 +42,15 @@ class MediaMineItem(BaseModel):
 class MediaMinePage(BaseModel):
     items: list[MediaMineItem]
     next_cursor: str | None = None
+
+
+class BatchMediaCreate(BaseModel):
+    """Batch upload request — up to 10 items at once."""
+
+    items: list[MediaCreate] = Field(min_length=1, max_length=10)
+
+
+class BatchUploadUrlResponse(BaseModel):
+    """Batch upload response — one entry per input item."""
+
+    items: list[UploadUrlResponse]

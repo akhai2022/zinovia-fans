@@ -25,6 +25,7 @@ class CreatorSummary(BaseModel):
     handle: str
     display_name: str
     avatar_asset_id: UUID | None
+    verified: bool = False
 
 
 class PostMediaItem(BaseModel):
@@ -151,3 +152,25 @@ class PostCommentPageOut(BaseModel):
     items: list[PostCommentOut]
     next_cursor: str | None = None
     total: int = 0
+
+
+class PostSearchResult(BaseModel):
+    """Search result with creator info."""
+
+    id: UUID
+    creator_user_id: UUID
+    type: str
+    caption: str | None
+    visibility: str
+    nsfw: bool
+    created_at: datetime
+    updated_at: datetime
+    asset_ids: list[UUID] = Field(default_factory=list)
+    creator: CreatorSummary | None = None
+
+
+class PostSearchPage(BaseModel):
+    items: list[PostSearchResult]
+    total: int
+    page: int
+    page_size: int

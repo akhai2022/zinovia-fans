@@ -14,6 +14,13 @@ export const metadata: Metadata = {
   description:
     "Discover and subscribe to exclusive creators on Zinovia. Browse profiles, follow favourites, and unlock premium content.",
   alternates: { canonical: "https://zinovia.ai/creators" },
+  openGraph: {
+    title: "Browse Creators | Zinovia",
+    description:
+      "Discover and subscribe to exclusive creators on Zinovia. Browse profiles, follow favourites, and unlock premium content.",
+    url: "https://zinovia.ai/creators",
+    siteName: "Zinovia Fans",
+  },
 };
 
 export type CreatorItem = {
@@ -21,6 +28,7 @@ export type CreatorItem = {
   handle: string;
   display_name: string;
   avatar_media_id?: string | null;
+  verified?: boolean;
   followers_count: number;
   posts_count: number;
 };

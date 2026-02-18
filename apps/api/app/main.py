@@ -48,6 +48,7 @@ from app.modules.ppv.router import router as ppv_router
 from app.modules.onboarding.router import router as onboarding_router
 from app.modules.onboarding.webhook_router import router as webhook_kyc_router
 from app.modules.admin.router import router as admin_router
+from app.modules.collections.router import router as collections_router
 from app.modules.posts.router import feed_router, router as posts_router
 
 logger = logging.getLogger(__name__)
@@ -190,6 +191,7 @@ def create_app() -> FastAPI:
     app.include_router(billing_router, prefix="/billing", tags=["billing"])
     app.include_router(creator_earnings_router, prefix="/creator", tags=["creator"])
     app.include_router(ledger_router, prefix="/ledger", tags=["ledger"])
+    app.include_router(collections_router, prefix="/collections", tags=["collections"])
     app.include_router(admin_router, prefix="/admin", tags=["admin"])
     return app
 

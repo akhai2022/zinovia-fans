@@ -71,6 +71,7 @@ type CreatorProfile = {
   bio?: string | null;
   avatar_media_id?: string | null;
   banner_media_id?: string | null;
+  verified?: boolean;
   followers_count: number;
   posts_count: number;
   is_following?: boolean;
@@ -141,8 +142,34 @@ export default async function CreatorProfilePage({
     postsError = error instanceof ApiClientError ? error.detail || error.message : "Failed to load posts.";
   }
 
+  const creatorJsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "ProfilePage",
+      mainEntity: {
+        "@type": "Person",
+        name: creator.display_name,
+        alternateName: `@${creator.handle}`,
+        url: `${SITE_URL}/creators/${creator.handle}`,
+        description: creator.bio ?? `Subscribe to ${creator.display_name} on Zinovia Fans.`,
+      },
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Creators", item: `${SITE_URL}/creators` },
+        { "@type": "ListItem", position: 2, name: creator.display_name },
+      ],
+    },
+  ];
+
   return (
     <Page className="max-w-6xl space-y-6 pb-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(creatorJsonLd) }}
+      />
       <div className="-mx-4 overflow-hidden rounded-2xl border border-border sm:-mx-6 md:mx-0">
         {creator.banner_media_id ? (
           <PostMediaImage
@@ -172,7 +199,7 @@ export default async function CreatorProfilePage({
               <span>{creator.followers_count} followers</span>
               <span>·</span>
               <span>{creator.posts_count} posts</span>
-              <Badge variant="verified">Verified</Badge>
+              {creator.verified && <Badge variant="verified">Verified</Badge>}
             </div>
           </div>
           <div className="flex flex-wrap gap-2">

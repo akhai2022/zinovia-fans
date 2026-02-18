@@ -11,13 +11,14 @@ import type { PostItem } from "@/types/creator";
 import type { PostOut, PostWithCreator } from "../api";
 import { PostMediaImage } from "./PostMediaImage";
 import { PostMediaVideo } from "./PostMediaVideo";
+import { RichCaption } from "./RichCaption";
 
 type FeedCardProps = {
   post: PostOut | PostWithCreator | PostItem;
   /** When true, show lock overlay (subscriber-only content) */
   locked?: boolean;
   /** Creator for header; from post.creator when feed item */
-  creator?: { handle: string; display_name: string; user_id?: string; avatar_asset_id?: string | null };
+  creator?: { handle: string; display_name: string; user_id?: string; avatar_asset_id?: string | null; verified?: boolean };
   onUnlockClick?: () => void;
   className?: string;
 };
@@ -103,7 +104,7 @@ export function FeedCard({
             href={`/creators/${creatorInfo.handle}`}
             avatarAssetId={creatorInfo.avatar_asset_id ?? undefined}
             size="sm"
-            badge={undefined}
+            badge={(creatorInfo as any)?.verified ? "verified" : undefined}
           />
         </div>
       )}
@@ -138,9 +139,7 @@ export function FeedCard({
           ) : null}
           <div className="px-4 py-3">
             {post.caption && (
-              <p className="text-premium-body-sm text-foreground line-clamp-3">
-                {post.caption}
-              </p>
+              <RichCaption text={post.caption} className="line-clamp-3" />
             )}
             <p className="mt-2 text-premium-small text-muted-foreground">
               {post.visibility} · {new Date(post.created_at).toLocaleDateString()}

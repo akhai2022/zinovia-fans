@@ -17,6 +17,33 @@ function makeObjectKey(file: File): string {
   return key.length > MAX_OBJECT_KEY_LENGTH ? key.slice(0, MAX_OBJECT_KEY_LENGTH) : key;
 }
 
+function uploadWithProgress(
+  url: string,
+  file: File,
+  contentType: string,
+  onProgress: (pct: number) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", url);
+    xhr.setRequestHeader("Content-Type", contentType);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+      } else {
+        reject(new Error(`Upload failed: ${xhr.status}`));
+      }
+    };
+    xhr.onerror = () => reject(new Error("Upload failed: network error"));
+    xhr.send(file);
+  });
+}
+
 export interface VideoUploadFieldProps {
   onUploadComplete: (assetId: string) => void;
   disabled?: boolean;
@@ -29,6 +56,7 @@ export function VideoUploadField({
   const inputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<"idle" | "uploading" | "done" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -47,6 +75,7 @@ export function VideoUploadField({
     }
 
     setStatus("uploading");
+    setProgress(0);
     setErrorMessage(null);
 
     const objectKey = makeObjectKey(file);
@@ -60,20 +89,13 @@ export function VideoUploadField({
         size_bytes: sizeBytes,
       });
 
-      const putRes = await fetch(upload_url, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": contentType },
-      });
-
-      if (!putRes.ok) {
-        throw new Error(`Upload failed: ${putRes.status}`);
-      }
+      await uploadWithProgress(upload_url, file, contentType, setProgress);
 
       setStatus("done");
       onUploadComplete(asset_id);
     } catch (err) {
       setStatus("error");
+      setProgress(0);
       setErrorMessage(err instanceof Error ? err.message : "Upload failed");
     }
   };
@@ -98,7 +120,7 @@ export function VideoUploadField({
           onClick={() => inputRef.current?.click()}
           disabled={disabled || status === "uploading"}
         >
-          {status === "uploading" ? "Uploading…" : status === "done" ? "Uploaded" : "Choose video"}
+          {status === "uploading" ? `Uploading ${progress}%` : status === "done" ? "Uploaded" : "Choose video"}
         </Button>
         {status === "error" && errorMessage && (
           <span className="text-sm text-destructive" role="alert">
@@ -106,6 +128,19 @@ export function VideoUploadField({
           </span>
         )}
       </div>
+      {status === "uploading" && (
+        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full bg-primary transition-all duration-200"
+            style={{ width: `${progress}%` }}
+            role="progressbar"
+            aria-valuenow={progress}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Upload progress"
+          />
+        </div>
+      )}
     </div>
   );
 }

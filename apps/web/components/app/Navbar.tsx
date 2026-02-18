@@ -37,6 +37,7 @@ export function Navbar({
     { href: "/", label: t.nav.home },
     { href: "/feed", label: t.nav.feed },
     { href: "/creators", label: t.nav.creators },
+    { href: "/search", label: "Search" },
   ];
 
   const NAV_LINKS_AUTH = [

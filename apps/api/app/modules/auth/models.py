@@ -52,5 +52,6 @@ class Profile(TimestampMixin, Base):
     )
     discoverable: Mapped[bool] = mapped_column(Boolean, default=True)
     nsfw: Mapped[bool] = mapped_column(Boolean, default=False)
+    verified: Mapped[bool] = mapped_column(Boolean, default=False)
 
     user: Mapped[User] = relationship(back_populates="profile")

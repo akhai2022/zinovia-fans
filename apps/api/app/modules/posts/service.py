@@ -686,3 +686,54 @@ async def publish_due_scheduled_posts(session: AsyncSession) -> int:
         await session.commit()
         logger.info("scheduled_posts_published count=%s", len(due_posts))
     return len(due_posts)
+
+
+async def search_posts(
+    session: AsyncSession,
+    q: str,
+    page: int = 1,
+    page_size: int = DEFAULT_PAGE_SIZE,
+) -> tuple[list[tuple[Post, User, Profile]], int]:
+    """
+    Search public published posts by caption using pg_trgm GIN index.
+    Returns (items, total) where items is list of (post, user, profile).
+    """
+    from sqlalchemy import text as sa_text
+    page, page_size, offset, limit = normalize_pagination(
+        page, page_size,
+        default_size=DEFAULT_PAGE_SIZE,
+        max_size=MAX_PAGE_SIZE,
+        invalid_page_size_use_default=True,
+    )
+    search_term = q.strip()
+    if not search_term:
+        return [], 0
+
+    pattern = f"%{search_term}%"
+    now = datetime.now(timezone.utc)
+
+    base_where = [
+        Post.status == POST_STATUS_PUBLISHED,
+        Post.visibility == VISIBILITY_PUBLIC,
+        or_(Post.publish_at.is_(None), Post.publish_at <= now),
+        Post.caption.ilike(pattern),
+    ]
+
+    count_result = await session.execute(
+        select(func.count(Post.id)).where(*base_where)
+    )
+    total = count_result.scalar_one() or 0
+
+    query = (
+        select(Post, User, Profile)
+        .join(User, User.id == Post.creator_user_id)
+        .join(Profile, Profile.user_id == User.id)
+        .where(*base_where)
+        .options(selectinload(Post.media))
+        .order_by(Post.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    rows = (await session.execute(query)).all()
+    items = [(post, user, profile) for post, user, profile in rows]
+    return items, total

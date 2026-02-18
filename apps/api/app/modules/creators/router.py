@@ -53,10 +53,11 @@ async def list_creators(
             handle=handle,
             display_name=display_name,
             avatar_media_id=avatar_media_id,
+            verified=verified,
             followers_count=followers_count,
             posts_count=posts_count,
         )
-        for user_id, handle, display_name, avatar_media_id, followers_count, posts_count in items_tuples
+        for user_id, handle, display_name, avatar_media_id, followers_count, posts_count, verified in items_tuples
     ]
     return CreatorDiscoverPage(items=items, total=total, page=page, page_size=page_size)
 
@@ -84,6 +85,7 @@ async def me_following(
             handle=profile.handle or "",
             display_name=profile.display_name,
             avatar_media_id=profile.avatar_asset_id,
+            verified=profile.verified,
             created_at=profile.created_at,
         )
         for user, profile in items_tuples
@@ -114,6 +116,7 @@ async def update_me(
         banner_media_id=profile.banner_asset_id,
         discoverable=profile.discoverable,
         nsfw=profile.nsfw,
+        verified=profile.verified,
         followers_count=followers_count,
         posts_count=posts_count,
         is_following=False,
@@ -150,6 +153,7 @@ async def get_me(
         banner_media_id=profile.banner_asset_id,
         discoverable=profile.discoverable,
         nsfw=profile.nsfw,
+        verified=profile.verified,
         followers_count=followers_count,
         posts_count=posts_count,
         is_following=False,
@@ -206,6 +210,7 @@ async def get_creator(
         banner_media_id=profile.banner_asset_id,
         discoverable=profile.discoverable,
         nsfw=profile.nsfw,
+        verified=profile.verified,
         followers_count=followers_count,
         posts_count=posts_count,
         is_following=is_following,

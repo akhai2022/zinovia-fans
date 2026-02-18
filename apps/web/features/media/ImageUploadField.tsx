@@ -20,6 +20,33 @@ function makeObjectKey(file: File): string {
   return key.length > MAX_OBJECT_KEY_LENGTH ? key.slice(0, MAX_OBJECT_KEY_LENGTH) : key;
 }
 
+function uploadWithProgress(
+  url: string,
+  file: File,
+  contentType: string,
+  onProgress: (pct: number) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", url);
+    xhr.setRequestHeader("Content-Type", contentType);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+      } else {
+        reject(new Error(`Upload failed: ${xhr.status}`));
+      }
+    };
+    xhr.onerror = () => reject(new Error("Upload failed: network error"));
+    xhr.send(file);
+  });
+}
+
 export interface ImageUploadFieldProps {
   /** Called with asset_id and optional preview URL after successful upload. */
   onUploadComplete: (assetId: string, previewUrl?: string | null) => void;
@@ -38,6 +65,7 @@ export function ImageUploadField({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [unauthorized, setUnauthorized] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -51,6 +79,7 @@ export function ImageUploadField({
     }
 
     setStatus("uploading");
+    setProgress(0);
     setErrorMessage(null);
     setUnauthorized(false);
     setPreviewUrl(null);
@@ -66,15 +95,7 @@ export function ImageUploadField({
         size_bytes: sizeBytes,
       });
 
-      const putRes = await fetch(upload_url, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": contentType },
-      });
-
-      if (!putRes.ok) {
-        throw new Error(`Upload failed: ${putRes.status}`);
-      }
+      await uploadWithProgress(upload_url, file, contentType, setProgress);
 
       const { download_url } = await MediaService.mediaDownloadUrl(asset_id);
       if (download_url) {
@@ -85,9 +106,11 @@ export function ImageUploadField({
       if (allowMultiple) {
         setPreviewUrl(null);
         setStatus("idle");
+        setProgress(0);
       }
     } catch (err) {
       setStatus("error");
+      setProgress(0);
       const { kind, message } = getApiErrorMessage(err);
       const isUnauth = kind === "unauthorized" || (err instanceof ApiError && err.status === 401);
       setUnauthorized(isUnauth);
@@ -116,7 +139,7 @@ export function ImageUploadField({
           disabled={disabled || status === "uploading"}
         >
           {status === "uploading"
-            ? "Uploading…"
+            ? `Uploading ${progress}%`
             : status === "done" && allowMultiple
               ? "Add another image"
               : "Choose image"}
@@ -138,6 +161,19 @@ export function ImageUploadField({
           </span>
         )}
       </div>
+      {status === "uploading" && (
+        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full bg-primary transition-all duration-200"
+            style={{ width: `${progress}%` }}
+            role="progressbar"
+            aria-valuenow={progress}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Upload progress"
+          />
+        </div>
+      )}
       {previewUrl && (
         <div className="mt-2">
           <img

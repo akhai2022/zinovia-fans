@@ -13,6 +13,7 @@ from app.modules.auth.models import User
 from app.modules.creators.deps import require_creator_with_profile
 from app.modules.posts.constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from app.modules.posts.schemas import (
+    CreatorSummary,
     FeedPage,
     PostCommentCreate,
     PostCommentOut,
@@ -20,6 +21,8 @@ from app.modules.posts.schemas import (
     PostCreate,
     PostLikeSummary,
     PostOut,
+    PostSearchPage,
+    PostSearchResult,
     PostUpdate,
     PostWithCreator,
 )
@@ -34,6 +37,7 @@ from app.modules.posts.service import (
     like_post,
     list_comments_page,
     publish_post_now,
+    search_posts,
     unlike_post,
     update_post,
 )
@@ -62,7 +66,6 @@ async def feed(
     page_size: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
     cursor: str | None = Query(None, description="Opaque cursor for infinite scroll pagination."),
 ) -> FeedPage:
-    from app.modules.posts.schemas import CreatorSummary
     from app.modules.posts.service import _post_to_out_locked
 
     items_tuples, total, next_cursor = await get_feed_page(
@@ -79,10 +82,44 @@ async def feed(
                     handle=profile.handle or "",
                     display_name=profile.display_name,
                     avatar_asset_id=profile.avatar_asset_id,
+                    verified=profile.verified,
                 ),
             )
         )
     return FeedPage(items=items, total=total, page=page, page_size=page_size, next_cursor=next_cursor)
+
+
+@router.get("/search", response_model=PostSearchPage, operation_id="posts_search")
+async def search(
+    q: str = Query(..., min_length=1, max_length=200, description="Search query"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
+    session: AsyncSession = Depends(get_async_session),
+) -> PostSearchPage:
+    """Search public posts by caption (trigram GIN index)."""
+    items_tuples, total = await search_posts(session, q, page=page, page_size=page_size)
+    items = [
+        PostSearchResult(
+            id=post.id,
+            creator_user_id=post.creator_user_id,
+            type=post.type,
+            caption=post.caption,
+            visibility=post.visibility,
+            nsfw=post.nsfw,
+            created_at=post.created_at,
+            updated_at=post.updated_at,
+            asset_ids=[pm.media_asset_id for pm in sorted(post.media, key=lambda m: m.position)],
+            creator=CreatorSummary(
+                user_id=user.id,
+                handle=profile.handle or "",
+                display_name=profile.display_name,
+                avatar_asset_id=profile.avatar_asset_id,
+                verified=profile.verified,
+            ),
+        )
+        for post, user, profile in items_tuples
+    ]
+    return PostSearchPage(items=items, total=total, page=page, page_size=page_size)
 
 
 @router.post("", response_model=PostOut, status_code=201, operation_id="posts_create")

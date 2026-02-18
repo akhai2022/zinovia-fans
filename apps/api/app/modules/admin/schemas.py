@@ -17,6 +17,7 @@ class AdminCreatorOut(BaseModel):
     bio: str | None
     discoverable: bool
     featured: bool
+    verified: bool = False
     created_at: datetime
 
 
@@ -28,7 +29,7 @@ class AdminCreatorPage(BaseModel):
 
 
 class AdminCreatorAction(BaseModel):
-    action: str = Field(..., pattern="^(approve|reject|feature|unfeature|suspend|activate)$")
+    action: str = Field(..., pattern="^(approve|reject|feature|unfeature|suspend|activate|verify|unverify)$")
     reason: str | None = None
 
 

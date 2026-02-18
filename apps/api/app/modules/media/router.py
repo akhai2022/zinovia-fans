@@ -15,6 +15,8 @@ from app.modules.auth.models import Profile, User
 from app.modules.creators.constants import CREATOR_ROLE
 from app.modules.media.models import MediaObject
 from app.modules.media.schemas import (
+    BatchMediaCreate,
+    BatchUploadUrlResponse,
     MediaCreate,
     MediaMineItem,
     MediaMinePage,
@@ -89,6 +91,66 @@ async def create_upload_url(
         metadata={"content_type": payload.content_type, "size_bytes": payload.size_bytes},
     )
     return UploadUrlResponse(asset_id=media.id, upload_url=upload_url)
+
+
+@router.post(
+    "/batch-upload-urls",
+    response_model=BatchUploadUrlResponse,
+    operation_id="media_batch_upload_urls",
+)
+async def create_batch_upload_urls(
+    payload: BatchMediaCreate,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(get_current_user),
+) -> BatchUploadUrlResponse:
+    """Create upload URLs for up to 10 files at once."""
+    storage = get_storage_client()
+    owner_handle = None
+    has_images = any(_is_image_content_type(item.content_type) for item in payload.items)
+    if has_images:
+        try:
+            r = await session.execute(
+                select(Profile.handle).where(Profile.user_id == user.id).limit(1)
+            )
+            owner_handle = r.scalar_one_or_none()
+        except Exception:
+            pass
+
+    results = []
+    for item in payload.items:
+        validate_media_upload(item.content_type, item.size_bytes)
+        media = await create_media_object(
+            session,
+            owner_user_id=user.id,
+            object_key=item.object_key,
+            content_type=item.content_type,
+            size_bytes=item.size_bytes,
+        )
+        upload_url = generate_signed_upload(storage, media.object_key, media.content_type)
+
+        if _is_image_content_type(item.content_type):
+            try:
+                from app.celery_client import enqueue_generate_derived_variants
+                enqueue_generate_derived_variants(
+                    str(media.id),
+                    media.object_key,
+                    media.content_type,
+                    owner_handle=owner_handle,
+                )
+            except Exception as e:
+                logger.warning("Failed to enqueue generate_derived_variants: %s", e)
+
+        await log_audit_event(
+            session,
+            action=ACTION_MEDIA_UPLOADED,
+            actor_id=user.id,
+            resource_type="media",
+            resource_id=str(media.id),
+            metadata={"content_type": item.content_type, "size_bytes": item.size_bytes},
+        )
+        results.append(UploadUrlResponse(asset_id=media.id, upload_url=upload_url))
+
+    return BatchUploadUrlResponse(items=results)
 
 
 @router.get(

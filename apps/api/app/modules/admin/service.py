@@ -69,6 +69,7 @@ async def list_creators_admin(
             "bio": profile.bio,
             "discoverable": profile.discoverable,
             "featured": getattr(profile, "featured", False),
+            "verified": profile.verified,
             "created_at": user.created_at,
         })
     return items, total
@@ -111,6 +112,12 @@ async def admin_action_creator(
     elif action == "activate":
         user.is_active = True
         logger.info("admin_activate user_id=%s", target_user_id)
+    elif action == "verify":
+        profile.verified = True
+        logger.info("admin_verify user_id=%s reason=%s", target_user_id, reason)
+    elif action == "unverify":
+        profile.verified = False
+        logger.info("admin_unverify user_id=%s reason=%s", target_user_id, reason)
     else:
         raise AppError(status_code=400, detail="invalid_action")
 
