@@ -1,6 +1,6 @@
 """Add verified badge, collections, and post search index.
 
-Revision ID: 0017_verification_collections_search
+Revision ID: 0017_verified_collections
 Revises: 0016_audit_events
 Create Date: 2026-02-18
 """
@@ -10,11 +10,14 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
 
-revision = "0017_verification_collections_search"
+revision = "0017_verified_collections"
 down_revision = "0016_audit_events"
 
 
 def upgrade() -> None:
+    # Widen alembic_version column to avoid future truncation (default is 32).
+    op.alter_column("alembic_version", "version_num", type_=sa.String(128))
+
     # 1. Creator verification badge
     op.add_column("profiles", sa.Column("verified", sa.Boolean(), nullable=False, server_default="false"))
 
