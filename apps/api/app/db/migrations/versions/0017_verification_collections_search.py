@@ -42,9 +42,21 @@ def upgrade() -> None:
         sa.UniqueConstraint("collection_id", "post_id", name="uq_collection_post"),
     )
 
-    # 3. Full-text search index on posts.caption using GIN trigram
-    op.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
-    op.execute("CREATE INDEX ix_posts_caption_trgm ON posts USING gin (caption gin_trgm_ops)")
+    # 3. Full-text search index on posts.caption using GIN trigram.
+    # pg_trgm may require elevated privileges on managed databases (e.g. AWS RDS).
+    # Use a savepoint so failure doesn't abort the rest of the migration.
+    conn = op.get_bind()
+    conn.execute(sa.text("SAVEPOINT trgm_ext"))
+    try:
+        conn.execute(sa.text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
+        conn.execute(sa.text(
+            "CREATE INDEX IF NOT EXISTS ix_posts_caption_trgm "
+            "ON posts USING gin (caption gin_trgm_ops)"
+        ))
+        conn.execute(sa.text("RELEASE SAVEPOINT trgm_ext"))
+    except Exception:
+        conn.execute(sa.text("ROLLBACK TO SAVEPOINT trgm_ext"))
+        # Extension unavailable — ILIKE search still works, just without GIN acceleration.
 
 
 def downgrade() -> None:
