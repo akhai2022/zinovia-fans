@@ -53,6 +53,15 @@ from app.modules.audit.service import (
 router = APIRouter()
 
 
+def _get_client_ip(request: Request) -> str | None:
+    """Extract real client IP from X-Forwarded-For (set by ALB/CloudFront) or fall back to direct connection."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        # X-Forwarded-For: client, proxy1, proxy2 — first entry is the real client
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else None
+
+
 def _cookie_settings() -> dict[str, object]:
     settings = get_settings()
     cookie_settings: dict[str, object] = {
@@ -79,7 +88,7 @@ async def register(
     idempotency_key: str = Depends(require_idempotency_key),
     session: AsyncSession = Depends(get_async_session),
 ) -> CreatorRegisterResponse:
-    client_ip = request.client.host if request.client else None
+    client_ip = _get_client_ip(request)
 
     async def _do() -> dict:
         user = await register_creator(session, payload.email, payload.password)
@@ -135,7 +144,7 @@ async def resend_verification_email(
     request: Request,
     session: AsyncSession = Depends(get_async_session),
 ) -> dict:
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = _get_client_ip(request) or "unknown"
     rate_limit_key = f"resend_verify:{client_ip}:{payload.email}"
     if not await check_rate_limit(rate_limit_key):
         raise AppError(status_code=429, detail="rate_limit_exceeded")
@@ -184,7 +193,7 @@ async def verify_email(
 ) -> dict:
     import secrets as _secrets
 
-    client_ip = request.client.host if request.client else None
+    client_ip = _get_client_ip(request)
 
     async def _do() -> dict:
         user = await consume_email_verification_token(session, payload.token)
@@ -243,7 +252,7 @@ async def verify_email(
 async def signup(
     payload: UserCreate, request: Request, session: AsyncSession = Depends(get_async_session)
 ) -> dict:
-    client_ip = request.client.host if request.client else None
+    client_ip = _get_client_ip(request)
     user = await create_user(session, payload.email, payload.password, payload.display_name)
     if client_ip:
         user.signup_ip = client_ip
@@ -290,7 +299,7 @@ async def forgot_password(
 
     from app.modules.auth.password_reset import create_password_reset_token
 
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = _get_client_ip(request) or "unknown"
     rate_limit_key = f"password_reset:{client_ip}:{payload.email}"
     if not await check_rate_limit(rate_limit_key):
         raise AppError(status_code=429, detail="rate_limited")
@@ -354,7 +363,7 @@ async def change_password_endpoint(
     user: User = Depends(get_current_user),
 ) -> dict:
     await change_password(session, user, payload.current_password, payload.new_password)
-    client_ip = request.client.host if request.client else None
+    client_ip = _get_client_ip(request)
     await log_audit_event(
         session,
         action=ACTION_PASSWORD_CHANGE,
@@ -375,7 +384,7 @@ async def login(
 ) -> TokenResponse:
     import secrets as _secrets
 
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = _get_client_ip(request) or "unknown"
     rate_limit_key = f"login:{client_ip}:{payload.email}"
     if not await check_rate_limit(rate_limit_key):
         raise AppError(status_code=429, detail="rate_limit_exceeded")
@@ -424,7 +433,7 @@ async def logout(
     session: AsyncSession = Depends(get_async_session),
     user: User = Depends(get_current_user),
 ) -> dict:
-    client_ip = request.client.host if request.client else None
+    client_ip = _get_client_ip(request)
     await log_audit_event(
         session,
         action=ACTION_LOGOUT,
