@@ -49,7 +49,7 @@ const VISIBILITY_OPTIONS = [
 ];
 
 export default function NewPostPage() {
-  const { authorized } = useRequireRole("creator");
+  const { authorized } = useRequireRole(["creator", "admin"]);
   const router = useRouter();
   const { addToast } = useToast();
   const [caption, setCaption] = useState("");

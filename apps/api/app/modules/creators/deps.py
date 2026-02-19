@@ -12,8 +12,8 @@ from app.modules.creators.constants import CREATOR_ROLE
 
 
 def require_creator(user: User = Depends(get_current_user)) -> User:
-    """Require user has creator role (e.g. for PATCH /creators/me)."""
-    if user.role != CREATOR_ROLE:
+    """Require user has creator or admin role (e.g. for PATCH /creators/me)."""
+    if user.role not in (CREATOR_ROLE, "admin"):
         raise AppError(status_code=403, detail="creator_only")
     return user
 

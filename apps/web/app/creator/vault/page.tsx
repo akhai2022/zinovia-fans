@@ -15,7 +15,7 @@ import { apiFetch } from "@/lib/apiFetch";
 type FilterType = "all" | "image" | "video";
 
 export default function VaultPage() {
-  const { authorized } = useRequireRole("creator");
+  const { authorized } = useRequireRole(["creator", "admin"]);
   const { addToast } = useToast();
   const [items, setItems] = useState<MediaMineItem[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);

@@ -19,7 +19,7 @@ const VISIBILITY_OPTIONS = [
 ];
 
 export default function NewCollectionPage() {
-  const { authorized } = useRequireRole("creator");
+  const { authorized } = useRequireRole(["creator", "admin"]);
   const router = useRouter();
   const { addToast } = useToast();
   const [title, setTitle] = useState("");

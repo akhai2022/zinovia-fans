@@ -26,7 +26,7 @@ const IMAGE_TYPES = [
 ] as const;
 
 function AiImagesNewPageContent() {
-  const { authorized } = useRequireRole("creator");
+  const { authorized } = useRequireRole(["creator", "admin"]);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { addToast } = useToast();

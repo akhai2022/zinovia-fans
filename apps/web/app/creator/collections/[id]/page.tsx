@@ -25,7 +25,7 @@ const VISIBILITY_OPTIONS = [
 ];
 
 export default function EditCollectionPage() {
-  const { authorized } = useRequireRole("creator");
+  const { authorized } = useRequireRole(["creator", "admin"]);
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { addToast } = useToast();
