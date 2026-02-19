@@ -20,6 +20,10 @@ class StorageClient(ABC):
     def create_signed_download_url(self, object_key: str) -> str:
         raise NotImplementedError
 
+    @abstractmethod
+    def delete_object(self, object_key: str) -> None:
+        raise NotImplementedError
+
 
 def _rewrite_url_host(url: str, public_endpoint: str) -> str:
     """Replace host in URL with public_endpoint (e.g. localhost:9000 for host-reachable presigned URLs)."""
@@ -58,6 +62,9 @@ class MinioStorage(StorageClient):
             return _rewrite_url_host(str(url), self._public_endpoint)
         return str(url)
 
+    def delete_object(self, object_key: str) -> None:
+        self._client.remove_object(self._bucket, object_key)
+
 
 class S3Storage(StorageClient):
     """S3 storage using boto3 and IAM task role (default credential chain). No static keys."""
@@ -94,6 +101,9 @@ class S3Storage(StorageClient):
             ExpiresIn=self._expires,
         ))
 
+    def delete_object(self, object_key: str) -> None:
+        self._client.delete_object(Bucket=self._bucket, Key=object_key)
+
 
 class CloudFrontStorage(StorageClient):
     """Uploads via S3 presigned PUT, downloads via CloudFront signed URL."""
@@ -110,6 +120,9 @@ class CloudFrontStorage(StorageClient):
     def create_signed_download_url(self, object_key: str) -> str:
         from app.modules.media.cloudfront_signer import generate_signed_url
         return generate_signed_url(object_key)
+
+    def delete_object(self, object_key: str) -> None:
+        self._s3.delete_object(object_key)
 
 
 def get_storage_client() -> StorageClient:

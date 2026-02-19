@@ -10,6 +10,8 @@ export type CreatorFollowedItem = {
     created_at: string;
     display_name: string;
     handle: string;
+    is_online?: boolean;
     user_id: string;
+    verified?: boolean;
 };
 

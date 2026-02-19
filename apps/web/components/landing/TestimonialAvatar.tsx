@@ -30,7 +30,7 @@ export function TestimonialAvatar({
       )}
     >
       {src ? (
-        <Image src={src} alt="" fill className="object-cover" sizes="40px" />
+        <Image src={src} alt="" fill loading="lazy" quality={75} className="object-cover" sizes="40px" />
       ) : (
         <span className="text-xs font-semibold text-foreground/70">{initials}</span>
       )}

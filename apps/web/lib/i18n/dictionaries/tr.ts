@@ -19,6 +19,8 @@ export const tr: Dictionary = {
     startSubscribing: "Abone Olmaya Başla",
     exploreCreators: "İçerik Üreticileri Keşfet",
     reconnecting: "yeniden bağlanıyor…",
+    vault: "Kasa",
+    collections: "Koleksiyonlar",
   },
   hero: {
     badge: "İçerik üretici monetizasyon platformu",

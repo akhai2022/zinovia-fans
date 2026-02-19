@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { Page } from "@/components/brand/Page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api/client";
 import { getApiErrorMessage } from "@/lib/errors";
+import { useRequireRole } from "@/lib/hooks/useRequireRole";
 import "@/lib/api";
 
 type AdminCreator = {
@@ -40,6 +42,7 @@ type PostsPage = { items: AdminPost[]; total: number };
 
 export default function AdminPage() {
   const router = useRouter();
+  const { authorized } = useRequireRole("admin");
   const [tab, setTab] = useState<"creators" | "posts">("creators");
   const [creators, setCreators] = useState<AdminCreator[]>([]);
   const [posts, setPosts] = useState<AdminPost[]>([]);
@@ -120,6 +123,16 @@ export default function AdminPage() {
       setActionLoading(null);
     }
   };
+
+  if (!authorized) {
+    return (
+      <Page className="max-w-6xl space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </Page>
+    );
+  }
 
   return (
     <Page className="max-w-6xl space-y-6">

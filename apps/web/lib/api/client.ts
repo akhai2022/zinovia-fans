@@ -51,7 +51,14 @@ function parseDetail(body: unknown): string | undefined {
   if (!body) return undefined;
   if (typeof body === "string") return body;
   if (typeof body === "object" && body !== null && "detail" in body) {
-    return String((body as { detail?: unknown }).detail ?? "");
+    const detail = (body as { detail?: unknown }).detail;
+    if (typeof detail === "string") return detail;
+    if (typeof detail === "object" && detail !== null) {
+      const d = detail as { message?: unknown; code?: unknown };
+      if (typeof d.message === "string") return d.message;
+      if (typeof d.code === "string") return d.code;
+    }
+    return undefined;
   }
   return undefined;
 }
@@ -80,6 +87,12 @@ function logFetchFailure(method: string, path: string, error: ApiClientError): v
   }
 }
 
+function getCsrfToken(): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+
 export async function apiFetch<T = unknown>(path: string, options: ApiFetchOptions = {}): Promise<T> {
   const {
     query,
@@ -101,6 +114,10 @@ export async function apiFetch<T = unknown>(path: string, options: ApiFetchOptio
     const finalHeaders = new Headers(headers ?? {});
     if (cookieHeader) {
       finalHeaders.set("cookie", cookieHeader);
+    }
+    if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
+      const csrfToken = getCsrfToken();
+      if (csrfToken) finalHeaders.set("X-CSRF-Token", csrfToken);
     }
     let requestBody: BodyInit | undefined;
     if (body !== undefined) {

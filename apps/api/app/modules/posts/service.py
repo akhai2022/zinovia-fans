@@ -28,6 +28,7 @@ from app.modules.posts.constants import (
     POST_TYPE_TEXT,
     POST_TYPE_VIDEO,
     VISIBILITY_FOLLOWERS,
+    VISIBILITY_PPV,
     VISIBILITY_PUBLIC,
     VISIBILITY_SUBSCRIBERS,
 )
@@ -82,8 +83,11 @@ async def create_post(
     nsfw: bool = False,
     asset_ids: list[UUID] | None = None,
     publish_at: datetime | None = None,
+    price_cents: int | None = None,
+    currency: str | None = None,
 ) -> Post:
     """Create a post. TEXT: asset_ids empty. IMAGE: 1..N assets. VIDEO: 1 asset (video/mp4), owned by creator."""
+    settings = get_settings()
     asset_ids = asset_ids or []
     if type_ == POST_TYPE_TEXT:
         if asset_ids:
@@ -99,6 +103,20 @@ async def create_post(
         await _check_media_owned_by_creator(session, asset_ids, creator_user_id)
     else:
         raise AppError(status_code=400, detail="invalid_post_type")
+
+    # PPV validation
+    if visibility == VISIBILITY_PPV:
+        if not settings.enable_ppv_posts:
+            raise AppError(status_code=400, detail="ppv_posts_disabled")
+        if not price_cents or price_cents < settings.min_ppv_cents or price_cents > settings.max_ppv_cents:
+            raise AppError(
+                status_code=400,
+                detail=f"ppv_price_invalid:min={settings.min_ppv_cents},max={settings.max_ppv_cents}",
+            )
+        currency = (currency or settings.default_currency).lower()
+    else:
+        price_cents = None
+        currency = None
 
     now = datetime.now(timezone.utc)
     post_status = POST_STATUS_PUBLISHED
@@ -116,6 +134,8 @@ async def create_post(
         nsfw=nsfw,
         publish_at=normalized_publish_at,
         status=post_status,
+        price_cents=price_cents,
+        currency=currency,
     )
     session.add(post)
     await session.flush()
@@ -173,11 +193,13 @@ def _post_to_out(post: Post) -> dict:
         "status": post.status,
         "is_locked": False,
         "locked_reason": None,
+        "price_cents": post.price_cents,
+        "currency": post.currency,
     }
 
 
 def _post_to_out_locked(post: Post, locked_reason: str) -> dict:
-    """Teaser payload for inaccessible posts: no caption, media IDs kept for teaser variants."""
+    """Teaser payload for inaccessible posts: no caption, no asset IDs."""
     return {
         "id": post.id,
         "creator_user_id": post.creator_user_id,
@@ -187,11 +209,13 @@ def _post_to_out_locked(post: Post, locked_reason: str) -> dict:
         "nsfw": post.nsfw,
         "created_at": post.created_at,
         "updated_at": post.updated_at,
-        "asset_ids": [pm.media_asset_id for pm in sorted(post.media, key=lambda m: m.position)],
+        "asset_ids": [],
         "publish_at": post.publish_at,
         "status": post.status,
         "is_locked": True,
         "locked_reason": locked_reason,
+        "price_cents": post.price_cents,
+        "currency": post.currency,
     }
 
 
@@ -202,8 +226,9 @@ async def _can_see_post(
     viewer_user_id: UUID | None,
     is_follower: bool = False,
     is_subscriber: bool = False,
+    ppv_unlocked_post_ids: set[UUID] | None = None,
 ) -> bool:
-    """Visibility: PUBLIC all; FOLLOWERS follower or creator; SUBSCRIBERS active subscribers + creator."""
+    """Visibility: PUBLIC all; FOLLOWERS follower or creator; SUBSCRIBERS active subscribers + creator; PPV purchased or creator."""
     if post.visibility == VISIBILITY_PUBLIC:
         return True
     if not viewer_user_id:
@@ -213,6 +238,8 @@ async def _can_see_post(
     if post.visibility == VISIBILITY_FOLLOWERS and is_follower:
         return True
     if post.visibility == VISIBILITY_SUBSCRIBERS and is_subscriber:
+        return True
+    if post.visibility == VISIBILITY_PPV and ppv_unlocked_post_ids and post.id in ppv_unlocked_post_ids:
         return True
     return False
 
@@ -272,6 +299,21 @@ async def get_creator_posts_page(
         await is_active_subscriber(session, current_user_id, creator_id)
         if current_user_id else False
     )
+
+    # Check PPV purchases for this viewer
+    ppv_unlocked: set[UUID] = set()
+    ppv_post_ids = [p.id for p in posts if p.visibility == VISIBILITY_PPV]
+    if current_user_id and ppv_post_ids:
+        from app.modules.payments.models import PostPurchase
+        ppv_result = await session.execute(
+            select(PostPurchase.post_id).where(
+                PostPurchase.purchaser_id == current_user_id,
+                PostPurchase.post_id.in_(ppv_post_ids),
+                PostPurchase.status == "SUCCEEDED",
+            )
+        )
+        ppv_unlocked = {row[0] for row in ppv_result.all()}
+
     items: list[tuple[Post, bool, str | None]] = []
     for post in posts:
         can_see = await _can_see_post(
@@ -279,6 +321,7 @@ async def get_creator_posts_page(
             viewer_user_id=current_user_id,
             is_follower=is_following,
             is_subscriber=is_sub,
+            ppv_unlocked_post_ids=ppv_unlocked,
         )
         if can_see:
             items.append((post, False, None))
@@ -286,20 +329,22 @@ async def get_creator_posts_page(
             items.append((post, True, "SUBSCRIPTION_REQUIRED"))
         elif include_locked and post.visibility == VISIBILITY_FOLLOWERS:
             items.append((post, True, "FOLLOW_REQUIRED"))
+        elif include_locked and post.visibility == VISIBILITY_PPV:
+            items.append((post, True, "PPV_REQUIRED"))
     return items, total
 
 
 def _feed_visibility_filter(
     current_user_id: UUID, subscribed_creator_ids: set[UUID]
 ) -> Any:
-    """Visibility in feed: PUBLIC and FOLLOWERS; SUBSCRIBERS when viewer is creator or active subscriber."""
+    """Visibility in feed: PUBLIC, FOLLOWERS, PPV always shown (locked if not purchased); SUBSCRIBERS when subscribed."""
     now = datetime.now(timezone.utc)
     return or_(
         and_(
             Post.status == POST_STATUS_PUBLISHED,
             or_(Post.publish_at.is_(None), Post.publish_at <= now),
             or_(
-                Post.visibility.in_([VISIBILITY_PUBLIC, VISIBILITY_FOLLOWERS]),
+                Post.visibility.in_([VISIBILITY_PUBLIC, VISIBILITY_FOLLOWERS, VISIBILITY_PPV]),
                 and_(
                     Post.visibility == VISIBILITY_SUBSCRIBERS,
                     or_(
@@ -356,13 +401,13 @@ async def get_feed_page(
     now = datetime.now(timezone.utc)
 
     # Base filter: published posts from followed creators or own posts
+    visibility_conditions = [Post.creator_user_id == current_user_id]
+    if followed_ids:
+        visibility_conditions.append(Post.creator_user_id.in_(followed_ids))
     base_filter = and_(
         Post.status == POST_STATUS_PUBLISHED,
         or_(Post.publish_at.is_(None), Post.publish_at <= now),
-        or_(
-            Post.creator_user_id.in_(followed_ids) if followed_ids else func.false(),
-            Post.creator_user_id == current_user_id,
-        ),
+        or_(*visibility_conditions),
     )
 
     count_stmt = select(func.count(Post.id)).select_from(Post).where(base_filter)
@@ -408,6 +453,20 @@ async def get_feed_page(
     rows = (await session.execute(posts_query)).all()
     order_map = {p.id: (p, u, prof) for p, u, prof in rows}
 
+    # Check PPV purchases for feed posts
+    ppv_feed_ids = [pid for pid in post_ids if pid in order_map and order_map[pid][0].visibility == VISIBILITY_PPV]
+    ppv_unlocked_feed: set[UUID] = set()
+    if ppv_feed_ids:
+        from app.modules.payments.models import PostPurchase
+        ppv_feed_result = await session.execute(
+            select(PostPurchase.post_id).where(
+                PostPurchase.purchaser_id == current_user_id,
+                PostPurchase.post_id.in_(ppv_feed_ids),
+                PostPurchase.status == "SUCCEEDED",
+            )
+        )
+        ppv_unlocked_feed = {row[0] for row in ppv_feed_result.all()}
+
     items: list[tuple[Post, User, Profile, bool, str | None]] = []
     for pid in post_ids:
         if pid not in order_map:
@@ -423,10 +482,14 @@ async def get_feed_page(
             items.append((post, user, profile, False, None))
         elif post.visibility == VISIBILITY_SUBSCRIBERS and is_subscriber:
             items.append((post, user, profile, False, None))
+        elif post.visibility == VISIBILITY_PPV and post.id in ppv_unlocked_feed:
+            items.append((post, user, profile, False, None))
         elif post.visibility == VISIBILITY_SUBSCRIBERS:
             items.append((post, user, profile, True, "SUBSCRIPTION_REQUIRED"))
         elif post.visibility == VISIBILITY_FOLLOWERS:
             items.append((post, user, profile, True, "FOLLOW_REQUIRED"))
+        elif post.visibility == VISIBILITY_PPV:
+            items.append((post, user, profile, True, "PPV_REQUIRED"))
 
     # Generate next_cursor from the last item
     if items and len(post_ids) >= limit:

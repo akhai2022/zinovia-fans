@@ -136,6 +136,12 @@ export const resolve = async <T>(options: ApiRequestOptions, resolver?: T | Reso
     return resolver;
 };
 
+const getCsrfToken = (): string | undefined => {
+    if (typeof document === 'undefined') return undefined;
+    const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : undefined;
+};
+
 export const getHeaders = async (config: OpenAPIConfig, options: ApiRequestOptions): Promise<Headers> => {
     const [token, username, password, additionalHeaders] = await Promise.all([
         resolve(options, config.TOKEN),
@@ -173,6 +179,14 @@ export const getHeaders = async (config: OpenAPIConfig, options: ApiRequestOptio
             headers['Content-Type'] = 'text/plain';
         } else if (!isFormData(options.body)) {
             headers['Content-Type'] = 'application/json';
+        }
+    }
+
+    // CSRF double-submit: read csrf_token cookie and send as header for mutating requests
+    if (options.method !== 'GET' && options.method !== 'HEAD' && options.method !== 'OPTIONS') {
+        const csrfToken = getCsrfToken();
+        if (csrfToken) {
+            headers['X-CSRF-Token'] = csrfToken;
         }
     }
 

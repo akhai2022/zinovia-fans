@@ -9,7 +9,16 @@ export type PostCreate = {
     asset_ids?: Array<string>;
     caption?: (string | null);
     nsfw?: boolean;
+    publish_at?: (string | null);
     type: string;
     visibility: string;
+    /**
+     * Required when visibility=PPV. Price in cents.
+     */
+    price_cents?: (number | null);
+    /**
+     * Currency code (defaults to platform default).
+     */
+    currency?: (string | null);
 };
 

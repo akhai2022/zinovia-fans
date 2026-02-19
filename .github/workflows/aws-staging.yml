@@ -24,7 +24,27 @@ env:
   WORKER_SERVICE: zinovia-fans-staging-worker
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare env
+        run: cp .env.example .env
+      - name: Compose up
+        run: make up
+      - name: Migrate
+        run: make migrate
+      - name: API lint
+        run: make api-lint
+      - name: API typecheck
+        run: make api-typecheck
+      - name: API tests
+        run: make api-test
+      - name: Web build
+        run: make web-build
+
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       id-token: write

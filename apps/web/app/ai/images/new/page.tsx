@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useRequireRole } from "@/lib/hooks/useRequireRole";
 import { AiImagesService } from "@/features/ai/api";
 import { Page } from "@/components/brand/Page";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,7 @@ const IMAGE_TYPES = [
 ] as const;
 
 function AiImagesNewPageContent() {
+  const { authorized } = useRequireRole("creator");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { addToast } = useToast();
@@ -63,6 +65,8 @@ function AiImagesNewPageContent() {
       setLoading(false);
     }
   };
+
+  if (!authorized) return null;
 
   return (
     <Page>

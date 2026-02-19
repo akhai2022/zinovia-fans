@@ -8,6 +8,8 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from conftest import signup_verify_login
+
 from app.core.settings import get_settings
 from app.modules.media.models import MediaObject
 from app.modules.payments.models import PpvPurchase
@@ -17,13 +19,8 @@ def _email() -> str:
     return f"ppv-{uuid.uuid4().hex[:10]}@test.com"
 
 
-async def _signup_and_login(client: AsyncClient, email: str, display_name: str) -> str:
-    await client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": display_name},
-    )
-    res = await client.post("/auth/login", json={"email": email, "password": "password123"})
-    return res.json()["access_token"]
+async def _signup_and_login(client: AsyncClient, email: str, display_name: str, role: str = "creator") -> str:
+    return await signup_verify_login(client, email, display_name=display_name, role=role)
 
 
 @pytest.fixture(autouse=True)
@@ -60,7 +57,7 @@ async def _create_locked_media_message(
     db_session: AsyncSession,
 ) -> tuple[str, str, str, str, str]:
     creator_token = await _signup_and_login(async_client, _email(), "Creator")
-    fan_token = await _signup_and_login(async_client, _email(), "Fan")
+    fan_token = await _signup_and_login(async_client, _email(), "Fan", role="fan")
     async_client.cookies.clear()
     creator_me = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {creator_token}"})
     async_client.cookies.clear()
@@ -96,7 +93,7 @@ async def _create_locked_media_message(
         json={
             "type": "MEDIA",
             "media_ids": [str(media.id)],
-            "lock": {"price_cents": 500, "currency": "usd"},
+            "lock": {"price_cents": 500, "currency": "eur"},
         },
         headers={"Authorization": f"Bearer {creator_token}"},
     )
@@ -110,7 +107,7 @@ async def _create_unlocked_media_message(
     db_session: AsyncSession,
 ) -> tuple[str, str, str, str, str]:
     creator_token = await _signup_and_login(async_client, _email(), "Creator")
-    fan_token = await _signup_and_login(async_client, _email(), "Fan")
+    fan_token = await _signup_and_login(async_client, _email(), "Fan", role="fan")
     async_client.cookies.clear()
     creator_me = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {creator_token}"})
     async_client.cookies.clear()
@@ -174,12 +171,12 @@ async def test_fan_cannot_create_locked_message(
         json={
             "type": "MEDIA",
             "media_ids": [str(fan_media.id)],
-            "lock": {"price_cents": 500, "currency": "usd"},
+            "lock": {"price_cents": 500, "currency": "eur"},
         },
         headers={"Authorization": f"Bearer {fan_token}"},
     )
     assert res.status_code == 403
-    assert res.json()["detail"] == "ppv_creator_only"
+    assert res.json()["detail"]["code"] == "ppv_creator_only"
 
 
 @pytest.mark.asyncio
@@ -196,7 +193,7 @@ async def test_non_participant_cannot_create_intent(
         headers={"Authorization": f"Bearer {other_token}"},
     )
     assert res.status_code == 403
-    assert res.json()["detail"] == "ppv_not_participant"
+    assert res.json()["detail"]["code"] == "ppv_not_participant"
 
 
 @pytest.mark.asyncio
@@ -234,7 +231,7 @@ async def test_cannot_create_intent_for_unlocked_media(
         headers={"Authorization": f"Bearer {fan_token}"},
     )
     assert res.status_code == 400
-    assert res.json()["detail"] == "ppv_not_locked"
+    assert res.json()["detail"]["code"] == "ppv_not_locked"
 
 
 @pytest.mark.asyncio
@@ -270,7 +267,7 @@ async def test_unique_purchase_prevents_double_unlock(
         headers={"Authorization": f"Bearer {creator_token}"},
     )
     assert creator_try.status_code == 403
-    assert creator_try.json()["detail"] == "ppv_creator_only"
+    assert creator_try.json()["detail"]["code"] == "ppv_creator_only"
 
 
 @pytest.mark.asyncio

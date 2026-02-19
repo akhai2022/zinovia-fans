@@ -11,7 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import AppError
 from app.core.settings import get_settings
 from app.modules.messaging.models import Conversation, Message, MessageMedia
-from app.modules.payments.models import PpvPurchase
+from app.modules.payments.models import PostPurchase, PpvPurchase
+from app.modules.posts.models import Post
 
 
 def _ensure_enabled() -> None:
@@ -151,6 +152,121 @@ async def create_ppv_message_media_intent(
         except IntegrityError as exc:
             await session.rollback()
             raise AppError(status_code=409, detail="ppv_already_unlocked") from exc
+        metadata["purchase_id"] = str(existing.id)
+
+    pi = stripe.PaymentIntent.create(
+        amount=existing.amount_cents,
+        currency=existing.currency,
+        metadata=metadata,
+        api_key=api_key,
+    )
+    existing.stripe_payment_intent_id = pi.id
+    existing.status = "REQUIRES_PAYMENT"
+    await session.commit()
+    await session.refresh(existing)
+    return {
+        "purchase_id": existing.id,
+        "client_secret": pi.client_secret,
+        "amount_cents": existing.amount_cents,
+        "currency": existing.currency,
+        "status": "REQUIRES_PAYMENT",
+    }
+
+
+async def get_ppv_post_status(
+    session: AsyncSession,
+    *,
+    post_id: UUID,
+    viewer_id: UUID,
+) -> tuple[bool, bool, int | None, str | None]:
+    """Return (is_locked, viewer_has_unlocked, price_cents, currency) for a PPV post."""
+    post = (
+        await session.execute(select(Post).where(Post.id == post_id))
+    ).scalar_one_or_none()
+    if not post:
+        raise AppError(status_code=404, detail="post_not_found")
+    if post.visibility != "PPV":
+        return False, True, None, None
+    if post.creator_user_id == viewer_id:
+        return True, True, post.price_cents, post.currency
+    unlocked = (
+        await session.execute(
+            select(PostPurchase.id).where(
+                PostPurchase.purchaser_id == viewer_id,
+                PostPurchase.post_id == post_id,
+                PostPurchase.status == "SUCCEEDED",
+            )
+        )
+    ).scalar_one_or_none() is not None
+    return True, unlocked, post.price_cents, post.currency
+
+
+async def create_ppv_post_intent(
+    session: AsyncSession,
+    *,
+    purchaser_id: UUID,
+    post_id: UUID,
+) -> dict:
+    """Create a Stripe PaymentIntent for a PPV post purchase."""
+    settings = get_settings()
+    if not settings.enable_ppv_posts:
+        raise AppError(status_code=503, detail="ppv_posts_disabled")
+    api_key = _get_stripe_key()
+
+    post = (
+        await session.execute(select(Post).where(Post.id == post_id))
+    ).scalar_one_or_none()
+    if not post:
+        raise AppError(status_code=404, detail="post_not_found")
+    if post.visibility != "PPV":
+        raise AppError(status_code=400, detail="post_not_ppv")
+    if post.creator_user_id == purchaser_id:
+        raise AppError(status_code=400, detail="ppv_creator_cannot_purchase")
+    if not post.price_cents or post.price_cents < settings.min_ppv_cents:
+        raise AppError(status_code=400, detail="ppv_price_invalid")
+
+    existing = (
+        await session.execute(
+            select(PostPurchase).where(
+                PostPurchase.purchaser_id == purchaser_id,
+                PostPurchase.post_id == post_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if existing and existing.status == "SUCCEEDED":
+        return {
+            "purchase_id": existing.id,
+            "client_secret": None,
+            "amount_cents": existing.amount_cents,
+            "currency": existing.currency,
+            "status": "ALREADY_UNLOCKED",
+        }
+
+    metadata = {
+        "type": "PPV_POST_UNLOCK",
+        "purchase_id": str(existing.id) if existing else "",
+        "post_id": str(post_id),
+        "creator_id": str(post.creator_user_id),
+        "purchaser_id": str(purchaser_id),
+    }
+
+    if existing is None:
+        existing = PostPurchase(
+            purchaser_id=purchaser_id,
+            creator_id=post.creator_user_id,
+            post_id=post_id,
+            amount_cents=post.price_cents,
+            currency=(post.currency or settings.default_currency).lower(),
+            stripe_payment_intent_id="",
+            stripe_charge_id=None,
+            status="REQUIRES_PAYMENT",
+        )
+        session.add(existing)
+        try:
+            await session.flush()
+        except IntegrityError as exc:
+            await session.rollback()
+            raise AppError(status_code=409, detail="ppv_already_purchased") from exc
         metadata["purchase_id"] = str(existing.id)
 
     pi = stripe.PaymentIntent.create(

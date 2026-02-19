@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import func, or_, select
@@ -20,6 +21,16 @@ from app.modules.creators.constants import (
 from app.modules.creators.models import Follow
 from app.shared.pagination import normalize_pagination
 from app.modules.posts.models import Post
+
+
+_ONLINE_THRESHOLD = timedelta(minutes=5)
+
+
+def user_is_online(user: User) -> bool:
+    """A user is online if last_activity_at is within the last 5 minutes."""
+    if not user.last_activity_at:
+        return False
+    return (datetime.now(UTC) - user.last_activity_at) < _ONLINE_THRESHOLD
 
 
 def normalize_handle(handle: str) -> str:
@@ -156,6 +167,7 @@ async def get_discoverable_creators_page(
             followers_subq,
             posts_subq,
             Profile.verified,
+            User.last_activity_at,
         )
         .join(User, User.id == Profile.user_id)
         .where(*main_where)
@@ -164,9 +176,13 @@ async def get_discoverable_creators_page(
         .limit(limit)
     )
     rows = (await session.execute(query)).all()
-    # Each row: (user_id, handle, display_name, avatar_asset_id, followers_count, posts_count, verified)
+    now = datetime.now(UTC)
+    # Each row: (user_id, handle, display_name, avatar_asset_id, followers_count, posts_count, verified, last_activity_at)
     items = [
-        (r[0], r[1] or "", r[2], r[3], r[4] or 0, r[5] or 0, r[6] or False)
+        (
+            r[0], r[1] or "", r[2], r[3], r[4] or 0, r[5] or 0, r[6] or False,
+            bool(r[7] and (now - r[7]) < _ONLINE_THRESHOLD),
+        )
         for r in rows
     ]
     return items, total

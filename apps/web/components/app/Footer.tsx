@@ -26,10 +26,13 @@ export function Footer() {
   const { t } = useTranslation();
 
   const LINKS = [
+    { href: "/pricing", label: "Pricing" },
+    { href: "/compare", label: "Compare" },
+    { href: "/about", label: "About" },
+    { href: "/help", label: t.footer.help },
+    { href: "/contact", label: t.footer.contact },
     { href: "/privacy", label: t.footer.privacy },
     { href: "/terms", label: t.footer.terms },
-    { href: "/contact", label: t.footer.contact },
-    { href: "/help", label: t.footer.help },
   ];
 
   return (
@@ -60,7 +63,7 @@ export function Footer() {
                   key={social.label}
                   href={social.href}
                   target="_blank"
-                  rel="noopener noreferrer"
+                  rel="noopener noreferrer nofollow"
                   aria-label={social.label}
                   className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
                 >

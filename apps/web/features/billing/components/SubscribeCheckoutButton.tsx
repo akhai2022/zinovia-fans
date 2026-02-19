@@ -9,11 +9,15 @@ import { buildBillingReturnUrls } from "@/features/billing/checkoutUrls";
 type SubscribeCheckoutButtonProps = {
   creatorId: string;
   creatorHandle: string;
+  price?: string;
+  currency?: string;
 };
 
 export function SubscribeCheckoutButton({
   creatorId,
   creatorHandle,
+  price,
+  currency,
 }: SubscribeCheckoutButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,10 +48,14 @@ export function SubscribeCheckoutButton({
     }
   };
 
+  const priceLabel = price
+    ? `Subscribe — ${parseFloat(price).toFixed(2)} ${(currency || "eur").toUpperCase()}/mo`
+    : "Subscribe";
+
   return (
     <div className="flex flex-col items-end gap-1">
       <Button size="sm" onClick={onSubscribe} disabled={loading}>
-        {loading ? "Starting..." : "Subscribe"}
+        {loading ? "Starting..." : priceLabel}
       </Button>
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>

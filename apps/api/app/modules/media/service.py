@@ -12,7 +12,7 @@ from app.modules.auth.models import Profile
 from app.modules.billing.service import is_active_subscriber
 from app.modules.creators.models import Follow
 from app.modules.media.models import MediaDerivedAsset, MediaObject
-from app.modules.media.storage import StorageClient
+from app.modules.media.storage import StorageClient, get_storage_client
 from app.modules.posts.models import Post, PostMedia
 from app.modules.posts.service import _can_see_post
 from app.modules.posts.constants import POST_STATUS_PUBLISHED, VISIBILITY_PUBLIC
@@ -177,6 +177,63 @@ async def create_media_object(
     await session.commit()
     await session.refresh(media)
     return media
+
+
+async def delete_media(
+    session: AsyncSession, media_id: UUID, owner_user_id: UUID
+) -> None:
+    """Delete a media object and its S3 files. Raises 404 if not found, 409 if in use."""
+    result = await session.execute(
+        select(MediaObject).where(
+            MediaObject.id == media_id,
+            MediaObject.owner_user_id == owner_user_id,
+        )
+    )
+    media = result.scalar_one_or_none()
+    if not media:
+        raise AppError(status_code=404, detail="media_not_found")
+
+    # Check if used in any post
+    post_ref = await session.execute(
+        select(PostMedia.id).where(PostMedia.media_asset_id == media_id).limit(1)
+    )
+    if post_ref.scalar_one_or_none() is not None:
+        raise AppError(status_code=409, detail="media_in_use")
+
+    # Check if used as profile avatar/banner
+    profile_ref = await session.execute(
+        select(Profile.id).where(
+            (Profile.avatar_asset_id == media_id) | (Profile.banner_asset_id == media_id)
+        ).limit(1)
+    )
+    if profile_ref.scalar_one_or_none() is not None:
+        raise AppError(status_code=409, detail="media_in_use")
+
+    # Check if used as collection cover
+    from app.modules.collections.models import Collection
+    coll_ref = await session.execute(
+        select(Collection.id).where(Collection.cover_asset_id == media_id).limit(1)
+    )
+    if coll_ref.scalar_one_or_none() is not None:
+        raise AppError(status_code=409, detail="media_in_use")
+
+    # Delete S3 objects (derived first, then original)
+    storage = get_storage_client()
+    derived_result = await session.execute(
+        select(MediaDerivedAsset).where(MediaDerivedAsset.parent_asset_id == media_id)
+    )
+    for derived in derived_result.scalars().all():
+        try:
+            storage.delete_object(derived.object_key)
+        except Exception:
+            pass  # Best-effort S3 cleanup
+    try:
+        storage.delete_object(media.object_key)
+    except Exception:
+        pass  # Best-effort S3 cleanup
+
+    await session.delete(media)
+    await session.commit()
 
 
 def generate_signed_upload(storage: StorageClient, object_key: str, content_type: str) -> str:

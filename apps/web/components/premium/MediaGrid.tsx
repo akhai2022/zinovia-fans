@@ -14,12 +14,19 @@ interface MediaGridProps {
   isLocked?: (post: PostItem) => boolean;
   /** Creator handle for unlock CTA */
   creatorHandle?: string;
-  onUnlockClick?: () => void;
+  onUnlockClick?: (post?: PostItem) => void;
   className?: string;
   /** Columns: 2 (mobile), 3 or 4 (desktop) */
   columns?: 2 | 3 | 4;
   /** Show "Validated by Zinovia Fans" watermark on image cells (e.g. profile grid only) */
   showWatermark?: boolean;
+}
+
+function formatPpvPrice(priceCents: number | undefined | null, currency: string | undefined | null): string {
+  if (!priceCents) return "Unlock";
+  const amount = (priceCents / 100).toFixed(2);
+  const cur = (currency || "eur").toUpperCase();
+  return `Unlock for ${amount} ${cur}`;
 }
 
 function PostCell({
@@ -40,7 +47,11 @@ function PostCell({
     <div className="h-full w-full bg-muted" aria-hidden />
   );
   const overlayLabel =
-    post.locked_reason === "FOLLOW_REQUIRED" ? "Follow to unlock" : "Subscribe to unlock";
+    post.locked_reason === "FOLLOW_REQUIRED"
+      ? "Follow to unlock"
+      : post.locked_reason === "PPV_REQUIRED"
+        ? formatPpvPrice(post.price_cents, post.currency)
+        : "Subscribe to unlock";
 
   const imageCell = hasImageAsset ? (
     <div className={cn("h-full w-full bg-muted", locked && "blur-[2px] opacity-90")}>
@@ -145,7 +156,7 @@ export function MediaGrid({
             <PostCell
               post={post}
               locked={locked}
-              onUnlockClick={onUnlockClick}
+              onUnlockClick={onUnlockClick ? () => onUnlockClick(post) : undefined}
               showWatermark={showWatermark}
             />
           </li>

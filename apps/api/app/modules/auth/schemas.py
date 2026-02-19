@@ -34,12 +34,22 @@ class UserOut(BaseModel):
     role: str
     is_active: bool
     profile: ProfileOut | None
+    last_login_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
 class ResetPasswordRequest(BaseModel):
     token: str
+    new_password: str = Field(min_length=10)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1)
     new_password: str = Field(min_length=10)
 
 

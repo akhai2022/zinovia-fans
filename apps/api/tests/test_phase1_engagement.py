@@ -8,6 +8,8 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from conftest import signup_verify_login
+
 from app.core.settings import get_settings
 from app.modules.media.models import MediaObject
 from app.modules.notifications.models import Notification
@@ -21,12 +23,7 @@ def _email() -> str:
 
 
 async def _signup_login(client: AsyncClient, email: str, display_name: str) -> str:
-    await client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": display_name},
-    )
-    login = await client.post("/auth/login", json={"email": email, "password": "password123"})
-    return login.json()["access_token"]
+    return await signup_verify_login(client, email, display_name=display_name)
 
 
 @pytest.fixture(autouse=True)

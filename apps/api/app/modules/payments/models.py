@@ -68,6 +68,30 @@ class PpvPurchase(TimestampMixin, Base):
     )
 
 
+class PostPurchase(TimestampMixin, Base):
+    __tablename__ = "post_purchases"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    purchaser_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    creator_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    post_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("posts.id", ondelete="CASCADE"), nullable=False
+    )
+    amount_cents: Mapped[int] = mapped_column(Integer)
+    currency: Mapped[str] = mapped_column(String(8))
+    stripe_payment_intent_id: Mapped[str] = mapped_column(String(255))
+    stripe_charge_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    status: Mapped[str] = mapped_column(String(32))
+
+    __table_args__ = (
+        UniqueConstraint("purchaser_id", "post_id", name="uq_post_purchase_purchaser_post"),
+    )
+
+
 class CreatorPayoutProfile(Base):
     __tablename__ = "creator_payout_profiles"
 

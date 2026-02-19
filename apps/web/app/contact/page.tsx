@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export const metadata = {
   title: "Contact — Zinovia Fans",
   description: "Get in touch with the Zinovia Fans team for support, partnerships, or press inquiries.",
+  alternates: { canonical: "https://zinovia.ai/contact" },
 };
 
 const CONTACT_CHANNELS = [

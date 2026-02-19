@@ -19,6 +19,8 @@ export const fr: Dictionary = {
     startSubscribing: "S'abonner",
     exploreCreators: "Découvrir les créateurs",
     reconnecting: "reconnexion…",
+    vault: "Coffre",
+    collections: "Collections",
   },
   hero: {
     badge: "Plateforme de monétisation pour créateurs",

@@ -16,10 +16,20 @@ export type PostOut = {
      */
     is_locked?: boolean;
     /**
-     * When is_locked: SUBSCRIPTION_REQUIRED or FOLLOW_REQUIRED for UI copy.
+     * When is_locked: SUBSCRIPTION_REQUIRED, FOLLOW_REQUIRED, or PPV_REQUIRED.
      */
     locked_reason?: (string | null);
+    /**
+     * PPV price in cents (set when visibility=PPV).
+     */
+    price_cents?: (number | null);
+    /**
+     * Currency code for PPV price.
+     */
+    currency?: (string | null);
     nsfw: boolean;
+    publish_at?: (string | null);
+    status?: string;
     type: string;
     updated_at: string;
     visibility: string;

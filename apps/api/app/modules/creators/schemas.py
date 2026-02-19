@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -20,9 +21,16 @@ class CreatorProfilePublic(BaseModel):
     discoverable: bool
     nsfw: bool
     verified: bool = False
+    is_online: bool = False
     followers_count: int
     posts_count: int = 0
     is_following: bool = False
+    subscription_price: Decimal | None = Field(
+        None, description="Monthly subscription price in major currency units (e.g. 4.99)"
+    )
+    subscription_currency: str | None = Field(
+        None, description="ISO 4217 currency code (e.g. eur)"
+    )
     created_at: datetime
     updated_at: datetime
 
@@ -47,6 +55,7 @@ class CreatorFollowedItem(BaseModel):
     display_name: str
     avatar_media_id: UUID | None
     verified: bool = False
+    is_online: bool = False
     created_at: datetime
 
 
@@ -67,6 +76,7 @@ class CreatorDiscoverItem(BaseModel):
     display_name: str
     avatar_media_id: UUID | None
     verified: bool = False
+    is_online: bool = False
     followers_count: int
     posts_count: int
 

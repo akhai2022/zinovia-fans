@@ -10,6 +10,8 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from conftest import signup_verify_login
+
 from app.core.settings import get_settings
 from app.modules.billing.models import StripeEvent, Subscription
 
@@ -25,28 +27,14 @@ async def test_checkout_returns_501_when_stripe_not_configured(
     """POST /billing/checkout/subscription returns 501 with clear message when Stripe keys not configured."""
     fan_email = _unique_email()
     creator_email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": fan_email, "password": "password123", "display_name": "Fan"},
-    )
-    await async_client.post(
-        "/auth/signup",
-        json={"email": creator_email, "password": "password123", "display_name": "Creator"},
-    )
-    login_c = await async_client.post(
-        "/auth/login", json={"email": creator_email, "password": "password123"}
-    )
-    token_c = login_c.json()["access_token"]
+    token_c = await signup_verify_login(async_client, creator_email, display_name="Creator")
     handle = f"chk-{uuid.uuid4().hex[:8]}"
     await async_client.patch(
         "/creators/me",
         json={"handle": handle},
         headers={"Authorization": f"Bearer {token_c}"},
     )
-    login_f = await async_client.post(
-        "/auth/login", json={"email": fan_email, "password": "password123"}
-    )
-    token_f = login_f.json()["access_token"]
+    token_f = await signup_verify_login(async_client, fan_email, display_name="Fan")
     r = await async_client.post(
         "/billing/checkout/subscription",
         json={"creator_handle": handle},
@@ -55,7 +43,8 @@ async def test_checkout_returns_501_when_stripe_not_configured(
     assert r.status_code == 501
     data = r.json()
     assert "detail" in data
-    assert "stripe" in data["detail"].lower() or "configured" in data["detail"].lower()
+    detail_msg = data["detail"]["message"] if isinstance(data["detail"], dict) else data["detail"]
+    assert "stripe" in detail_msg.lower() or "configured" in detail_msg.lower()
 
 
 @pytest.mark.asyncio
@@ -101,14 +90,7 @@ async def test_subscriber_sees_subscribers_posts(
     """Creator + SUBSCRIBERS post; active subscription row: fan sees post (no Stripe API)."""
     email_creator = _unique_email()
     email_fan = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_creator, "password": "password123", "display_name": "Creator"},
-    )
-    login_c = await async_client.post(
-        "/auth/login", json={"email": email_creator, "password": "password123"}
-    )
-    token_c = login_c.json()["access_token"]
+    token_c = await signup_verify_login(async_client, email_creator, display_name="Creator")
     handle = f"sub-{uuid.uuid4().hex[:8]}"
     await async_client.patch(
         "/creators/me",
@@ -128,14 +110,7 @@ async def test_subscriber_sees_subscribers_posts(
         },
         headers={"Authorization": f"Bearer {token_c}"},
     )
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_fan, "password": "password123", "display_name": "Fan"},
-    )
-    login_f = await async_client.post(
-        "/auth/login", json={"email": email_fan, "password": "password123"}
-    )
-    token_f = login_f.json()["access_token"]
+    token_f = await signup_verify_login(async_client, email_fan, display_name="Fan")
     me_f = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {token_f}"})
     fan_id = me_f.json()["id"]
 
@@ -163,17 +138,13 @@ async def test_subscriber_sees_subscribers_posts(
 async def test_non_subscriber_cannot_see_subscribers_posts(
     async_client: AsyncClient,
 ) -> None:
-    """Creator + SUBSCRIBERS post; fan with no subscription does not see it (creator page and feed)."""
+    """Creator + SUBSCRIBERS post; fan with no subscription does not see it on creator page (include_locked=false).
+
+    Feed shows SUBSCRIBERS posts as locked teasers to encourage subscription.
+    """
     email_creator = _unique_email()
     email_fan = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_creator, "password": "password123", "display_name": "Creator"},
-    )
-    login_c = await async_client.post(
-        "/auth/login", json={"email": email_creator, "password": "password123"}
-    )
-    token_c = login_c.json()["access_token"]
+    token_c = await signup_verify_login(async_client, email_creator, display_name="Creator")
     handle = f"nosub-{uuid.uuid4().hex[:8]}"
     await async_client.patch(
         "/creators/me",
@@ -190,14 +161,7 @@ async def test_non_subscriber_cannot_see_subscribers_posts(
         },
         headers={"Authorization": f"Bearer {token_c}"},
     )
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_fan, "password": "password123", "display_name": "Fan"},
-    )
-    login_f = await async_client.post(
-        "/auth/login", json={"email": email_fan, "password": "password123"}
-    )
-    token_f = login_f.json()["access_token"]
+    token_f = await signup_verify_login(async_client, email_fan, display_name="Fan", role="fan")
 
     r_creator_page = await async_client.get(
         f"/creators/{handle}/posts",
@@ -223,7 +187,9 @@ async def test_non_subscriber_cannot_see_subscribers_posts(
     assert r_feed.status_code == 200
     items_feed = r_feed.json()["items"]
     sub_in_feed = [p for p in items_feed if p.get("visibility") == "SUBSCRIBERS"]
-    assert len(sub_in_feed) == 0, "Follower without subscription must not see SUBSCRIBERS posts in feed"
+    assert len(sub_in_feed) >= 1, "Feed shows SUBSCRIBERS posts as locked teasers"
+    assert sub_in_feed[0]["is_locked"] is True
+    assert sub_in_feed[0]["caption"] is None
 
 
 @pytest.mark.asyncio
@@ -233,28 +199,14 @@ async def test_billing_status_returns_authenticated_fan_subscriptions(
 ) -> None:
     creator_email = _unique_email()
     fan_email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": creator_email, "password": "password123", "display_name": "Creator"},
-    )
-    creator_login = await async_client.post(
-        "/auth/login", json={"email": creator_email, "password": "password123"}
-    )
-    creator_token = creator_login.json()["access_token"]
+    creator_token = await signup_verify_login(async_client, creator_email, display_name="Creator")
     creator_me = await async_client.get(
         "/auth/me",
         headers={"Authorization": f"Bearer {creator_token}"},
     )
     creator_id = creator_me.json()["id"]
 
-    await async_client.post(
-        "/auth/signup",
-        json={"email": fan_email, "password": "password123", "display_name": "Fan"},
-    )
-    fan_login = await async_client.post(
-        "/auth/login", json={"email": fan_email, "password": "password123"}
-    )
-    fan_token = fan_login.json()["access_token"]
+    fan_token = await signup_verify_login(async_client, fan_email, display_name="Fan")
     fan_me = await async_client.get(
         "/auth/me",
         headers={"Authorization": f"Bearer {fan_token}"},
@@ -296,7 +248,7 @@ async def test_webhook_missing_signature_returns_400(
             headers={},
         )
         assert r.status_code == 400
-        assert "missing_signature" in (r.json().get("detail") or "")
+        assert r.json().get("detail", {}).get("code") == "missing_signature"
     finally:
         get_settings.cache_clear()
 
@@ -371,7 +323,7 @@ async def test_webhook_invalid_signature_rejected(
             headers={"Stripe-Signature": "t=1,v1=bad"},
         )
         assert response.status_code == 400
-        assert response.json().get("detail") == "invalid_signature"
+        assert response.json().get("detail", {}).get("code") == "invalid_signature"
     finally:
         get_settings.cache_clear()
 
@@ -443,7 +395,8 @@ async def test_webhook_no_secret_returns_501(
             headers={"Stripe-Signature": "x"},
         )
         assert r.status_code == 501
-        assert "stripe" in (r.json().get("detail") or "").lower() or "configured" in (r.json().get("detail") or "").lower()
+        detail_msg = r.json().get("detail", {}).get("message", "") if isinstance(r.json().get("detail"), dict) else (r.json().get("detail") or "")
+        assert "stripe" in detail_msg.lower() or "configured" in detail_msg.lower()
     finally:
         get_settings.cache_clear()
 
@@ -459,19 +412,11 @@ async def test_webhook_checkout_session_completed_upserts_subscription(
     get_settings.cache_clear()
     email_creator = _unique_email()
     email_fan = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_creator, "password": "password123", "display_name": "Creator"},
-    )
-    login_c = await async_client.post("/auth/login", json={"email": email_creator, "password": "password123"})
-    me_c = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {login_c.json()['access_token']}"})
+    token_c = await signup_verify_login(async_client, email_creator, display_name="Creator")
+    me_c = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {token_c}"})
     creator_id = me_c.json()["id"]
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_fan, "password": "password123", "display_name": "Fan"},
-    )
-    login_f = await async_client.post("/auth/login", json={"email": email_fan, "password": "password123"})
-    me_f = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {login_f.json()['access_token']}"})
+    token_f = await signup_verify_login(async_client, email_fan, display_name="Fan")
+    me_f = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {token_f}"})
     fan_id = me_f.json()["id"]
     event_id = f"evt_cs_{uuid.uuid4().hex}"
     body = {
@@ -530,29 +475,17 @@ async def test_webhook_invoice_payment_failed_marks_subscription_past_due(
     get_settings.cache_clear()
     creator_email = _unique_email()
     fan_email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": creator_email, "password": "password123", "display_name": "Creator"},
-    )
-    creator_login = await async_client.post(
-        "/auth/login", json={"email": creator_email, "password": "password123"}
-    )
+    creator_token = await signup_verify_login(async_client, creator_email, display_name="Creator")
     creator_me = await async_client.get(
         "/auth/me",
-        headers={"Authorization": f"Bearer {creator_login.json()['access_token']}"},
+        headers={"Authorization": f"Bearer {creator_token}"},
     )
     creator_id = UUID(creator_me.json()["id"])
 
-    await async_client.post(
-        "/auth/signup",
-        json={"email": fan_email, "password": "password123", "display_name": "Fan"},
-    )
-    fan_login = await async_client.post(
-        "/auth/login", json={"email": fan_email, "password": "password123"}
-    )
+    fan_token = await signup_verify_login(async_client, fan_email, display_name="Fan")
     fan_me = await async_client.get(
         "/auth/me",
-        headers={"Authorization": f"Bearer {fan_login.json()['access_token']}"},
+        headers={"Authorization": f"Bearer {fan_token}"},
     )
     fan_id = UUID(fan_me.json()["id"])
     stripe_sub_id = f"sub_{uuid.uuid4().hex}"

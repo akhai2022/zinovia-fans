@@ -223,6 +223,7 @@ export function CreatorGrid({
                         handle={creator.handle}
                         size="md"
                         withRing
+                        isOnline={creator.is_online}
                       />
                     ) : (
                       <CreatorAvatar
@@ -230,6 +231,7 @@ export function CreatorGrid({
                         handle={creator.handle}
                         size="md"
                         withRing
+                        isOnline={creator.is_online}
                       />
                     )}
                     <div className="min-w-0 flex-1">

@@ -29,6 +29,7 @@ export type CreatorItem = {
   display_name: string;
   avatar_media_id?: string | null;
   verified?: boolean;
+  is_online?: boolean;
   followers_count: number;
   posts_count: number;
 };

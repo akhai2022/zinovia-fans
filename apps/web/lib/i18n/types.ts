@@ -17,6 +17,8 @@ export interface Dictionary {
     startSubscribing: string;
     exploreCreators: string;
     reconnecting: string;
+    vault: string;
+    collections: string;
   };
   hero: {
     badge: string;

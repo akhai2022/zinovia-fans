@@ -38,7 +38,7 @@ from app.modules.audit.service import (
     ACTION_SUBSCRIPTION_CANCELED,
     ACTION_SUBSCRIPTION_CREATED,
 )
-from app.modules.payments.models import PpvPurchase, Tip
+from app.modules.payments.models import PostPurchase, PpvPurchase, Tip
 
 STRIPE_KEY_PLACEHOLDER = "sk_test_placeholder"
 
@@ -171,6 +171,72 @@ async def get_or_create_creator_plan(
         plan.stripe_price_id = price_id
         await session.commit()
         await session.refresh(plan)
+    return plan
+
+
+async def update_creator_plan_price(
+    session: AsyncSession, creator_user_id: UUID, new_price: Decimal
+) -> CreatorPlan:
+    """Update a creator's subscription price. Creates a new Stripe Price (Prices are immutable)
+    and archives the old one. Existing subscribers keep their current price until they renew."""
+    settings = get_settings()
+    price_cents = int(new_price * 100)
+    if price_cents < settings.min_subscription_price_cents:
+        raise AppError(
+            status_code=400,
+            detail=f"price_below_minimum:{settings.min_subscription_price_cents}",
+        )
+    if price_cents > settings.max_subscription_price_cents:
+        raise AppError(
+            status_code=400,
+            detail=f"price_above_maximum:{settings.max_subscription_price_cents}",
+        )
+
+    plan = await get_or_create_creator_plan(session, creator_user_id)
+
+    if plan.price == new_price:
+        return plan
+
+    api_key = _get_stripe_key()
+
+    # Ensure Stripe Product exists
+    product_id = plan.stripe_product_id
+    if not product_id:
+        product = stripe.Product.create(
+            name="Creator subscription",
+            metadata={"creator_user_id": str(creator_user_id)},
+            api_key=api_key,
+        )
+        product_id = product.id
+        plan.stripe_product_id = product_id
+
+    # Archive old Stripe Price
+    old_price_id = plan.stripe_price_id
+    if old_price_id:
+        stripe.Price.modify(old_price_id, active=False, api_key=api_key)
+
+    # Create new Stripe Price
+    new_stripe_price = stripe.Price.create(
+        product=product_id,
+        unit_amount=price_cents,
+        currency=plan.currency.lower(),
+        recurring={"interval": "month"},
+        metadata={"creator_user_id": str(creator_user_id)},
+        api_key=api_key,
+    )
+
+    plan.price = new_price
+    plan.stripe_price_id = new_stripe_price.id
+    await session.commit()
+    await session.refresh(plan)
+
+    logger.info(
+        "creator plan price updated creator_user_id=%s old_price_id=%s new_price_id=%s price=%s",
+        creator_user_id,
+        old_price_id,
+        new_stripe_price.id,
+        new_price,
+    )
     return plan
 
 
@@ -611,6 +677,65 @@ async def _handle_payment_intent_succeeded(
                 reference=ref,
                 auto_commit=False,
             )
+    elif pi_type == "PPV_POST_UNLOCK":
+        purchase_id = metadata.get("purchase_id")
+        result = None
+        if purchase_id:
+            result = await session.execute(
+                select(PostPurchase).where(
+                    PostPurchase.id == UUID(purchase_id),
+                    PostPurchase.stripe_payment_intent_id == pi.get("id"),
+                )
+            )
+        else:
+            result = await session.execute(
+                select(PostPurchase).where(
+                    PostPurchase.stripe_payment_intent_id == pi.get("id"),
+                )
+            )
+        purchase = result.scalar_one_or_none() if result is not None else None
+        if not purchase:
+            logger.warning("post_purchase not found purchase_id=%s", purchase_id)
+            return
+        if purchase.status == "SUCCEEDED":
+            return
+        purchase.status = "SUCCEEDED"
+        latest_charge = pi.get("latest_charge")
+        if latest_charge:
+            purchase.stripe_charge_id = str(latest_charge)
+        creator_id_str = metadata.get("creator_id") or str(purchase.creator_id)
+        await create_ledger_event(
+            session,
+            creator_id=UUID(creator_id_str),
+            type="PPV_POST_UNLOCK",
+            gross_cents=gross_cents,
+            fee_cents=fee_cents,
+            net_cents=net_cents,
+            currency=currency,
+            reference_type="post_purchase",
+            reference_id=purchase_id,
+        )
+        ref = f"stripe_pi:{pi.get('id')}"
+        if net_cents > 0:
+            await create_ledger_entry(
+                session,
+                account_id=creator_pending_account_id(creator_id_str),
+                currency=currency,
+                amount=Decimal(net_cents) / 100,
+                direction=LEDGER_DIRECTION_CREDIT,
+                reference=ref,
+                auto_commit=False,
+            )
+        if fee_cents > 0:
+            await create_ledger_entry(
+                session,
+                account_id=PLATFORM_ACCOUNT_ID,
+                currency=currency,
+                amount=Decimal(fee_cents) / 100,
+                direction=LEDGER_DIRECTION_CREDIT,
+                reference=ref,
+                auto_commit=False,
+            )
     await session.flush()
 
 
@@ -631,6 +756,13 @@ async def _handle_payment_intent_failed_or_canceled(
         purchase_id = metadata.get("purchase_id")
         if purchase_id:
             result = await session.execute(select(PpvPurchase).where(PpvPurchase.id == UUID(purchase_id)))
+            purchase = result.scalar_one_or_none()
+            if purchase and purchase.status == "REQUIRES_PAYMENT":
+                purchase.status = "CANCELED"
+    elif pi_type == "PPV_POST_UNLOCK":
+        purchase_id = metadata.get("purchase_id")
+        if purchase_id:
+            result = await session.execute(select(PostPurchase).where(PostPurchase.id == UUID(purchase_id)))
             purchase = result.scalar_one_or_none()
             if purchase and purchase.status == "REQUIRES_PAYMENT":
                 purchase.status = "CANCELED"

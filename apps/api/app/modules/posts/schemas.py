@@ -13,6 +13,7 @@ from app.modules.posts.constants import (
     POST_TYPE_TEXT,
     POST_TYPE_VIDEO,
     VISIBILITY_FOLLOWERS,
+    VISIBILITY_PPV,
     VISIBILITY_PUBLIC,
     VISIBILITY_SUBSCRIBERS,
 )
@@ -44,11 +45,13 @@ class PostCreate(BaseModel):
     caption: str | None = None
     visibility: str = Field(
         ...,
-        pattern=f"^({VISIBILITY_PUBLIC}|{VISIBILITY_FOLLOWERS}|{VISIBILITY_SUBSCRIBERS})$",
+        pattern=f"^({VISIBILITY_PUBLIC}|{VISIBILITY_FOLLOWERS}|{VISIBILITY_SUBSCRIBERS}|{VISIBILITY_PPV})$",
     )
     nsfw: bool = False
     asset_ids: list[UUID] = Field(default_factory=list)
     publish_at: datetime | None = None
+    price_cents: int | None = Field(default=None, description="Required when visibility=PPV. Price in cents.")
+    currency: str | None = Field(default=None, description="Currency code (defaults to platform default).")
 
 
 class PostUpdate(BaseModel):
@@ -57,8 +60,9 @@ class PostUpdate(BaseModel):
     caption: str | None = None
     visibility: str | None = Field(
         default=None,
-        pattern=f"^({VISIBILITY_PUBLIC}|{VISIBILITY_FOLLOWERS}|{VISIBILITY_SUBSCRIBERS})$",
+        pattern=f"^({VISIBILITY_PUBLIC}|{VISIBILITY_FOLLOWERS}|{VISIBILITY_SUBSCRIBERS}|{VISIBILITY_PPV})$",
     )
+    price_cents: int | None = Field(default=None, description="Required when visibility=PPV.")
 
 
 class PostOut(BaseModel):
@@ -81,8 +85,10 @@ class PostOut(BaseModel):
     is_locked: bool = Field(default=False, description="True when viewer cannot access content (teaser only).")
     locked_reason: str | None = Field(
         default=None,
-        description="When is_locked: SUBSCRIPTION_REQUIRED or FOLLOW_REQUIRED for UI copy.",
+        description="When is_locked: SUBSCRIPTION_REQUIRED, FOLLOW_REQUIRED, or PPV_REQUIRED.",
     )
+    price_cents: int | None = Field(default=None, description="PPV price in cents (set when visibility=PPV).")
+    currency: str | None = Field(default=None, description="Currency code for PPV price.")
 
 
 class PostWithCreator(BaseModel):
@@ -105,8 +111,10 @@ class PostWithCreator(BaseModel):
     is_locked: bool = Field(default=False, description="True when viewer cannot access content (teaser only).")
     locked_reason: str | None = Field(
         default=None,
-        description="When is_locked: SUBSCRIPTION_REQUIRED or FOLLOW_REQUIRED for UI copy.",
+        description="When is_locked: SUBSCRIPTION_REQUIRED, FOLLOW_REQUIRED, or PPV_REQUIRED.",
     )
+    price_cents: int | None = Field(default=None, description="PPV price in cents (set when visibility=PPV).")
+    currency: str | None = Field(default=None, description="Currency code for PPV price.")
     creator: CreatorSummary
 
 

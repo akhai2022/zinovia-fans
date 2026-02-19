@@ -6,8 +6,7 @@ from dataclasses import dataclass
 from typing import Protocol
 from urllib.parse import quote
 
-import boto3
-from botocore.exceptions import ClientError
+import resend
 
 from app.core.request_id import get_request_id
 from app.core.settings import get_settings
@@ -88,14 +87,45 @@ class ConsoleMailProvider:
         )
 
 
-class SesMailProvider:
+def _wrap_html(body_content: str) -> str:
+    """Wrap email body in a proper HTML document structure for deliverability."""
+    return (
+        "<!DOCTYPE html>"
+        '<html lang="en" xmlns="http://www.w3.org/1999/xhtml">'
+        "<head>"
+        '<meta charset="utf-8"/>'
+        '<meta name="viewport" content="width=device-width, initial-scale=1.0"/>'
+        "<title>Zinovia Fans</title>"
+        "</head>"
+        '<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'
+        "'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5;"
+        'color:#1a1a1a;background-color:#f9fafb;">'
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        'style="background-color:#f9fafb;">'
+        "<tr><td align=\"center\" style=\"padding:40px 20px;\">"
+        '<table role="presentation" width="600" cellpadding="0" cellspacing="0" '
+        'style="background-color:#ffffff;border-radius:8px;overflow:hidden;">'
+        '<tr><td style="padding:32px 40px;">'
+        f"{body_content}"
+        '<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;"/>'
+        '<p style="font-size:12px;color:#9ca3af;margin:0;">'
+        "Zinovia Fans &mdash; the premium creator platform.<br/>"
+        "You received this email because you have an account on zinovia.ai.<br/>"
+        'To manage your email preferences, visit your '
+        '<a href="https://zinovia.ai/settings/profile" '
+        'style="color:#6366f1;">account settings</a>.'
+        "</p>"
+        "</td></tr></table>"
+        "</td></tr></table>"
+        "</body></html>"
+    )
+
+
+class ResendMailProvider:
     def __init__(self) -> None:
         settings = get_settings()
-        self._region = settings.aws_region or "us-east-1"
-        self._mail_from = settings.mail_from
-        self._configuration_set = settings.ses_configuration_set or ""
-        self._client = boto3.client("sesv2", region_name=self._region)
-        # Build List-Unsubscribe target from web base URL.
+        resend.api_key = settings.resend_api_key
+        self._mail_from = f"Zinovia Fans <{settings.mail_from}>"
         web_base = (settings.public_web_base_url or settings.app_base_url).rstrip("/")
         self._unsubscribe_url = f"{web_base}/settings/profile"
 
@@ -103,83 +133,87 @@ class SesMailProvider:
         self, *, recipient: str, subject: str, text_body: str, html_body: str, email_type: str
     ) -> None:
         try:
-            kwargs: dict = dict(
-                FromEmailAddress=self._mail_from,
-                Destination={"ToAddresses": [recipient]},
-                Content={
-                    "Simple": {
-                        "Subject": {"Data": subject, "Charset": "UTF-8"},
-                        "Body": {
-                            "Text": {"Data": text_body, "Charset": "UTF-8"},
-                            "Html": {"Data": html_body, "Charset": "UTF-8"},
-                        },
-                        "Headers": [
-                            {"Name": "List-Unsubscribe", "Value": f"<{self._unsubscribe_url}>"},
-                            {"Name": "List-Unsubscribe-Post", "Value": "List-Unsubscribe=One-Click"},
-                        ],
-                    }
+            params: resend.Emails.SendParams = {
+                "from": self._mail_from,
+                "to": [recipient],
+                "subject": subject,
+                "html": html_body,
+                "text": text_body,
+                "headers": {
+                    "List-Unsubscribe": f"<{self._unsubscribe_url}>",
+                    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
                 },
-                EmailTags=[{"Name": "EmailType", "Value": email_type}],
-            )
-            if self._configuration_set:
-                kwargs["ConfigurationSetName"] = self._configuration_set
-            response = await asyncio.to_thread(
-                self._client.send_email,
-                **kwargs,
-            )
+            }
+            response = await asyncio.to_thread(resend.Emails.send, params)
             logger.info(
                 "%s email delivered",
                 email_type,
                 extra={
                     "request_id": get_request_id(),
-                    "provider": "ses",
+                    "provider": "resend",
                     "outcome": "sent",
-                    "ses_message_id": response.get("MessageId"),
+                    "resend_id": response.get("id") if isinstance(response, dict) else None,
                 },
             )
-        except ClientError as exc:
-            error_code = exc.response.get("Error", {}).get("Code", "ClientError")
+        except resend.exceptions.ResendError as exc:
             logger.error(
                 "%s email delivery failed",
                 email_type,
                 extra={
                     "request_id": get_request_id(),
-                    "provider": "ses",
+                    "provider": "resend",
                     "outcome": "failed",
-                    "ses_error_code": error_code,
+                    "error": str(exc),
                 },
             )
-            reason = "ses_message_rejected" if error_code == "MessageRejected" else "ses_send_failed"
-            raise VerificationEmailDeliveryError(reason) from exc
+            raise VerificationEmailDeliveryError("resend_send_failed") from exc
         except Exception as exc:  # noqa: BLE001 - wraps network/timeouts/etc
             logger.error(
                 "%s email delivery failed",
                 email_type,
                 extra={
                     "request_id": get_request_id(),
-                    "provider": "ses",
+                    "provider": "resend",
                     "outcome": "failed",
-                    "ses_error_code": exc.__class__.__name__,
+                    "error": exc.__class__.__name__,
                 },
             )
-            raise VerificationEmailDeliveryError("ses_send_failed") from exc
+            raise VerificationEmailDeliveryError("resend_send_failed") from exc
 
     async def send_verification_email(self, payload: VerificationEmailPayload) -> None:
         verify_link = _build_verify_link(payload.token)
         await self._send_email(
             recipient=payload.recipient,
-            subject="Verify your Zinovia Fans account",
+            subject="Verify your email address",
             text_body=(
-                "Welcome to Zinovia Fans.\n\n"
-                "Please verify your email using this link:\n"
+                "Welcome to Zinovia Fans!\n\n"
+                "Thank you for signing up. To complete your registration and "
+                "start exploring the platform, please verify your email address "
+                "by visiting the link below:\n\n"
                 f"{verify_link}\n\n"
-                "This link expires in 24 hours."
+                "This verification link will expire in 24 hours. If you did not "
+                "create an account on Zinovia Fans, you can safely ignore this email.\n\n"
+                "Best regards,\n"
+                "The Zinovia Fans Team\n"
+                "https://zinovia.ai"
             ),
-            html_body=(
-                "<p>Welcome to Zinovia Fans.</p>"
-                "<p>Please verify your email using this link:</p>"
-                f'<p><a href="{verify_link}">{verify_link}</a></p>'
-                "<p>This link expires in 24 hours.</p>"
+            html_body=_wrap_html(
+                '<p style="margin:0 0 16px;">Welcome to Zinovia Fans!</p>'
+                '<p style="margin:0 0 16px;">Thank you for signing up. To complete your '
+                "registration and start exploring the platform, please verify your "
+                "email address:</p>"
+                '<p style="margin:0 0 24px;text-align:center;">'
+                '<a href="' + verify_link + '" style="display:inline-block;'
+                "background-color:#6366f1;color:#ffffff;font-weight:600;"
+                "text-decoration:none;padding:12px 32px;border-radius:6px;"
+                'font-size:16px;">Verify my email</a></p>'
+                '<p style="margin:0 0 8px;font-size:13px;color:#6b7280;">'
+                "Or copy and paste this link into your browser:</p>"
+                '<p style="margin:0 0 16px;font-size:13px;word-break:break-all;">'
+                f'<a href="{verify_link}" style="color:#6366f1;">{verify_link}</a></p>'
+                '<p style="margin:0 0 8px;font-size:13px;color:#6b7280;">'
+                "This link expires in 24 hours. If you did not create an account "
+                "on Zinovia Fans, you can safely ignore this email.</p>"
             ),
             email_type="verification",
         )
@@ -187,19 +221,35 @@ class SesMailProvider:
     async def send_password_reset_email(self, payload: PasswordResetEmailPayload) -> None:
         await self._send_email(
             recipient=payload.recipient,
-            subject="Reset your password — Zinovia Fans",
+            subject="Reset your password",
             text_body=(
-                "You requested a password reset for your Zinovia Fans account.\n\n"
-                "Use this link to set a new password:\n"
+                "Password Reset Request\n\n"
+                "You requested a password reset for your Zinovia Fans account. "
+                "Use the link below to set a new password:\n\n"
                 f"{payload.reset_url}\n\n"
-                "This link expires in 1 hour. If you didn't request this, "
-                "you can safely ignore this email."
+                "This link expires in 1 hour. If you didn't request a password "
+                "reset, you can safely ignore this email — your password will "
+                "remain unchanged.\n\n"
+                "Best regards,\n"
+                "The Zinovia Fans Team\n"
+                "https://zinovia.ai"
             ),
-            html_body=(
-                "<p>You requested a password reset for your Zinovia Fans account.</p>"
-                "<p>Use this link to set a new password:</p>"
-                f'<p><a href="{payload.reset_url}">{payload.reset_url}</a></p>'
-                "<p>This link expires in 1 hour. If you didn't request this, "
+            html_body=_wrap_html(
+                '<p style="margin:0 0 16px;">Password Reset Request</p>'
+                '<p style="margin:0 0 16px;">You requested a password reset for your '
+                "Zinovia Fans account. Click the button below to set a new password:</p>"
+                '<p style="margin:0 0 24px;text-align:center;">'
+                '<a href="' + payload.reset_url + '" style="display:inline-block;'
+                "background-color:#6366f1;color:#ffffff;font-weight:600;"
+                "text-decoration:none;padding:12px 32px;border-radius:6px;"
+                'font-size:16px;">Reset password</a></p>'
+                '<p style="margin:0 0 8px;font-size:13px;color:#6b7280;">'
+                "Or copy and paste this link into your browser:</p>"
+                '<p style="margin:0 0 16px;font-size:13px;word-break:break-all;">'
+                f'<a href="{payload.reset_url}" style="color:#6366f1;">'
+                f"{payload.reset_url}</a></p>"
+                '<p style="margin:0 0 8px;font-size:13px;color:#6b7280;">'
+                "This link expires in 1 hour. If you didn't request this, "
                 "you can safely ignore this email.</p>"
             ),
             email_type="password_reset",
@@ -293,8 +343,8 @@ class MailpitProvider:
 def get_mail_provider() -> MailProvider:
     settings = get_settings()
     provider = settings.mail_provider.lower()
-    if provider == "ses":
-        return SesMailProvider()
+    if provider == "resend":
+        return ResendMailProvider()
     if provider == "mailpit":
         return MailpitProvider()
     return ConsoleMailProvider()

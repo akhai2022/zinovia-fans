@@ -22,6 +22,8 @@ class Post(TimestampMixin, Base):
     nsfw: Mapped[bool] = mapped_column(Boolean, default=False)
     publish_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="PUBLISHED")
+    price_cents: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    currency: Mapped[str | None] = mapped_column(String(8), nullable=True)
 
     media: Mapped[list["PostMedia"]] = relationship(
         "PostMedia", back_populates="post", order_by="PostMedia.position"

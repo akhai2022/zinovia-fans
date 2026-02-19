@@ -25,6 +25,8 @@ const PROTECTED_PREFIXES = [
   "/onboarding",
   "/ai/images",
   "/creator/post",
+  "/creator/vault",
+  "/creator/collections",
 ];
 
 function isProtectedRoute(pathname: string): boolean {
@@ -80,8 +82,22 @@ function detectLocale(req: NextRequest): Locale {
   return DEFAULT_LOCALE;
 }
 
+/** Known sub-paths under /creator that are NOT public profile handles. */
+const CREATOR_RESERVED = new Set(["post", "vault", "collections"]);
+
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // Redirect /creator/<handle> → /creators/<handle> (public profile alias)
+  const creatorMatch = pathname.match(/^\/creator\/([^/]+)\/?$/);
+  if (creatorMatch) {
+    const segment = creatorMatch[1];
+    if (!CREATOR_RESERVED.has(segment)) {
+      const url = req.nextUrl.clone();
+      url.pathname = `/creators/${segment}`;
+      return NextResponse.redirect(url, 308);
+    }
+  }
 
   // Auth gate: redirect unauthenticated users away from protected routes
   if (isProtectedRoute(pathname)) {

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export const metadata = {
   title: "Help Center — Zinovia Fans",
   description: "Get help with your Zinovia Fans account, billing, and creator tools.",
+  alternates: { canonical: "https://zinovia.ai/help" },
 };
 
 const FAQ_ITEMS = [
@@ -50,9 +51,23 @@ const FAQ_ITEMS = [
   },
 ] as const;
 
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQ_ITEMS.map((item) => ({
+    "@type": "Question",
+    name: item.question,
+    acceptedAnswer: { "@type": "Answer", text: item.answer },
+  })),
+};
+
 export default function HelpPage() {
   return (
     <Page className="max-w-3xl space-y-8 py-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <header className="space-y-2">
         <h1 className="font-display text-premium-h2 font-semibold text-foreground">Help Center</h1>
         <p className="text-sm text-muted-foreground">

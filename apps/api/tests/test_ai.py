@@ -9,6 +9,8 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from conftest import signup_verify_login
+
 from app.modules.ai.models import AiImageJob
 from app.modules.auth.models import Profile
 
@@ -37,12 +39,7 @@ async def test_ai_images_generate_creates_job(
 ) -> None:
     """POST /ai/images/generate creates QUEUED job and returns job_id."""
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "Creator"},
-    )
-    login = await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    token = login.json()["access_token"]
+    token = await signup_verify_login(async_client, email, display_name="Creator")
     headers = {"Authorization": f"Bearer {token}"}
 
     r = await async_client.post(
@@ -68,12 +65,7 @@ async def test_ai_images_apply_creator_avatar(
 ) -> None:
     """POST /ai/images/{job_id}/apply with creator.avatar updates profile."""
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "Creator"},
-    )
-    login = await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    token = login.json()["access_token"]
+    token = await signup_verify_login(async_client, email, display_name="Creator")
     headers = {"Authorization": f"Bearer {token}"}
     me = await async_client.get("/auth/me", headers=headers)
     user_id = uuid.UUID(me.json()["id"])
@@ -117,12 +109,7 @@ async def test_ai_images_apply_creator_banner(
 ) -> None:
     """POST /ai/images/{job_id}/apply with creator.banner updates profile."""
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "Creator"},
-    )
-    login = await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    token = login.json()["access_token"]
+    token = await signup_verify_login(async_client, email, display_name="Creator")
     headers = {"Authorization": f"Bearer {token}"}
     me = await async_client.get("/auth/me", headers=headers)
     user_id = uuid.UUID(me.json()["id"])
@@ -165,12 +152,7 @@ async def test_ai_images_apply_landing_hero_rejects_non_admin(
 ) -> None:
     """Applying to landing.hero returns 403 for non-admin (unless ALLOW_BRAND_ASSET_WRITE)."""
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "Creator"},
-    )
-    login = await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    token = login.json()["access_token"]
+    token = await signup_verify_login(async_client, email, display_name="Creator")
     headers = {"Authorization": f"Bearer {token}"}
     me = await async_client.get("/auth/me", headers=headers)
     user_id = uuid.UUID(me.json()["id"])

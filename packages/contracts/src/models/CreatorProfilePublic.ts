@@ -15,9 +15,19 @@ export type CreatorProfilePublic = {
     followers_count: number;
     handle: string;
     is_following?: boolean;
+    is_online?: boolean;
     nsfw: boolean;
     posts_count?: number;
+    /**
+     * ISO 4217 currency code (e.g. eur)
+     */
+    subscription_currency?: (string | null);
+    /**
+     * Monthly subscription price in major currency units (e.g. 4.99)
+     */
+    subscription_price?: (string | null);
     updated_at: string;
     user_id: string;
+    verified?: boolean;
 };
 

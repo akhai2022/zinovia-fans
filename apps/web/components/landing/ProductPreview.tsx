@@ -24,6 +24,8 @@ function PreviewTile({ src, locked }: { src: string; locked?: boolean }) {
         src={src}
         alt=""
         fill
+        loading="lazy"
+        quality={75}
         className={cn("object-cover", locked && "blur-[2px] opacity-80")}
         sizes="(max-width: 768px) 33vw, 120px"
         priority={false}
@@ -61,7 +63,7 @@ export function ProductPreview({ className }: { className?: string }) {
 
       <div className="flex items-center gap-3 p-4 border-b border-border/60 bg-card">
         <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-border/60">
-          <Image src={DEMO_ASSETS.avatar[256]} alt="" fill className="object-cover" sizes="48px" />
+          <Image src={DEMO_ASSETS.avatar[256]} alt="" fill loading="lazy" quality={75} className="object-cover" sizes="48px" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="h-4 w-24 rounded bg-foreground/20" />

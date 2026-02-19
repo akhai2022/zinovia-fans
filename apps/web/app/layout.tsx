@@ -34,6 +34,22 @@ export const metadata = {
   title: "Zinovia Fans — Premium Creator Subscription Platform",
   description:
     "Subscribe to exclusive content from your favourite creators. Secure payouts, Stripe checkout, and private media delivery. For fans and creators.",
+  metadataBase: new URL(SITE_URL),
+  alternates: {
+    canonical: SITE_URL,
+    languages: {
+      en: SITE_URL,
+      es: SITE_URL,
+      fr: SITE_URL,
+      de: SITE_URL,
+      pt: SITE_URL,
+      tr: SITE_URL,
+      ro: SITE_URL,
+      pl: SITE_URL,
+      it: SITE_URL,
+      "x-default": SITE_URL,
+    },
+  },
   openGraph: {
     title: "Zinovia Fans — Premium Creator Subscription Platform",
     description:
@@ -42,14 +58,25 @@ export const metadata = {
     siteName: "Zinovia Fans",
     locale: "en_US",
     type: "website",
+    images: [
+      {
+        url: "/assets/og-default.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Zinovia Fans — Premium Creator Subscription Platform",
+      },
+    ],
   },
   twitter: {
-    card: "summary_large_image",
+    card: "summary_large_image" as const,
     title: "Zinovia Fans — Premium Creator Subscription Platform",
     description:
       "Subscribe to exclusive content from your favourite creators. Secure payouts and private delivery.",
+    images: ["/assets/og-default.jpg"],
   },
-  metadataBase: new URL(SITE_URL),
+  other: {
+    "theme-color": "#0a0a0e",
+  },
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
@@ -63,27 +90,42 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     : DEFAULT_LOCALE;
   const dictionary = await getDictionary(locale);
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    name: "Zinovia Fans",
-    url: SITE_URL,
-    description:
-      "Subscribe to exclusive content from your favourite creators. Secure payouts, Stripe checkout, and private media delivery.",
-    publisher: {
-      "@type": "Organization",
-      name: "Zinovia",
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: "Zinovia Fans",
       url: SITE_URL,
-    },
-    potentialAction: {
-      "@type": "SearchAction",
-      target: {
-        "@type": "EntryPoint",
-        urlTemplate: `${SITE_URL}/creators?q={search_term_string}`,
+      description:
+        "Subscribe to exclusive content from your favourite creators. Secure payouts, Stripe checkout, and private media delivery.",
+      publisher: { "@type": "Organization", name: "Zinovia", url: SITE_URL },
+      potentialAction: {
+        "@type": "SearchAction",
+        target: {
+          "@type": "EntryPoint",
+          urlTemplate: `${SITE_URL}/creators?q={search_term_string}`,
+        },
+        "query-input": "required name=search_term_string",
       },
-      "query-input": "required name=search_term_string",
     },
-  };
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      name: "Zinovia Fans",
+      url: SITE_URL,
+      logo: `${SITE_URL}/assets/og-default.jpg`,
+      sameAs: [
+        "https://twitter.com/zinoviafans",
+        "https://instagram.com/zinoviafans",
+        "https://tiktok.com/@zinoviafans",
+      ],
+      contactPoint: {
+        "@type": "ContactPoint",
+        contactType: "customer service",
+        email: "support@zinovia.ai",
+      },
+    },
+  ];
 
   return (
     <html lang={locale} className={`${inter.variable} ${spaceGrotesk.variable} scroll-smooth`}>

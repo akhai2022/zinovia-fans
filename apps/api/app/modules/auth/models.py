@@ -21,6 +21,9 @@ class User(TimestampMixin, Base):
     role: Mapped[str] = mapped_column(String(32), default=DEFAULT_USER_ROLE)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_activity_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    signup_ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    last_login_ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
 
     # Password reset
     password_reset_token: Mapped[str | None] = mapped_column(String(128), nullable=True)

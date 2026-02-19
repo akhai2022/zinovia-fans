@@ -39,12 +39,23 @@ const nextConfig = {
     const upstream =
       process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
       "http://127.0.0.1:8000";
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${upstream}/:path*`,
-      },
-    ];
+    return {
+      beforeFiles: [],
+      afterFiles: [
+        {
+          source: "/api/:path*",
+          destination: `${upstream}/:path*`,
+        },
+      ],
+      // Fallback: short creator URLs — only triggers when no real page matches.
+      // Allows creators to share https://zinovia.ai/<handle>
+      fallback: [
+        {
+          source: "/:handle",
+          destination: "/creators/:handle",
+        },
+      ],
+    };
   },
 };
 

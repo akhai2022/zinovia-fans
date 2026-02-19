@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.billing.models import Subscription
 from app.modules.media.models import MediaObject
+from conftest import signup_verify_login
 
 
 def _unique_email() -> str:
@@ -20,12 +21,7 @@ async def test_creator_can_create_text_post(
     async_client: AsyncClient,
 ) -> None:
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "Author"},
-    )
-    login = await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    token = login.json()["access_token"]
+    token = await signup_verify_login(async_client, email, display_name="Author")
     handle = f"author-{uuid.uuid4().hex[:8]}"
     await async_client.patch(
         "/creators/me",
@@ -57,12 +53,7 @@ async def test_creator_can_create_image_post_with_media(
     db_session: AsyncSession,
 ) -> None:
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "PhotoCreator"},
-    )
-    login = await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    token = login.json()["access_token"]
+    token = await signup_verify_login(async_client, email, display_name="PhotoCreator")
     me = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
     user_id = uuid.UUID(me.json()["id"])
     handle = f"photo-{uuid.uuid4().hex[:8]}"
@@ -103,12 +94,7 @@ async def test_creator_can_create_video_post_with_mp4_asset(
     db_session: AsyncSession,
 ) -> None:
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "VideoCreator"},
-    )
-    login = await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    token = login.json()["access_token"]
+    token = await signup_verify_login(async_client, email, display_name="VideoCreator")
     me = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
     user_id = uuid.UUID(me.json()["id"])
     handle = f"video-{uuid.uuid4().hex[:8]}"
@@ -149,12 +135,7 @@ async def test_video_post_requires_mp4_asset(
     db_session: AsyncSession,
 ) -> None:
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "Creator"},
-    )
-    login = await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    token = login.json()["access_token"]
+    token = await signup_verify_login(async_client, email, display_name="Creator")
     me = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
     user_id = uuid.UUID(me.json()["id"])
     await async_client.patch(
@@ -183,7 +164,7 @@ async def test_video_post_requires_mp4_asset(
         headers={"Authorization": f"Bearer {token}"},
     )
     assert r.status_code == 400, r.json()
-    assert r.json().get("detail") == "video_post_requires_mp4_asset"
+    assert r.json().get("detail", {}).get("code") == "video_post_requires_mp4_asset"
 
 
 @pytest.mark.asyncio
@@ -191,12 +172,7 @@ async def test_non_creator_cannot_create_post(
     async_client: AsyncClient,
 ) -> None:
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "Fan"},
-    )
-    login = await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    token = login.json()["access_token"]
+    token = await signup_verify_login(async_client, email, display_name="Fan", role="fan")
     r = await async_client.post(
         "/posts",
         json={
@@ -215,12 +191,7 @@ async def test_visibility_public_visible_to_anon(
     async_client: AsyncClient,
 ) -> None:
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "PublicCreator"},
-    )
-    login = await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    token = login.json()["access_token"]
+    token = await signup_verify_login(async_client, email, display_name="PublicCreator")
     handle = f"pub-{uuid.uuid4().hex[:8]}"
     await async_client.patch(
         "/creators/me",
@@ -245,12 +216,7 @@ async def test_visibility_followers_visible_to_follower(
 ) -> None:
     email_creator = _unique_email()
     email_fan = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_creator, "password": "password123", "display_name": "Creator"},
-    )
-    login_c = await async_client.post("/auth/login", json={"email": email_creator, "password": "password123"})
-    token_c = login_c.json()["access_token"]
+    token_c = await signup_verify_login(async_client, email_creator, display_name="Creator")
     handle = f"fol-{uuid.uuid4().hex[:8]}"
     await async_client.patch(
         "/creators/me",
@@ -276,12 +242,7 @@ async def test_visibility_followers_visible_to_follower(
     assert r.status_code == 200
     assert len(r.json()["items"]) == 0
     # Fan follows then can see
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_fan, "password": "password123", "display_name": "Fan"},
-    )
-    login_f = await async_client.post("/auth/login", json={"email": email_fan, "password": "password123"})
-    token_f = login_f.json()["access_token"]
+    token_f = await signup_verify_login(async_client, email_fan, display_name="Fan")
     async_client.cookies.clear()  # so /auth/me uses Bearer only and returns creator
     me_c = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {token_c}"})
     creator_id = me_c.json()["id"]
@@ -305,12 +266,7 @@ async def test_visibility_subscribers_hidden_from_follower(
 ) -> None:
     email_creator = _unique_email()
     email_fan = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_creator, "password": "password123", "display_name": "Creator"},
-    )
-    login_c = await async_client.post("/auth/login", json={"email": email_creator, "password": "password123"})
-    token_c = login_c.json()["access_token"]
+    token_c = await signup_verify_login(async_client, email_creator, display_name="Creator")
     handle = f"sub-{uuid.uuid4().hex[:8]}"
     await async_client.patch(
         "/creators/me",
@@ -327,12 +283,7 @@ async def test_visibility_subscribers_hidden_from_follower(
         },
         headers={"Authorization": f"Bearer {token_c}"},
     )
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_fan, "password": "password123", "display_name": "Fan"},
-    )
-    login_f = await async_client.post("/auth/login", json={"email": email_fan, "password": "password123"})
-    token_f = login_f.json()["access_token"]
+    token_f = await signup_verify_login(async_client, email_fan, display_name="Fan")
     async_client.cookies.clear()  # so /auth/me uses Bearer only and returns creator
     me_c = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {token_c}"})
     creator_id = me_c.json()["id"]
@@ -356,12 +307,7 @@ async def test_include_locked_returns_teaser_for_non_subscriber(
     """Non-subscriber with include_locked=true sees SUBSCRIBERS posts as locked teasers (no caption/asset_ids)."""
     email_creator = _unique_email()
     email_fan = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_creator, "password": "password123", "display_name": "Creator"},
-    )
-    login_c = await async_client.post("/auth/login", json={"email": email_creator, "password": "password123"})
-    token_c = login_c.json()["access_token"]
+    token_c = await signup_verify_login(async_client, email_creator, display_name="Creator")
     handle = f"tease-{uuid.uuid4().hex[:8]}"
     await async_client.patch(
         "/creators/me",
@@ -378,12 +324,7 @@ async def test_include_locked_returns_teaser_for_non_subscriber(
         },
         headers={"Authorization": f"Bearer {token_c}"},
     )
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_fan, "password": "password123", "display_name": "Fan"},
-    )
-    login_f = await async_client.post("/auth/login", json={"email": email_fan, "password": "password123"})
-    token_f = login_f.json()["access_token"]
+    token_f = await signup_verify_login(async_client, email_fan, display_name="Fan")
     async_client.cookies.clear()
     me_c = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {token_c}"})
     creator_id = me_c.json()["id"]
@@ -413,12 +354,7 @@ async def test_include_locked_returns_teaser_for_non_follower(
     """Non-follower with include_locked=true sees FOLLOWERS posts as locked teasers with FOLLOW_REQUIRED."""
     email_creator = _unique_email()
     email_fan = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_creator, "password": "password123", "display_name": "Creator"},
-    )
-    login_c = await async_client.post("/auth/login", json={"email": email_creator, "password": "password123"})
-    token_c = login_c.json()["access_token"]
+    token_c = await signup_verify_login(async_client, email_creator, display_name="Creator")
     handle = f"foltease-{uuid.uuid4().hex[:8]}"
     await async_client.patch(
         "/creators/me",
@@ -435,12 +371,7 @@ async def test_include_locked_returns_teaser_for_non_follower(
         },
         headers={"Authorization": f"Bearer {token_c}"},
     )
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_fan, "password": "password123", "display_name": "Fan"},
-    )
-    login_f = await async_client.post("/auth/login", json={"email": email_fan, "password": "password123"})
-    token_f = login_f.json()["access_token"]
+    token_f = await signup_verify_login(async_client, email_fan, display_name="Fan")
     async_client.cookies.clear()
     r = await async_client.get(
         f"/creators/{handle}/posts",
@@ -465,12 +396,7 @@ async def test_locked_teaser_image_post_redacts_asset_ids(
     """SUBSCRIBERS IMAGE post appears as locked teaser: is_locked true, caption null, asset_ids empty."""
     email_creator = _unique_email()
     email_fan = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_creator, "password": "password123", "display_name": "Creator"},
-    )
-    login_c = await async_client.post("/auth/login", json={"email": email_creator, "password": "password123"})
-    token_c = login_c.json()["access_token"]
+    token_c = await signup_verify_login(async_client, email_creator, display_name="Creator")
     me_c = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {token_c}"})
     user_id = me_c.json()["id"]
     handle = f"imglock-{uuid.uuid4().hex[:8]}"
@@ -499,12 +425,7 @@ async def test_locked_teaser_image_post_redacts_asset_ids(
         },
         headers={"Authorization": f"Bearer {token_c}"},
     )
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_fan, "password": "password123", "display_name": "Fan"},
-    )
-    login_f = await async_client.post("/auth/login", json={"email": email_fan, "password": "password123"})
-    token_f = login_f.json()["access_token"]
+    token_f = await signup_verify_login(async_client, email_fan, display_name="Fan", role="fan")
     async_client.cookies.clear()
     await async_client.get("/auth/me", headers={"Authorization": f"Bearer {token_c}"})
     creator_id = me_c.json()["id"]
@@ -535,12 +456,7 @@ async def test_locked_teaser_video_post_redacts_asset_ids(
     """SUBSCRIBERS VIDEO post appears as locked teaser: is_locked true, caption null, asset_ids empty."""
     email_creator = _unique_email()
     email_fan = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_creator, "password": "password123", "display_name": "Creator"},
-    )
-    login_c = await async_client.post("/auth/login", json={"email": email_creator, "password": "password123"})
-    token_c = login_c.json()["access_token"]
+    token_c = await signup_verify_login(async_client, email_creator, display_name="Creator")
     me_c = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {token_c}"})
     user_id = me_c.json()["id"]
     handle = f"vidlock-{uuid.uuid4().hex[:8]}"
@@ -569,12 +485,7 @@ async def test_locked_teaser_video_post_redacts_asset_ids(
         },
         headers={"Authorization": f"Bearer {token_c}"},
     )
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_fan, "password": "password123", "display_name": "Fan"},
-    )
-    login_f = await async_client.post("/auth/login", json={"email": email_fan, "password": "password123"})
-    token_f = login_f.json()["access_token"]
+    token_f = await signup_verify_login(async_client, email_fan, display_name="Fan", role="fan")
     r = await async_client.get(
         f"/creators/{handle}/posts",
         params={"page": 1, "page_size": 10, "include_locked": True},
@@ -598,12 +509,7 @@ async def test_follower_sees_followers_post_unlocked_with_asset_ids(
     """After follow, FOLLOWERS IMAGE post returns is_locked false and includes asset_ids/caption."""
     email_creator = _unique_email()
     email_fan = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_creator, "password": "password123", "display_name": "Creator"},
-    )
-    login_c = await async_client.post("/auth/login", json={"email": email_creator, "password": "password123"})
-    token_c = login_c.json()["access_token"]
+    token_c = await signup_verify_login(async_client, email_creator, display_name="Creator")
     me_c = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {token_c}"})
     user_id = me_c.json()["id"]
     handle = f"folunlock-{uuid.uuid4().hex[:8]}"
@@ -632,12 +538,7 @@ async def test_follower_sees_followers_post_unlocked_with_asset_ids(
         },
         headers={"Authorization": f"Bearer {token_c}"},
     )
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_fan, "password": "password123", "display_name": "Fan"},
-    )
-    login_f = await async_client.post("/auth/login", json={"email": email_fan, "password": "password123"})
-    token_f = login_f.json()["access_token"]
+    token_f = await signup_verify_login(async_client, email_fan, display_name="Fan", role="fan")
     r_before = await async_client.get(
         f"/creators/{handle}/posts",
         params={"page": 1, "page_size": 10, "include_locked": True},
@@ -673,12 +574,7 @@ async def test_visibility_subscribers_visible_to_creator(
     async_client: AsyncClient,
 ) -> None:
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "Me"},
-    )
-    login = await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    token = login.json()["access_token"]
+    token = await signup_verify_login(async_client, email, display_name="Me")
     handle = f"me-{uuid.uuid4().hex[:8]}"
     await async_client.patch(
         "/creators/me",
@@ -712,12 +608,7 @@ async def test_feed_returns_followed_creators_public_posts(
 ) -> None:
     email_creator = _unique_email()
     email_fan = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_creator, "password": "password123", "display_name": "FeedCreator"},
-    )
-    login_c = await async_client.post("/auth/login", json={"email": email_creator, "password": "password123"})
-    token_c = login_c.json()["access_token"]
+    token_c = await signup_verify_login(async_client, email_creator, display_name="FeedCreator")
     handle = f"feed-{uuid.uuid4().hex[:8]}"
     await async_client.patch(
         "/creators/me",
@@ -734,12 +625,7 @@ async def test_feed_returns_followed_creators_public_posts(
         },
         headers={"Authorization": f"Bearer {token_c}"},
     )
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_fan, "password": "password123", "display_name": "FeedFan"},
-    )
-    login_f = await async_client.post("/auth/login", json={"email": email_fan, "password": "password123"})
-    token_f = login_f.json()["access_token"]
+    token_f = await signup_verify_login(async_client, email_fan, display_name="FeedFan")
     async_client.cookies.clear()  # so /auth/me uses Bearer only and returns creator
     me_c = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {token_c}"})
     creator_id = me_c.json()["id"]
@@ -767,12 +653,7 @@ async def test_feed_returns_followed_creators_public_posts(
 async def test_feed_empty_when_following_none(async_client: AsyncClient) -> None:
     """Feed returns empty when user follows no creators."""
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "Nobody"},
-    )
-    login = await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    token = login.json()["access_token"]
+    token = await signup_verify_login(async_client, email, display_name="Nobody")
     r = await async_client.get(
         "/feed",
         params={"page": 1, "page_size": 10},
@@ -789,12 +670,7 @@ async def test_feed_ordering_newest_first(async_client: AsyncClient) -> None:
     """Feed returns posts ordered by created_at desc."""
     email_creator = _unique_email()
     email_fan = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_creator, "password": "password123", "display_name": "OrderCreator"},
-    )
-    login_c = await async_client.post("/auth/login", json={"email": email_creator, "password": "password123"})
-    token_c = login_c.json()["access_token"]
+    token_c = await signup_verify_login(async_client, email_creator, display_name="OrderCreator")
     handle = f"order-{uuid.uuid4().hex[:8]}"
     await async_client.patch(
         "/creators/me",
@@ -811,12 +687,7 @@ async def test_feed_ordering_newest_first(async_client: AsyncClient) -> None:
         json={"type": "TEXT", "caption": "Second", "visibility": "PUBLIC", "asset_ids": []},
         headers={"Authorization": f"Bearer {token_c}"},
     )
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_fan, "password": "password123", "display_name": "OrderFan"},
-    )
-    login_f = await async_client.post("/auth/login", json={"email": email_fan, "password": "password123"})
-    token_f = login_f.json()["access_token"]
+    token_f = await signup_verify_login(async_client, email_fan, display_name="OrderFan")
     async_client.cookies.clear()
     me_c = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {token_c}"})
     creator_id = me_c.json()["id"]
@@ -841,12 +712,7 @@ async def test_feed_includes_followers_visibility_for_follower(async_client: Asy
     """Follower sees FOLLOWERS posts in feed."""
     email_creator = _unique_email()
     email_fan = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_creator, "password": "password123", "display_name": "FollCreator"},
-    )
-    login_c = await async_client.post("/auth/login", json={"email": email_creator, "password": "password123"})
-    token_c = login_c.json()["access_token"]
+    token_c = await signup_verify_login(async_client, email_creator, display_name="FollCreator")
     handle = f"foll-{uuid.uuid4().hex[:8]}"
     await async_client.patch(
         "/creators/me",
@@ -863,12 +729,7 @@ async def test_feed_includes_followers_visibility_for_follower(async_client: Asy
         },
         headers={"Authorization": f"Bearer {token_c}"},
     )
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_fan, "password": "password123", "display_name": "FollFan"},
-    )
-    login_f = await async_client.post("/auth/login", json={"email": email_fan, "password": "password123"})
-    token_f = login_f.json()["access_token"]
+    token_f = await signup_verify_login(async_client, email_fan, display_name="FollFan")
     async_client.cookies.clear()
     me_c = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {token_c}"})
     creator_id = me_c.json()["id"]
@@ -889,16 +750,11 @@ async def test_feed_includes_followers_visibility_for_follower(async_client: Asy
 
 
 @pytest.mark.asyncio
-async def test_feed_excludes_subscribers_from_follower(async_client: AsyncClient) -> None:
-    """Follower without subscription does not see SUBSCRIBERS posts in feed."""
+async def test_feed_shows_subscribers_post_as_locked_teaser(async_client: AsyncClient) -> None:
+    """Follower without subscription sees SUBSCRIBERS posts in feed as locked teasers."""
     email_creator = _unique_email()
     email_fan = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_creator, "password": "password123", "display_name": "SubCreator"},
-    )
-    login_c = await async_client.post("/auth/login", json={"email": email_creator, "password": "password123"})
-    token_c = login_c.json()["access_token"]
+    token_c = await signup_verify_login(async_client, email_creator, display_name="SubCreator")
     handle = f"sub-{uuid.uuid4().hex[:8]}"
     await async_client.patch(
         "/creators/me",
@@ -915,12 +771,7 @@ async def test_feed_excludes_subscribers_from_follower(async_client: AsyncClient
         },
         headers={"Authorization": f"Bearer {token_c}"},
     )
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_fan, "password": "password123", "display_name": "SubFan"},
-    )
-    login_f = await async_client.post("/auth/login", json={"email": email_fan, "password": "password123"})
-    token_f = login_f.json()["access_token"]
+    token_f = await signup_verify_login(async_client, email_fan, display_name="SubFan", role="fan")
     async_client.cookies.clear()
     me_c = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {token_c}"})
     creator_id = me_c.json()["id"]
@@ -936,7 +787,11 @@ async def test_feed_excludes_subscribers_from_follower(async_client: AsyncClient
     assert r.status_code == 200, r.json()
     items = r.json()["items"]
     sub_posts = [p for p in items if p.get("visibility") == "SUBSCRIBERS"]
-    assert len(sub_posts) == 0
+    assert len(sub_posts) >= 1
+    assert sub_posts[0]["is_locked"] is True
+    assert sub_posts[0]["locked_reason"] == "SUBSCRIPTION_REQUIRED"
+    assert sub_posts[0]["caption"] is None
+    assert sub_posts[0]["asset_ids"] == []
 
 
 @pytest.mark.asyncio
@@ -946,12 +801,7 @@ async def test_subscriber_sees_subscribers_posts_on_creator_page(
     """Active subscriber can see SUBSCRIBERS posts on creator profile."""
     email_creator = _unique_email()
     email_fan = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_creator, "password": "password123", "display_name": "SubCreator"},
-    )
-    login_c = await async_client.post("/auth/login", json={"email": email_creator, "password": "password123"})
-    token_c = login_c.json()["access_token"]
+    token_c = await signup_verify_login(async_client, email_creator, display_name="SubCreator")
     handle = f"sub2-{uuid.uuid4().hex[:8]}"
     await async_client.patch(
         "/creators/me",
@@ -971,12 +821,7 @@ async def test_subscriber_sees_subscribers_posts_on_creator_page(
         },
         headers={"Authorization": f"Bearer {token_c}"},
     )
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_fan, "password": "password123", "display_name": "SubFan"},
-    )
-    login_f = await async_client.post("/auth/login", json={"email": email_fan, "password": "password123"})
-    token_f = login_f.json()["access_token"]
+    token_f = await signup_verify_login(async_client, email_fan, display_name="SubFan")
     me_f = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {token_f}"})
     fan_id = me_f.json()["id"]
     sub = Subscription(
@@ -1004,12 +849,7 @@ async def test_subscriber_sees_subscribers_posts_on_creator_page(
 async def test_feed_includes_subscribers_for_creator(async_client: AsyncClient) -> None:
     """Creator sees their own SUBSCRIBERS posts in feed (own posts always included)."""
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "SelfCreator"},
-    )
-    login = await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    token = login.json()["access_token"]
+    token = await signup_verify_login(async_client, email, display_name="SelfCreator")
     handle = f"self-{uuid.uuid4().hex[:8]}"
     await async_client.patch(
         "/creators/me",

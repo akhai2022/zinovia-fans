@@ -4,7 +4,7 @@
  */
 
 export type PostType = "TEXT" | "IMAGE" | "VIDEO";
-export type Visibility = "PUBLIC" | "FOLLOWERS" | "SUBSCRIBERS";
+export type Visibility = "PUBLIC" | "FOLLOWERS" | "SUBSCRIBERS" | "PPV";
 
 export interface CreatorSummary {
   user_id: string;
@@ -26,8 +26,12 @@ export interface PostItem {
   asset_ids: string[];
   /** True when post is paywalled for this viewer (teaser only; no caption/asset_ids). */
   is_locked?: boolean;
-  /** When is_locked: SUBSCRIPTION_REQUIRED | FOLLOW_REQUIRED for overlay copy. */
+  /** When is_locked: SUBSCRIPTION_REQUIRED | FOLLOW_REQUIRED | PPV_REQUIRED for overlay copy. */
   locked_reason?: string | null;
+  /** PPV price in cents (set when visibility=PPV). */
+  price_cents?: number | null;
+  /** Currency code for PPV price. */
+  currency?: string | null;
   creator?: CreatorSummary;
 }
 

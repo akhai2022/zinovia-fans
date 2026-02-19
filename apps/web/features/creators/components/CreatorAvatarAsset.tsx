@@ -18,6 +18,7 @@ export function CreatorAvatarAsset({
   size = "md",
   withRing = true,
   className,
+  isOnline,
 }: {
   assetId: string | null;
   displayName?: string | null;
@@ -25,6 +26,7 @@ export function CreatorAvatarAsset({
   size?: "sm" | "md" | "lg";
   withRing?: boolean;
   className?: string;
+  isOnline?: boolean;
 }) {
   const [url, setUrl] = useState<string | null>(
     () => (assetId && avatarUrlCache.get(assetId)) ?? null
@@ -58,6 +60,7 @@ export function CreatorAvatarAsset({
       size={size}
       withRing={withRing}
       className={className}
+      isOnline={isOnline}
     />
   );
 }

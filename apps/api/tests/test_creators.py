@@ -8,6 +8,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.models import User
+from conftest import signup_verify_login
 
 
 def _unique_email() -> str:
@@ -19,12 +20,7 @@ async def test_create_creator_profile_and_get_by_handle(
     async_client: AsyncClient,
 ) -> None:
     email = _unique_email()
-    r = await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "Alice"},
-    )
-    assert r.status_code == 201, r.json()
-    token = (await async_client.post("/auth/login", json={"email": email, "password": "password123"})).json()["access_token"]
+    token = await signup_verify_login(async_client, email, display_name="Alice")
     handle = f"alice-{uuid.uuid4().hex[:8]}"
     headers = {"Authorization": f"Bearer {token}"}
     r = await async_client.patch(
@@ -48,20 +44,10 @@ async def test_follow_unfollow_idempotency(
 ) -> None:
     email_bob = _unique_email()
     email_fan = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_bob, "password": "password123", "display_name": "Bob"},
-    )
-    login = await async_client.post("/auth/login", json={"email": email_bob, "password": "password123"})
-    token2 = login.json()["access_token"]
+    token2 = await signup_verify_login(async_client, email_bob, display_name="Bob")
     handle_bob = f"bob-{uuid.uuid4().hex[:8]}"
     await async_client.patch("/creators/me", json={"handle": handle_bob}, headers={"Authorization": f"Bearer {token2}"})
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_fan, "password": "password123", "display_name": "Fan"},
-    )
-    login_fan = await async_client.post("/auth/login", json={"email": email_fan, "password": "password123"})
-    token_fan = login_fan.json()["access_token"]
+    token_fan = await signup_verify_login(async_client, email_fan, display_name="Fan")
     headers_fan = {"Authorization": f"Bearer {token_fan}"}
     async_client.cookies.clear()  # so /auth/me uses Bearer only and returns Bob
     me_bob = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {token2}"})
@@ -89,17 +75,12 @@ async def test_self_follow_rejected(
     async_client: AsyncClient,
 ) -> None:
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "Self"},
-    )
-    login = await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    token = login.json()["access_token"]
+    token = await signup_verify_login(async_client, email, display_name="Self")
     me = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
     user_id = me.json()["id"]
     r = await async_client.post(f"/creators/{user_id}/follow", headers={"Authorization": f"Bearer {token}"})
     assert r.status_code == 400
-    assert r.json()["detail"] == "cannot_follow_self"
+    assert r.json()["detail"]["code"] == "cannot_follow_self"
 
 
 @pytest.mark.asyncio
@@ -107,19 +88,14 @@ async def test_reserved_handle_rejected(
     async_client: AsyncClient,
 ) -> None:
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "Reserved"},
-    )
-    login = await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    token = login.json()["access_token"]
+    token = await signup_verify_login(async_client, email, display_name="Reserved")
     r = await async_client.patch(
         "/creators/me",
         json={"handle": "admin"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert r.status_code == 400
-    assert r.json()["detail"] == "handle_reserved"
+    assert r.json()["detail"]["code"] == "handle_reserved"
 
 
 @pytest.mark.asyncio
@@ -127,12 +103,7 @@ async def test_handle_format_invalid(
     async_client: AsyncClient,
 ) -> None:
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "Format"},
-    )
-    login = await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    token = login.json()["access_token"]
+    token = await signup_verify_login(async_client, email, display_name="Format")
     r = await async_client.patch(
         "/creators/me",
         json={"handle": "a"},
@@ -140,7 +111,7 @@ async def test_handle_format_invalid(
     )
     assert r.status_code in (400, 422)
     if r.status_code == 400:
-        assert r.json()["detail"] in ("handle_length_invalid", "handle_format_invalid")
+        assert r.json()["detail"]["code"] in ("handle_length_invalid", "handle_format_invalid")
 
 
 @pytest.mark.asyncio
@@ -149,23 +120,18 @@ async def test_non_creator_cannot_patch_me(
     db_session: AsyncSession,
 ) -> None:
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "FanRole"},
-    )
+    token = await signup_verify_login(async_client, email, display_name="FanRole")
     result = await db_session.execute(select(User).where(User.email == email))
     user = result.scalar_one()
     await db_session.execute(update(User).where(User.id == user.id).values(role="fan"))
     await db_session.commit()
-    login = await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    token = login.json()["access_token"]
     r = await async_client.patch(
         "/creators/me",
         json={"handle": "fanuser"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert r.status_code == 403
-    assert r.json()["detail"] == "creator_only"
+    assert r.json()["detail"]["code"] == "creator_only"
 
 
 @pytest.mark.asyncio
@@ -174,12 +140,7 @@ async def test_creators_get_me_creator_returns_200(
 ) -> None:
     """GET /creators/me returns 200 and profile for creator; route is before /{handle}."""
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "MeCreator"},
-    )
-    login = await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    token = login.json()["access_token"]
+    token = await signup_verify_login(async_client, email, display_name="MeCreator")
     handle = f"mecre-{uuid.uuid4().hex[:8]}"
     await async_client.patch(
         "/creators/me",
@@ -213,19 +174,14 @@ async def test_creators_get_me_fan_returns_403(
 ) -> None:
     """GET /creators/me returns 403 for fan user."""
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "Fan"},
-    )
+    token = await signup_verify_login(async_client, email, display_name="Fan")
     result = await db_session.execute(select(User).where(User.email == email))
     user = result.scalar_one()
     await db_session.execute(update(User).where(User.id == user.id).values(role="fan"))
     await db_session.commit()
-    login = await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    token = login.json()["access_token"]
     r = await async_client.get("/creators/me", headers={"Authorization": f"Bearer {token}"})
     assert r.status_code == 403
-    assert r.json()["detail"] == "creator_only"
+    assert r.json()["detail"]["code"] == "creator_only"
 
 
 @pytest.mark.asyncio
@@ -233,12 +189,7 @@ async def test_me_following_paginated(
     async_client: AsyncClient,
 ) -> None:
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "ListFan"},
-    )
-    login = await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    token = login.json()["access_token"]
+    token = await signup_verify_login(async_client, email, display_name="ListFan")
     r = await async_client.get("/creators/me/following", headers={"Authorization": f"Bearer {token}"}, params={"page": 1, "page_size": 10})
     assert r.status_code == 200
     data = r.json()
@@ -253,12 +204,7 @@ async def test_discoverable_enforcement(
     async_client: AsyncClient,
 ) -> None:
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "Hidden"},
-    )
-    login = await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    token = login.json()["access_token"]
+    token = await signup_verify_login(async_client, email, display_name="Hidden")
     handle = f"hidden-{uuid.uuid4().hex[:8]}"
     await async_client.patch(
         "/creators/me",
@@ -283,38 +229,30 @@ async def test_followers_count_correct(
 ) -> None:
     email_creator = _unique_email()
     email_fan = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_creator, "password": "password123", "display_name": "CountCreator"},
-    )
-    login_c = await async_client.post("/auth/login", json={"email": email_creator, "password": "password123"})
+    token_c = await signup_verify_login(async_client, email_creator, display_name="CountCreator")
     handle = f"count-{uuid.uuid4().hex[:8]}"
     await async_client.patch(
         "/creators/me",
         json={"handle": handle},
-        headers={"Authorization": f"Bearer {login_c.json()['access_token']}"},
+        headers={"Authorization": f"Bearer {token_c}"},
     )
     r = await async_client.get(f"/creators/{handle}")
     assert r.status_code == 200
     assert r.json()["followers_count"] == 0
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_fan, "password": "password123", "display_name": "CountFan"},
-    )
-    login_f = await async_client.post("/auth/login", json={"email": email_fan, "password": "password123"})
+    token_f = await signup_verify_login(async_client, email_fan, display_name="CountFan")
     async_client.cookies.clear()  # so /auth/me uses Bearer only and returns creator
-    me_c = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {login_c.json()['access_token']}"})
+    me_c = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {token_c}"})
     creator_id = me_c.json()["id"]
     await async_client.post(
         f"/creators/{creator_id}/follow",
-        headers={"Authorization": f"Bearer {login_f.json()['access_token']}"},
+        headers={"Authorization": f"Bearer {token_f}"},
     )
     r = await async_client.get(f"/creators/{handle}")
     assert r.status_code == 200
     assert r.json()["followers_count"] == 1
     await async_client.delete(
         f"/creators/{creator_id}/follow",
-        headers={"Authorization": f"Bearer {login_f.json()['access_token']}"},
+        headers={"Authorization": f"Bearer {token_f}"},
     )
     r = await async_client.get(f"/creators/{handle}")
     assert r.status_code == 200
@@ -327,12 +265,7 @@ async def test_creator_profile_posts_count(
 ) -> None:
     """GET /creators/{handle} and PATCH /creators/me return posts_count from posts table."""
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": "Author"},
-    )
-    login = await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    token = login.json()["access_token"]
+    token = await signup_verify_login(async_client, email, display_name="Author")
     headers = {"Authorization": f"Bearer {token}"}
     handle = f"author-{uuid.uuid4().hex[:8]}"
     await async_client.patch("/creators/me", json={"handle": handle}, headers=headers)
@@ -370,11 +303,7 @@ async def test_creators_list_discoverable_only(
     handles_before = {item["handle"] for item in r0.json()["items"]}
 
     email_hid = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_hid, "password": "password123", "display_name": "Hidden"},
-    )
-    token_hid = (await async_client.post("/auth/login", json={"email": email_hid, "password": "password123"})).json()["access_token"]
+    token_hid = await signup_verify_login(async_client, email_hid, display_name="Hidden")
     handle_hid = f"hid-{uuid.uuid4().hex[:8]}"
     await async_client.patch(
         "/creators/me",
@@ -389,11 +318,7 @@ async def test_creators_list_discoverable_only(
     assert handle_hid not in handles, "non-discoverable creator must not be in list"
 
     email_vis = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email_vis, "password": "password123", "display_name": "Visible"},
-    )
-    token_vis = (await async_client.post("/auth/login", json={"email": email_vis, "password": "password123"})).json()["access_token"]
+    token_vis = await signup_verify_login(async_client, email_vis, display_name="Visible")
     handle_vis = f"vis-{uuid.uuid4().hex[:8]}"
     await async_client.patch(
         "/creators/me",
@@ -433,11 +358,7 @@ async def test_creators_list_pagination(
     """GET /creators pagination works; counts are integers >= 0."""
     for i in range(3):
         email = _unique_email()
-        await async_client.post(
-            "/auth/signup",
-            json={"email": email, "password": "password123", "display_name": f"Creator{i}"},
-        )
-        token = (await async_client.post("/auth/login", json={"email": email, "password": "password123"})).json()["access_token"]
+        token = await signup_verify_login(async_client, email, display_name=f"Creator{i}")
         await async_client.patch(
             "/creators/me",
             json={"handle": f"pag-{uuid.uuid4().hex[:8]}"},
@@ -468,13 +389,7 @@ async def _signup_creator(
 ) -> str:
     """Create a creator with given handle and display_name; returns handle."""
     email = _unique_email()
-    await async_client.post(
-        "/auth/signup",
-        json={"email": email, "password": "password123", "display_name": display_name},
-    )
-    token = (
-        await async_client.post("/auth/login", json={"email": email, "password": "password123"})
-    ).json()["access_token"]
+    token = await signup_verify_login(async_client, email, display_name=display_name)
     await async_client.patch(
         "/creators/me",
         json={"handle": handle, "discoverable": discoverable},

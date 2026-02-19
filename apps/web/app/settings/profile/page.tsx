@@ -8,6 +8,7 @@ import {
   CreatorsService,
   type CreatorProfileUpdate,
 } from "@/features/creators/api";
+import { BillingService, type CreatorPlanOut } from "@/features/billing/api";
 import { CreatorAvatarAsset } from "@/features/creators/components/CreatorAvatarAsset";
 import { ImageUploadField } from "@/features/media/ImageUploadField";
 import { Page } from "@/components/brand/Page";
@@ -20,6 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getApiErrorMessage } from "@/lib/errors";
+import { useRequireRole } from "@/lib/hooks/useRequireRole";
 import { MediaService } from "@/features/media/api";
 import "@/lib/api";
 
@@ -51,6 +53,7 @@ const PROFILE_ERROR_MESSAGES: Record<string, string> = {
 };
 
 export default function SettingsProfilePage() {
+  const { authorized } = useRequireRole("creator");
   const router = useRouter();
   const { addToast } = useToast();
   const [handle, setHandle] = useState("");
@@ -62,6 +65,11 @@ export default function SettingsProfilePage() {
   const [bannerMediaId, setBannerMediaId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [prefillStatus, setPrefillStatus] = useState<"loading" | "ok" | "error">("loading");
+
+  // Subscription pricing state
+  const [plan, setPlan] = useState<CreatorPlanOut | null>(null);
+  const [subscriptionPrice, setSubscriptionPrice] = useState("");
+  const [priceLoading, setPriceLoading] = useState(false);
 
   useEffect(() => {
     CreatorsService.creatorsGetMe()
@@ -82,7 +90,28 @@ export default function SettingsProfilePage() {
         }
         setPrefillStatus("error");
       });
+    BillingService.billingGetPlan()
+      .then((p) => {
+        setPlan(p);
+        setSubscriptionPrice(p.price);
+      })
+      .catch(() => {});
   }, [router]);
+
+  const onPriceSave = async () => {
+    setPriceLoading(true);
+    try {
+      const updated = await BillingService.billingUpdatePlan({ price: subscriptionPrice });
+      setPlan(updated);
+      setSubscriptionPrice(updated.price);
+      addToast("Subscription price updated", "success");
+    } catch (err) {
+      const { message } = getApiErrorMessage(err);
+      addToast(message, "error");
+    } finally {
+      setPriceLoading(false);
+    }
+  };
 
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -121,6 +150,8 @@ export default function SettingsProfilePage() {
       setLoading(false);
     }
   };
+
+  if (!authorized) return null;
 
   if (prefillStatus === "loading") {
     return (
@@ -274,9 +305,55 @@ export default function SettingsProfilePage() {
           </form>
         </CardContent>
       </Card>
-      <Button variant="ghost" size="sm" className="mt-4" asChild>
-        <Link href="/">Back to home</Link>
-      </Button>
+      {plan && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Subscription pricing</CardTitle>
+            <CardDescription>
+              Set your monthly subscription price. Platform fee: {plan.platform_fee_percent}%.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="subscriptionPrice">
+                Monthly price ({plan.currency.toUpperCase()})
+              </Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  id="subscriptionPrice"
+                  type="number"
+                  step="0.01"
+                  min={(plan.min_price_cents / 100).toFixed(2)}
+                  max={(plan.max_price_cents / 100).toFixed(2)}
+                  value={subscriptionPrice}
+                  onChange={(e) => setSubscriptionPrice(e.target.value)}
+                  className="max-w-[160px]"
+                />
+                <Button
+                  size="sm"
+                  onClick={onPriceSave}
+                  disabled={priceLoading || subscriptionPrice === plan.price}
+                >
+                  {priceLoading ? "Saving..." : "Update price"}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Min {(plan.min_price_cents / 100).toFixed(2)} {plan.currency.toUpperCase()} — Max{" "}
+                {(plan.max_price_cents / 100).toFixed(2)} {plan.currency.toUpperCase()}.
+                Existing subscribers keep their current rate until renewal.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      <div className="mt-4 flex gap-2">
+        <Button variant="secondary" size="sm" asChild>
+          <Link href="/settings/security">Change password</Link>
+        </Button>
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/">Back to home</Link>
+        </Button>
+      </div>
     </Page>
   );
 }

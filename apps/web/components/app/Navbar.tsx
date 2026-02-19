@@ -3,6 +3,27 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import {
+  Home,
+  Rss,
+  Users,
+  Search,
+  MessageCircle,
+  PenSquare,
+  FolderOpen,
+  LayoutGrid,
+  Settings,
+  Bell,
+  User,
+  CreditCard,
+  ShieldCheck,
+  LogOut,
+  LogIn,
+  UserPlus,
+  Menu,
+  Compass,
+  Clock,
+} from "lucide-react";
 import { type UserOut } from "@zinovia/contracts";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +40,21 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import "@/lib/api";
 
+function formatRelativeTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return "Never";
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60_000);
+  if (diffMin < 1) return "Just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+}
+
 export function Navbar({
   initialSession,
   sessionUnavailable = false,
@@ -34,16 +70,24 @@ export function Navbar({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const NAV_LINKS_PUBLIC = [
-    { href: "/", label: t.nav.home },
-    { href: "/feed", label: t.nav.feed },
-    { href: "/creators", label: t.nav.creators },
-    { href: "/search", label: "Search" },
+    { href: "/", label: t.nav.home, icon: Home },
+    { href: "/creators", label: t.nav.creators, icon: Users },
+    { href: "/search", label: "Search", icon: Search },
   ];
 
+  const isCreator = user?.role === "creator";
+
   const NAV_LINKS_AUTH = [
-    { href: "/messages", label: t.nav.messages },
-    { href: "/creator/post/new", label: t.nav.newPost },
-    { href: "/settings/profile", label: t.nav.settings },
+    { href: "/feed", label: t.nav.feed, icon: Rss },
+    { href: "/messages", label: t.nav.messages, icon: MessageCircle },
+    ...(isCreator
+      ? [
+          { href: "/creator/post/new", label: t.nav.newPost, icon: PenSquare },
+          { href: "/creator/vault", label: t.nav.vault, icon: FolderOpen },
+          { href: "/creator/collections", label: t.nav.collections, icon: LayoutGrid },
+        ]
+      : []),
+    { href: "/settings/profile", label: t.nav.settings, icon: Settings },
   ];
 
   useEffect(() => {
@@ -81,8 +125,10 @@ export function Navbar({
           <span className="text-gradient-brand">Zinovia</span>
           <span className="text-foreground/75">Fans</span>
         </Link>
-        <nav className="hidden items-center gap-1 sm:flex sm:gap-2">
-          {NAV_LINKS_PUBLIC.map(({ href, label }) => {
+
+        {/* Desktop nav */}
+        <nav className="hidden items-center gap-1 sm:flex sm:gap-1.5">
+          {NAV_LINKS_PUBLIC.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || (href !== "/" && pathname.startsWith(href));
             return (
               <Button
@@ -90,69 +136,130 @@ export function Navbar({
                 variant="ghost"
                 size="sm"
                 asChild
-                className={cn(
-                  active && "bg-white/10 text-foreground"
-                )}
+                className={cn(active && "bg-white/10 text-foreground")}
               >
-                <Link href={href}>{label}</Link>
+                <Link href={href} className="flex items-center gap-1.5">
+                  <Icon className="h-4 w-4" />
+                  <span>{label}</span>
+                </Link>
               </Button>
             );
           })}
+
           {user && (
             <>
-              {NAV_LINKS_AUTH.map((link) => (
-                <Button
-                  key={link.href}
-                  variant="ghost"
-                  size="sm"
-                  asChild
-                  className={cn(
-                    (pathname === link.href || pathname.startsWith(link.href + "/")) && "bg-white/10 text-foreground"
-                  )}
-                >
-                  <Link href={link.href}>{link.label}</Link>
-                </Button>
-              ))}
+              {NAV_LINKS_AUTH.map(({ href, label, icon: Icon }) => {
+                const active = pathname === href || pathname.startsWith(href + "/");
+                return (
+                  <Button
+                    key={href}
+                    variant="ghost"
+                    size="sm"
+                    asChild
+                    className={cn(active && "bg-white/10 text-foreground")}
+                  >
+                    <Link href={href} className="flex items-center gap-1.5">
+                      <Icon className="h-4 w-4" />
+                      <span>{label}</span>
+                    </Link>
+                  </Button>
+                );
+              })}
+
+              {/* Notifications */}
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/notifications">
-                  {t.nav.notifications}{unreadNotifications > 0 ? ` (${unreadNotifications})` : ""}
+                <Link href="/notifications" className="relative flex items-center gap-1.5">
+                  <Bell className="h-4 w-4" />
+                  <span>{t.nav.notifications}</span>
+                  {unreadNotifications > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">
+                      {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                    </span>
+                  )}
                 </Link>
               </Button>
             </>
           )}
+
+          {/* User dropdown / auth buttons */}
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="flex items-center gap-2 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="ml-1 flex items-center gap-2 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="text-xs">
-                      {user.email?.slice(0, 2).toUpperCase() ?? "?"}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="relative">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="text-xs">
+                        {user.email?.slice(0, 2).toUpperCase() ?? "?"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[rgb(10,10,14)] bg-emerald-500" />
+                  </div>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-56">
+                {/* User info header */}
+                <div className="border-b border-border px-3 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" title="Online" />
+                    <span className="text-sm font-medium text-foreground truncate">
+                      {user.profile?.display_name || user.email}
+                    </span>
+                    <span className={cn(
+                      "ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none",
+                      user.role === "creator"
+                        ? "bg-primary/15 text-primary"
+                        : user.role === "admin"
+                          ? "bg-amber-500/15 text-amber-400"
+                          : "bg-emerald-500/15 text-emerald-400"
+                    )}>
+                      {user.role === "fan" ? "Fan" : user.role}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-muted-foreground truncate">{user.email}</p>
+                  {user.last_login_at && (
+                    <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      Last login: {formatRelativeTime(user.last_login_at)}
+                    </p>
+                  )}
+                </div>
                 <DropdownMenuItem asChild>
-                  <Link href="/me">{t.nav.me}</Link>
+                  <Link href="/me" className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    {t.nav.me}
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/messages">{t.nav.messages}</Link>
+                  <Link href="/messages" className="flex items-center gap-2">
+                    <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                    {t.nav.messages}
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/settings/profile">{t.nav.settings}</Link>
+                  <Link href="/settings/profile" className="flex items-center gap-2">
+                    <Settings className="h-4 w-4 text-muted-foreground" />
+                    {t.nav.settings}
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/billing/manage">{t.nav.subscriptions}</Link>
+                  <Link href="/billing/manage" className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    {t.nav.subscriptions}
+                  </Link>
                 </DropdownMenuItem>
                 {user?.role === "admin" && (
                   <DropdownMenuItem asChild>
-                    <Link href="/admin">{t.nav.admin}</Link>
+                    <Link href="/admin" className="flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                      {t.nav.admin}
+                    </Link>
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem onClick={handleLogout}>
+                <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2">
+                  <LogOut className="h-4 w-4 text-muted-foreground" />
                   {t.nav.logout}
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -160,10 +267,16 @@ export function Navbar({
           ) : (
             <div className="flex items-center gap-2">
               <Button variant="secondary" size="sm" asChild>
-                <Link href="/login">{t.nav.login}</Link>
+                <Link href="/login" className="flex items-center gap-1.5">
+                  <LogIn className="h-3.5 w-3.5" />
+                  {t.nav.login}
+                </Link>
               </Button>
               <Button size="sm" asChild>
-                <Link href="/signup">{t.nav.signup}</Link>
+                <Link href="/signup" className="flex items-center gap-1.5">
+                  <UserPlus className="h-3.5 w-3.5" />
+                  {t.nav.signup}
+                </Link>
               </Button>
               {sessionUnavailable && (
                 <span className="text-xs text-muted-foreground" title="Session check failed; API may be temporarily unavailable.">
@@ -173,6 +286,8 @@ export function Navbar({
             </div>
           )}
         </nav>
+
+        {/* Mobile hamburger */}
         <Button
           type="button"
           variant="secondary"
@@ -181,48 +296,71 @@ export function Navbar({
           onClick={() => setMobileOpen(true)}
           aria-label="Open navigation menu"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="M4 7H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M4 12H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M4 17H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          {t.nav.menu}
+          <Menu className="h-4 w-4" />
+          <span className="ml-1">{t.nav.menu}</span>
         </Button>
       </div>
+
+      {/* Mobile drawer */}
       <Drawer open={mobileOpen} onClose={() => setMobileOpen(false)} title="Navigation">
-        <div className="space-y-2">
-          {[...NAV_LINKS_PUBLIC, ...(user ? NAV_LINKS_AUTH : [])].map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setMobileOpen(false)}
-              className="block rounded-brand border border-border bg-card px-3 py-2 text-sm font-medium text-foreground"
-            >
-              {item.label}
-            </Link>
-          ))}
+        <div className="space-y-1.5">
+          {[...NAV_LINKS_PUBLIC, ...(user ? NAV_LINKS_AUTH : [])].map(({ href, label, icon: Icon }) => {
+            const active = pathname === href || (href !== "/" && pathname.startsWith(href));
+            return (
+              <Link
+                key={href}
+                href={href}
+                onClick={() => setMobileOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 rounded-brand border border-border px-3 py-2.5 text-sm font-medium text-foreground transition-colors",
+                  active ? "bg-white/10 border-primary/30" : "bg-card hover:bg-white/5"
+                )}
+              >
+                <Icon className="h-4 w-4 text-muted-foreground" />
+                {label}
+              </Link>
+            );
+          })}
+
           {user && (
             <Link
               href="/notifications"
               onClick={() => setMobileOpen(false)}
-              className="block rounded-brand border border-border bg-card px-3 py-2 text-sm font-medium text-foreground"
+              className={cn(
+                "flex items-center gap-3 rounded-brand border border-border px-3 py-2.5 text-sm font-medium text-foreground transition-colors",
+                pathname === "/notifications" ? "bg-white/10 border-primary/30" : "bg-card hover:bg-white/5"
+              )}
             >
-              {t.nav.notifications}{unreadNotifications > 0 ? ` (${unreadNotifications})` : ""}
+              <Bell className="h-4 w-4 text-muted-foreground" />
+              {t.nav.notifications}
+              {unreadNotifications > 0 && (
+                <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-white">
+                  {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                </span>
+              )}
             </Link>
           )}
+
           {!user && (
-            <div className="grid grid-cols-2 gap-2 pt-2">
+            <div className="grid grid-cols-2 gap-2 pt-3">
               <Button className="btn-cta-primary" asChild>
-                <Link href="/signup" onClick={() => setMobileOpen(false)}>{t.nav.startSubscribing}</Link>
+                <Link href="/signup" onClick={() => setMobileOpen(false)} className="flex items-center justify-center gap-1.5">
+                  <UserPlus className="h-3.5 w-3.5" />
+                  {t.nav.startSubscribing}
+                </Link>
               </Button>
               <Button variant="secondary" asChild>
-                <Link href="/creators" onClick={() => setMobileOpen(false)}>{t.nav.exploreCreators}</Link>
+                <Link href="/creators" onClick={() => setMobileOpen(false)} className="flex items-center justify-center gap-1.5">
+                  <Compass className="h-3.5 w-3.5" />
+                  {t.nav.exploreCreators}
+                </Link>
               </Button>
               <Link
                 href="/login"
                 onClick={() => setMobileOpen(false)}
-                className="col-span-2 rounded-brand border border-border py-2 text-center text-sm font-medium text-muted-foreground hover:text-foreground"
+                className="col-span-2 flex items-center justify-center gap-1.5 rounded-brand border border-border py-2 text-center text-sm font-medium text-muted-foreground hover:text-foreground"
               >
+                <LogIn className="h-3.5 w-3.5" />
                 {t.nav.login}
               </Link>
             </div>

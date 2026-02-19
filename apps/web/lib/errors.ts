@@ -39,9 +39,6 @@ const FRIENDLY_MESSAGES: Record<string, string> = {
 export function getApiErrorMessage(err: unknown): ApiErrorMessage {
   // Handle ApiClientError (from apiFetch / apiFetchServer)
   if (err instanceof ApiClientError) {
-    if (err.status === 401) {
-      return { kind: "unauthorized", message: "Sign in to continue.", status: 401 };
-    }
     if (err.kind === "timeout") {
       return { kind: "timeout", message: "The request timed out. Please try again." };
     }
@@ -54,11 +51,37 @@ export function getApiErrorMessage(err: unknown): ApiErrorMessage {
             : "API unreachable. Please try again later.",
       };
     }
+    // Extract the error code from the response body.
+    // API returns { detail: { code: "invalid_credentials", message: "..." } }
+    // parseDetail() prefers `message` over `code`, so err.detail is the message.
+    // We need the code to look up FRIENDLY_MESSAGES.
+    const bodyObj = err.body as { detail?: unknown } | undefined;
+    const rawBodyDetail = bodyObj && typeof bodyObj === "object" && "detail" in bodyObj ? bodyObj.detail : null;
+    const errorCode =
+      typeof rawBodyDetail === "string"
+        ? rawBodyDetail
+        : rawBodyDetail && typeof rawBodyDetail === "object" && "code" in (rawBodyDetail as Record<string, unknown>)
+          ? String((rawBodyDetail as Record<string, string>).code)
+          : "";
     const detail = err.detail || "";
-    const friendly = FRIENDLY_MESSAGES[detail];
+    // Check for a known error code BEFORE the generic 401 fallback so that
+    // login failures (invalid_credentials, email_not_verified, etc.) show
+    // the correct message instead of the generic "Sign in to continue."
+    const friendly = FRIENDLY_MESSAGES[errorCode] || FRIENDLY_MESSAGES[detail];
+    if (friendly) {
+      return {
+        kind: err.status === 401 ? "unauthorized" : "error",
+        message: friendly,
+        status: err.status,
+        requestId: err.requestId,
+      };
+    }
+    if (err.status === 401) {
+      return { kind: "unauthorized", message: "Sign in to continue.", status: 401 };
+    }
     return {
       kind: "error",
-      message: friendly || detail || err.message || `Request failed (${err.status})`,
+      message: detail || err.message || `Request failed (${err.status})`,
       status: err.status,
       requestId: err.requestId,
     };
@@ -66,19 +89,30 @@ export function getApiErrorMessage(err: unknown): ApiErrorMessage {
 
   // Handle ApiError (from @zinovia/contracts OpenAPI client)
   if (err instanceof ApiError) {
+    const body = err.body as { detail?: unknown } | undefined;
+    const rawDetail = body && typeof body === "object" && "detail" in body ? body.detail : null;
+    // detail can be a string ("invalid_credentials") or object ({code: "...", message: "..."})
+    const detailCode =
+      typeof rawDetail === "string"
+        ? rawDetail
+        : rawDetail && typeof rawDetail === "object" && "code" in (rawDetail as Record<string, unknown>)
+          ? String((rawDetail as Record<string, string>).code)
+          : "";
+    const friendly = detailCode ? FRIENDLY_MESSAGES[detailCode] : undefined;
+    if (friendly) {
+      return {
+        kind: err.status === 401 ? "unauthorized" : "error",
+        message: friendly,
+        status: err.status,
+      };
+    }
     if (err.status === 401) {
       return { kind: "unauthorized", message: "Sign in to continue." };
     }
-    const detail =
-      err.body &&
-      typeof err.body === "object" &&
-      "detail" in err.body
-        ? String((err.body as { detail?: unknown }).detail)
-        : err.statusText;
-    const friendly = detail ? FRIENDLY_MESSAGES[detail] : undefined;
+    const fallbackMsg = detailCode || (typeof rawDetail === "string" ? rawDetail : err.statusText);
     return {
       kind: "error",
-      message: friendly || detail || `Request failed (${err.status})`,
+      message: fallbackMsg || `Request failed (${err.status})`,
       status: err.status,
     };
   }

@@ -137,6 +137,8 @@ async def create(
         nsfw=payload.nsfw,
         asset_ids=payload.asset_ids or [],
         publish_at=payload.publish_at,
+        price_cents=payload.price_cents,
+        currency=payload.currency,
     )
     data = _post_to_out(post)
     return PostOut(**data)

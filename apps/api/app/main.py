@@ -69,6 +69,7 @@ def create_app() -> FastAPI:
             "X-Request-Id",
             "X-CSRF-Token",
             "X-Idempotency-Key",
+            "Idempotency-Key",
             "Cookie",
         ],
     )
@@ -86,12 +87,15 @@ def create_app() -> FastAPI:
         settings.storage,
     )
 
-    # --- Paths exempt from CSRF (webhooks receive POST from external services) ---
+    # --- Paths exempt from CSRF ---
+    # Webhooks receive POST from external services; auth endpoints are pre-login
+    # and must work even when a stale csrf_token cookie exists from a prior session.
     _CSRF_EXEMPT_PREFIXES = (
         "/billing/webhooks/",
         "/webhooks/",
         "/health",
         "/ready",
+        "/auth/",
     )
 
     @app.middleware("http")
@@ -125,10 +129,16 @@ def create_app() -> FastAPI:
         # CSRF only enforced when the cookie exists (set after login)
         if not cookie_token:
             return await call_next(request)
-        return JSONResponse(
+        origin = request.headers.get("origin", "")
+        csrf_response = JSONResponse(
             status_code=403,
             content={"error": "csrf_validation_failed", "detail": "Missing or mismatched CSRF token"},
         )
+        # Include CORS headers so the browser can read the error body
+        if origin in cors_origins:
+            csrf_response.headers["Access-Control-Allow-Origin"] = origin
+            csrf_response.headers["Access-Control-Allow-Credentials"] = "true"
+        return csrf_response
 
     @app.middleware("http")
     async def request_id_middleware(
@@ -146,6 +156,8 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+        logger = logging.getLogger("zinovia.errors")
+        logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
         return JSONResponse(
             status_code=500,
             content={"error": "internal_server_error", "request_id": get_request_id()},

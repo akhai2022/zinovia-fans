@@ -72,9 +72,12 @@ type CreatorProfile = {
   avatar_media_id?: string | null;
   banner_media_id?: string | null;
   verified?: boolean;
+  is_online?: boolean;
   followers_count: number;
   posts_count: number;
   is_following?: boolean;
+  subscription_price?: string | null;
+  subscription_currency?: string | null;
 };
 
 type CreatorPostsPage = {
@@ -189,6 +192,7 @@ export default async function CreatorProfilePage({
             handle={creator.handle}
             size="lg"
             withRing
+            isOnline={creator.is_online}
           />
         </div>
         <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -207,7 +211,12 @@ export default async function CreatorProfilePage({
             <Button variant="secondary" size="sm" asChild>
               <Link href="/messages">Message</Link>
             </Button>
-            <SubscribeCheckoutButton creatorId={creator.user_id} creatorHandle={creator.handle} />
+            <SubscribeCheckoutButton
+              creatorId={creator.user_id}
+              creatorHandle={creator.handle}
+              price={creator.subscription_price ?? undefined}
+              currency={creator.subscription_currency ?? undefined}
+            />
           </div>
         </div>
         {creator.bio && (

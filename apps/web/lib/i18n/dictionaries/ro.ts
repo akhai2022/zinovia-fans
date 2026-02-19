@@ -19,6 +19,8 @@ export const ro: Dictionary = {
     startSubscribing: "Începeți să vă abonați",
     exploreCreators: "Descoperiți creatori",
     reconnecting: "reconectare…",
+    vault: "Seif",
+    collections: "Colecții",
   },
   hero: {
     badge: "Platforma nr. 1 de monetizare pentru creatori",

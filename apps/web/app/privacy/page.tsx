@@ -3,6 +3,7 @@ import { Page } from "@/components/brand/Page";
 export const metadata = {
   title: "Privacy Policy — Zinovia Fans",
   description: "How Zinovia Fans collects, uses, and protects your personal information.",
+  alternates: { canonical: "https://zinovia.ai/privacy" },
 };
 
 const LAST_UPDATED = "2026-02-14";

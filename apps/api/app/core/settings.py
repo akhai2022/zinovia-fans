@@ -110,14 +110,14 @@ class Settings(BaseSettings):
     public_web_base_url: str = Field(
         alias="PUBLIC_WEB_BASE_URL", default="http://localhost:3000"
     )
-    mail_provider: Literal["console", "ses", "mailpit"] = Field(
+    mail_provider: Literal["console", "resend", "mailpit"] = Field(
         alias="MAIL_PROVIDER", default="console"
     )
     mailpit_host: str = Field(default="localhost", alias="MAILPIT_HOST")
     mailpit_port: int = Field(default=1025, alias="MAILPIT_PORT")
     # Default matches production sender; can be overridden via MAIL_FROM env var.
     mail_from: str = Field(alias="MAIL_FROM", default="noreply@zinovia.ai")
-    ses_configuration_set: str = Field(alias="SES_CONFIGURATION_SET", default="")
+    resend_api_key: str = Field(alias="RESEND_API_KEY", default="")
 
     # Watermark for derived image variants (footer only; originals unchanged)
     media_watermark_text: str = Field(
@@ -219,6 +219,14 @@ class Settings(BaseSettings):
         ge=1,
     )
 
+    # Subscription price bounds (cents). Creators choose within this range.
+    min_subscription_price_cents: int = Field(
+        default=299, alias="MIN_SUBSCRIPTION_PRICE_CENTS", ge=100
+    )
+    max_subscription_price_cents: int = Field(
+        default=49999, alias="MAX_SUBSCRIPTION_PRICE_CENTS", ge=100
+    )
+
     # Minimum password length for both signup and reset (single source of truth).
     password_min_length: int = Field(default=10, alias="PASSWORD_MIN_LENGTH", ge=8)
 
@@ -246,10 +254,10 @@ class Settings(BaseSettings):
                     "MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, "
                     "MINIO_BUCKET are required when STORAGE=minio"
                 )
-        # Production safety: email provider must be SES
+        # Production safety: email provider must be resend
         if self.is_production and self.mail_provider in ("console", "mailpit"):
             raise ValueError(
-                f"MAIL_PROVIDER={self.mail_provider} is not allowed in production. Use 'ses'."
+                f"MAIL_PROVIDER={self.mail_provider} is not allowed in production. Use 'resend'."
             )
         # Production safety: webhook test bypass must be off
         if self.is_production and self.stripe_webhook_test_bypass:

@@ -19,6 +19,8 @@ export const en: Dictionary = {
     startSubscribing: "Start Subscribing",
     exploreCreators: "Explore Creators",
     reconnecting: "reconnecting…",
+    vault: "Vault",
+    collections: "Collections",
   },
   hero: {
     badge: "Creator monetisation platform",

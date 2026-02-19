@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useRequireRole } from "@/lib/hooks/useRequireRole";
 import { AiImagesService, AiImageApplyIn, type AiImageJobOut } from "@/features/ai/api";
 import { Page } from "@/components/brand/Page";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import "@/lib/api";
 const POLL_INTERVAL_MS = 2000;
 
 export default function AiImageJobPage() {
+  const { authorized } = useRequireRole("creator");
   const params = useParams();
   const router = useRouter();
   const { addToast } = useToast();
@@ -70,6 +72,8 @@ export default function AiImageJobPage() {
       setApplying(false);
     }
   };
+
+  if (!authorized) return null;
 
   if (loading && !job) {
     return (

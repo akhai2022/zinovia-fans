@@ -33,6 +33,7 @@ function CreatorCard({ name, handle, niche, image, subscribeLabel }: typeof CREA
           src={image}
           alt={name}
           fill
+          loading="lazy"
           quality={85}
           className="object-cover transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none"
           sizes="(max-width: 768px) 50vw, 240px"

@@ -30,6 +30,8 @@ ACTION_MEDIA_UPLOADED = "media_uploaded"
 ACTION_MEDIA_QUARANTINED = "media_quarantined"
 ACTION_ENTITLEMENT_GRANTED = "entitlement_granted"
 ACTION_ENTITLEMENT_REVOKED = "entitlement_revoked"
+ACTION_PASSWORD_CHANGE = "password_change"
+ACTION_MEDIA_DELETED = "media_deleted"
 
 
 async def log_audit_event(

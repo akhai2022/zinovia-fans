@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
@@ -62,3 +63,20 @@ class CancelSubscriptionOut(BaseModel):
     status: str
     cancel_at_period_end: bool
     current_period_end: datetime | None = None
+
+
+class CreatorPlanOut(BaseModel):
+    """Current creator subscription plan."""
+
+    price: Decimal = Field(description="Monthly price in major currency units (e.g. 4.99)")
+    currency: str
+    active: bool
+    platform_fee_percent: float = Field(description="Platform fee deducted from each payment")
+    min_price_cents: int = Field(description="Minimum allowed price in cents")
+    max_price_cents: int = Field(description="Maximum allowed price in cents")
+
+
+class CreatorPlanUpdate(BaseModel):
+    """Update subscription price. Price is in major currency units (e.g. 9.99)."""
+
+    price: Decimal = Field(gt=0, max_digits=8, decimal_places=2)

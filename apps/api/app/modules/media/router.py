@@ -27,13 +27,14 @@ from app.modules.media.service import (
     can_anonymous_access_media,
     can_user_access_media,
     create_media_object,
+    delete_media,
     generate_signed_download,
     generate_signed_upload,
     resolve_download_object_key,
     validate_media_upload,
 )
 from app.modules.media.storage import get_storage_client
-from app.modules.audit.service import log_audit_event, ACTION_MEDIA_UPLOADED
+from app.modules.audit.service import log_audit_event, ACTION_MEDIA_DELETED, ACTION_MEDIA_UPLOADED
 
 logger = logging.getLogger(__name__)
 
@@ -236,4 +237,32 @@ async def media_mine(
             for row in rows
         ],
         next_cursor=next_cursor,
+    )
+
+
+@router.delete(
+    "/{media_id}",
+    status_code=204,
+    operation_id="media_delete",
+    summary="Delete a media file",
+    description="Permanently deletes a media file and its S3 objects. Fails if the file is used in a post, profile, or collection.",
+)
+async def delete_media_endpoint(
+    media_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(get_current_user),
+) -> None:
+    try:
+        media_uuid = UUID(media_id)
+    except ValueError as exc:
+        raise AppError(status_code=404, detail="media_not_found") from exc
+    if user.role != CREATOR_ROLE:
+        raise AppError(status_code=403, detail="creator_only")
+    await delete_media(session, media_uuid, user.id)
+    await log_audit_event(
+        session,
+        action=ACTION_MEDIA_DELETED,
+        actor_id=user.id,
+        resource_type="media",
+        resource_id=media_id,
     )

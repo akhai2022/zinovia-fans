@@ -11,6 +11,8 @@ export type CreatorDiscoverItem = {
     display_name: string;
     followers_count: number;
     handle: string;
+    is_online?: boolean;
     posts_count: number;
+    verified?: boolean;
 };
 

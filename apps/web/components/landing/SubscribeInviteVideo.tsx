@@ -25,6 +25,7 @@ export function SubscribeInviteVideo() {
             src="/assets/hero_abstract.jpg"
             alt="Abstract gradient"
             fill
+            loading="lazy"
             quality={90}
             className="object-cover opacity-60"
             sizes="(max-width: 768px) 100vw, 900px"
@@ -46,6 +47,7 @@ export function SubscribeInviteVideo() {
                   src={src}
                   alt=""
                   fill
+                  loading="lazy"
                   quality={80}
                   className="object-cover"
                   sizes="160px"

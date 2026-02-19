@@ -19,3 +19,10 @@ class PpvMessageMediaStatusOut(BaseModel):
     price_cents: int | None = None
     currency: str | None = None
 
+
+class PpvPostStatusOut(BaseModel):
+    is_locked: bool
+    viewer_has_unlocked: bool
+    price_cents: int | None = None
+    currency: str | None = None
+

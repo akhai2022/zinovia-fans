@@ -142,8 +142,8 @@ async def test_verify_email_idempotent(async_client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_kyc_session_requires_email_verified(async_client: AsyncClient) -> None:
-    """POST /kyc/session returns 400 when email not verified."""
+async def test_login_blocked_for_unverified_creator(async_client: AsyncClient) -> None:
+    """POST /auth/login returns 401 for creator who hasn't verified email (onboarding_state=CREATED)."""
     email = _unique_email()
     await async_client.post(
         "/auth/register",
@@ -154,13 +154,8 @@ async def test_kyc_session_requires_email_verified(async_client: AsyncClient) ->
         "/auth/login",
         json={"email": email, "password": "password123456"},
     )
-    assert login.status_code == 200
-    r = await async_client.post(
-        "/kyc/session",
-        json={},
-        headers={"Idempotency-Key": _idempotency_key()},
-    )
-    assert r.status_code == 400, r.json()
+    assert login.status_code == 401
+    assert login.json()["detail"]["code"] == "email_not_verified"
 
 
 @pytest.mark.asyncio
@@ -182,6 +177,7 @@ async def test_kyc_session_after_verify(async_client: AsyncClient) -> None:
         "/auth/login",
         json={"email": email, "password": "password123456"},
     )
+    async_client.cookies.delete("csrf_token")
     r = await async_client.post(
         "/kyc/session",
         json={},
@@ -213,6 +209,7 @@ async def test_kyc_session_idempotent(async_client: AsyncClient) -> None:
         "/auth/login",
         json={"email": email, "password": "password123456"},
     )
+    async_client.cookies.delete("csrf_token")
     key = _idempotency_key()
     r1 = await async_client.post(
         "/kyc/session",
@@ -288,6 +285,7 @@ async def test_webhook_valid_hmac_and_audit(async_client: AsyncClient) -> None:
         "/auth/login",
         json={"email": email, "password": "password123456"},
     )
+    async_client.cookies.delete("csrf_token")
     r = await async_client.post(
         "/kyc/session",
         json={},
@@ -360,6 +358,7 @@ async def test_webhook_idempotent_by_event_id(async_client: AsyncClient) -> None
         "/auth/login",
         json={"email": email, "password": "password123456"},
     )
+    async_client.cookies.delete("csrf_token")
     r = await async_client.post(
         "/kyc/session",
         json={},
@@ -407,6 +406,7 @@ async def test_invalid_state_transition_returns_409(async_client: AsyncClient) -
         "/auth/login",
         json={"email": email, "password": "password123456"},
     )
+    async_client.cookies.delete("csrf_token")
     r = await async_client.post(
         "/kyc/session",
         json={},
@@ -428,4 +428,5 @@ async def test_invalid_state_transition_returns_409(async_client: AsyncClient) -
     )
     assert wh.status_code == 409, wh.json()
     data = wh.json()
-    assert data.get("detail", {}).get("error_code") == "invalid_state_transition"
+    detail = data.get("detail", {})
+    assert detail.get("code") == "invalid_state_transition" or detail.get("error_code") == "invalid_state_transition"

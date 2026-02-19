@@ -13,7 +13,7 @@ export type CreatorRegisterResponse = {
   email_delivery_status?: "sent" | "failed" | string;
   email_delivery_error_code?: string | null;
 };
-export type VerifyEmailResponse = { creator_id: string; state: string };
+export type VerifyEmailResponse = { creator_id: string; state: string; role?: string };
 export type OnboardingStatusResponse = { state: string; checklist: Record<string, boolean> };
 export type KycSessionResponse = { redirect_url: string; session_id: string };
 export type KycStatusResponse = { session_status: string; creator_state: string };
@@ -28,6 +28,12 @@ type FetchJsonOpts = Omit<RequestInit, "body"> & {
   idempotencyKey?: string;
 };
 
+function getCsrfToken(): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+
 async function fetchJson<T>(path: string, opts: FetchJsonOpts = {}): Promise<T> {
   const { jsonBody, idempotencyKey, ...rest } = opts;
   const headers: Record<string, string> = {
@@ -35,6 +41,8 @@ async function fetchJson<T>(path: string, opts: FetchJsonOpts = {}): Promise<T> 
     ...(rest.headers as Record<string, string>),
   };
   if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
+  const csrfToken = getCsrfToken();
+  if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
   const fetchOpts: RequestInit = {
     ...rest,
     headers,

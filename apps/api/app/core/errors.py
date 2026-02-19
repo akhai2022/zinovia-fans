@@ -43,6 +43,7 @@ ERROR_MESSAGES: dict[str, str] = {
     "invalid_signature": "Invalid webhook signature.",
     "no_stripe_customer": "No billing account found. Subscribe to a creator first.",
     "cannot_follow_self": "You cannot follow yourself.",
+    "media_in_use": "This media is used in a post, profile, or collection. Remove it first.",
     "internal_server_error": "Something went wrong. Please try again or contact support.",
 }
 

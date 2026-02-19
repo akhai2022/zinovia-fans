@@ -6,6 +6,7 @@ import { SubscribeSheet } from "@/components/premium/SubscribeSheet";
 import { BillingService } from "@/features/billing/api";
 import { buildBillingReturnUrls } from "@/features/billing/checkoutUrls";
 import { getApiErrorMessage } from "@/lib/errors";
+import { PostUnlockButton } from "@/features/ppv/PostUnlockButton";
 import type { PostItem, SubscriptionOffer } from "@/types/creator";
 import { DEFAULT_SUBSCRIPTION_OFFER } from "@/types/creator";
 
@@ -18,9 +19,8 @@ interface CreatorPostsSectionProps {
 }
 
 /**
- * Client component that wraps MediaGrid with the subscribe checkout flow.
- * When a locked post's "Unlock" button is clicked, the SubscribeSheet opens.
- * The sheet's CTA creates a Stripe Checkout session and redirects.
+ * Client component that wraps MediaGrid with the subscribe/PPV checkout flow.
+ * Subscription posts → SubscribeSheet. PPV posts → PostUnlockButton (Stripe PaymentIntent).
  */
 export function CreatorPostsSection({
   posts,
@@ -32,11 +32,16 @@ export function CreatorPostsSection({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [ppvPost, setPpvPost] = useState<PostItem | null>(null);
 
   const offer: SubscriptionOffer = DEFAULT_SUBSCRIPTION_OFFER;
 
-  const handleUnlockClick = useCallback(() => {
-    setSheetOpen(true);
+  const handleUnlockClick = useCallback((post?: PostItem) => {
+    if (post?.locked_reason === "PPV_REQUIRED") {
+      setPpvPost(post);
+    } else {
+      setSheetOpen(true);
+    }
   }, []);
 
   const handleSubscribe = useCallback(async () => {
@@ -85,6 +90,19 @@ export function CreatorPostsSection({
         loading={checkoutLoading}
         disabledHelper={checkoutError}
       />
+
+      {ppvPost && (
+        <PostUnlockButton
+          postId={ppvPost.id}
+          priceCents={ppvPost.price_cents ?? 0}
+          currency={ppvPost.currency ?? "eur"}
+          onClose={() => setPpvPost(null)}
+          onUnlocked={() => {
+            setPpvPost(null);
+            window.location.reload();
+          }}
+        />
+      )}
     </>
   );
 }

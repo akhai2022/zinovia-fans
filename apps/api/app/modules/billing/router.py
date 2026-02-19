@@ -24,6 +24,8 @@ from app.modules.billing.schemas import (
     CancelSubscriptionOut,
     CheckoutSubscriptionCreate,
     CheckoutSubscriptionOut,
+    CreatorPlanOut,
+    CreatorPlanUpdate,
     SubscriptionStatusItem,
     WebhookAck,
 )
@@ -31,12 +33,15 @@ from app.modules.billing.service import (
     _get_stripe_key,
     cancel_subscription,
     create_checkout_session,
+    get_or_create_creator_plan,
     handle_stripe_event,
     mark_stripe_event_processed,
     record_stripe_event,
     stripe_mode,
+    update_creator_plan_price,
     verify_stripe_signature,
 )
+from app.modules.creators.deps import require_creator
 from app.modules.creators.service import get_creator_by_handle_any
 
 router = APIRouter()
@@ -332,4 +337,53 @@ async def billing_health() -> BillingHealthOut:
             (settings.checkout_success_url or "").strip()
             and (settings.checkout_cancel_url or "").strip()
         ),
+    )
+
+
+@router.get(
+    "/plan",
+    response_model=CreatorPlanOut,
+    status_code=200,
+    operation_id="billing_get_plan",
+    summary="Get creator subscription plan",
+    description="Returns the authenticated creator's current subscription plan and pricing bounds.",
+)
+async def get_plan(
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(require_creator),
+) -> CreatorPlanOut:
+    plan = await get_or_create_creator_plan(session, current_user.id)
+    settings = get_settings()
+    return CreatorPlanOut(
+        price=plan.price,
+        currency=plan.currency,
+        active=plan.active,
+        platform_fee_percent=settings.platform_fee_percent,
+        min_price_cents=settings.min_subscription_price_cents,
+        max_price_cents=settings.max_subscription_price_cents,
+    )
+
+
+@router.patch(
+    "/plan",
+    response_model=CreatorPlanOut,
+    status_code=200,
+    operation_id="billing_update_plan",
+    summary="Update subscription price",
+    description="Set a new monthly subscription price. Creates a new Stripe Price; existing subscribers keep their current rate until renewal.",
+)
+async def update_plan(
+    payload: CreatorPlanUpdate,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(require_creator),
+) -> CreatorPlanOut:
+    plan = await update_creator_plan_price(session, current_user.id, payload.price)
+    settings = get_settings()
+    return CreatorPlanOut(
+        price=plan.price,
+        currency=plan.currency,
+        active=plan.active,
+        platform_fee_percent=settings.platform_fee_percent,
+        min_price_cents=settings.min_subscription_price_cents,
+        max_price_cents=settings.max_subscription_price_cents,
     )

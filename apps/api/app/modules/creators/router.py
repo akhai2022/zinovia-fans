@@ -29,11 +29,29 @@ from app.modules.creators.service import (
     get_sitemap_creators,
     unfollow_creator,
     update_creator_profile,
+    user_is_online,
 )
+from app.modules.billing.models import CreatorPlan
 from app.modules.posts.schemas import PostOut, PostPage
 from app.modules.posts.service import get_creator_posts_page, _post_to_out, _post_to_out_locked
 
 router = APIRouter()
+
+
+async def _get_plan_price(
+    session: AsyncSession, creator_user_id: UUID
+) -> tuple[float | None, str | None]:
+    """Return (price, currency) for a creator's plan, or (None, None) if no plan exists."""
+    result = await session.execute(
+        select(CreatorPlan.price, CreatorPlan.currency).where(
+            CreatorPlan.creator_user_id == creator_user_id,
+            CreatorPlan.active.is_(True),
+        )
+    )
+    row = result.one_or_none()
+    if row is None:
+        return None, None
+    return row[0], row[1]
 
 
 @router.get("", response_model=CreatorDiscoverPage, operation_id="creators_list")
@@ -54,10 +72,11 @@ async def list_creators(
             display_name=display_name,
             avatar_media_id=avatar_media_id,
             verified=verified,
+            is_online=is_online,
             followers_count=followers_count,
             posts_count=posts_count,
         )
-        for user_id, handle, display_name, avatar_media_id, followers_count, posts_count, verified in items_tuples
+        for user_id, handle, display_name, avatar_media_id, followers_count, posts_count, verified, is_online in items_tuples
     ]
     return CreatorDiscoverPage(items=items, total=total, page=page, page_size=page_size)
 
@@ -86,6 +105,7 @@ async def me_following(
             display_name=profile.display_name,
             avatar_media_id=profile.avatar_asset_id,
             verified=profile.verified,
+            is_online=user_is_online(user),
             created_at=profile.created_at,
         )
         for user, profile in items_tuples
@@ -107,6 +127,7 @@ async def update_me(
     )
     followers_count = followers_count_result.scalar_one() or 0
     posts_count = await get_posts_count(session, user.id)
+    plan_price, plan_currency = await _get_plan_price(session, user.id)
     return CreatorProfilePublic(
         user_id=user.id,
         handle=profile.handle or "",
@@ -117,9 +138,12 @@ async def update_me(
         discoverable=profile.discoverable,
         nsfw=profile.nsfw,
         verified=profile.verified,
+        is_online=True,
         followers_count=followers_count,
         posts_count=posts_count,
         is_following=False,
+        subscription_price=plan_price,
+        subscription_currency=plan_currency,
         created_at=profile.created_at,
         updated_at=profile.updated_at,
     )
@@ -144,6 +168,7 @@ async def get_me(
     )
     followers_count = followers_count_result.scalar_one() or 0
     posts_count = await get_posts_count(session, user.id)
+    plan_price, plan_currency = await _get_plan_price(session, user.id)
     return CreatorProfilePublic(
         user_id=user.id,
         handle=profile.handle or "",
@@ -154,9 +179,12 @@ async def get_me(
         discoverable=profile.discoverable,
         nsfw=profile.nsfw,
         verified=profile.verified,
+        is_online=True,
         followers_count=followers_count,
         posts_count=posts_count,
         is_following=False,
+        subscription_price=plan_price,
+        subscription_currency=plan_currency,
         created_at=profile.created_at,
         updated_at=profile.updated_at,
     )
@@ -201,6 +229,7 @@ async def get_creator(
         session, handle, current_user_id=current_user_id
     )
     posts_count = await get_posts_count(session, user.id)
+    plan_price, plan_currency = await _get_plan_price(session, user.id)
     return CreatorProfilePublic(
         user_id=user.id,
         handle=profile.handle or "",
@@ -211,9 +240,12 @@ async def get_creator(
         discoverable=profile.discoverable,
         nsfw=profile.nsfw,
         verified=profile.verified,
+        is_online=user_is_online(user),
         followers_count=followers_count,
         posts_count=posts_count,
         is_following=is_following,
+        subscription_price=plan_price,
+        subscription_currency=plan_currency,
         created_at=profile.created_at,
         updated_at=profile.updated_at,
     )

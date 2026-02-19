@@ -19,6 +19,8 @@ export const pl: Dictionary = {
     startSubscribing: "Zacznij subskrybowa\u0107",
     exploreCreators: "Odkryj tw\u00f3rc\u00f3w",
     reconnecting: "ponowne \u0142\u0105czenie\u2026",
+    vault: "Sejf",
+    collections: "Kolekcje",
   },
   hero: {
     badge: "Platforma nr 1 do monetyzacji tre\u015bci",

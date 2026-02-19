@@ -15,7 +15,12 @@ from app.modules.auth.security import create_access_token, hash_password, verify
 async def create_user(
     session: AsyncSession, email: str, password: str, display_name: str
 ) -> User:
-    user = User(email=email, password_hash=hash_password(password), role=FAN_ROLE)
+    user = User(
+        email=email,
+        password_hash=hash_password(password),
+        role=FAN_ROLE,
+        onboarding_state="CREATED",
+    )
     profile = Profile(user=user, display_name=display_name)
     session.add_all([user, profile])
     try:
@@ -54,9 +59,24 @@ async def authenticate_user(session: AsyncSession, email: str, password: str) ->
     user = result.scalar_one_or_none()
     if not user or not verify_password(password, user.password_hash):
         raise AppError(status_code=401, detail="invalid_credentials")
+    # Block login for users who haven't verified their email yet.
+    if user.onboarding_state == "CREATED":
+        raise AppError(status_code=401, detail="email_not_verified")
     user.last_login_at = datetime.now(UTC)
     await session.commit()
     return user
+
+
+async def change_password(
+    session: AsyncSession, user: User, current_password: str, new_password: str
+) -> None:
+    """Change password for an authenticated user. Verifies current password first."""
+    if not verify_password(current_password, user.password_hash):
+        raise AppError(status_code=400, detail="wrong_current_password")
+    if verify_password(new_password, user.password_hash):
+        raise AppError(status_code=400, detail="same_as_current")
+    user.password_hash = hash_password(new_password)
+    await session.commit()
 
 
 def create_token_for_user(user: User) -> str:

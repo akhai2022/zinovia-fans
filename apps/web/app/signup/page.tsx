@@ -55,17 +55,15 @@ export default function SignupPage() {
           ? "/verify-email?delivery=failed"
           : "/verify-email";
       } else {
-        // Fan signup: create account and auto-login
-        await apiFetch("/auth/signup", {
+        // Fan signup: create account and redirect to email verification
+        const res = await apiFetch<{ user_id: string; email_delivery_status: string }>("/auth/signup", {
           method: "POST",
           body: { email, password, display_name: displayName },
         });
-        // Auto-login after signup
-        await apiFetch("/auth/login", {
-          method: "POST",
-          body: { email, password },
-        });
-        window.location.href = "/feed";
+        const deliveryFailed = res.email_delivery_status === "failed";
+        window.location.href = deliveryFailed
+          ? "/verify-email?delivery=failed"
+          : "/verify-email";
       }
     } catch (err) {
       setError(getApiErrorMessage(err).message);

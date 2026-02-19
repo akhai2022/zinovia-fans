@@ -3,6 +3,7 @@ import { Page } from "@/components/brand/Page";
 export const metadata = {
   title: "Terms of Service — Zinovia Fans",
   description: "Terms governing your use of the Zinovia Fans platform.",
+  alternates: { canonical: "https://zinovia.ai/terms" },
 };
 
 const LAST_UPDATED = "2026-02-14";

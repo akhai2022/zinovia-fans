@@ -59,8 +59,22 @@ export default async function HomePage() {
   const HOW_IT_WORKS = getHowItWorks(t.howItWorks);
   const FAQ = getFaq(t.faq);
 
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQ.map(({ q, a }) => ({
+      "@type": "Question",
+      name: q,
+      acceptedAnswer: { "@type": "Answer", text: a },
+    })),
+  };
+
   return (
     <main className="hero-bg">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <LandingHero />
 
       <ScrollReveal>

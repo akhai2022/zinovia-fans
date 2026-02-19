@@ -1,17 +1,22 @@
 from __future__ import annotations
 
+import logging
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from fastapi import Depends, Request
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.errors import AppError
-from app.db.session import get_async_session
+from app.db.session import async_session_factory, get_async_session
 from app.modules.auth.constants import ADMIN_ROLE
 from app.modules.auth.models import User
 from app.modules.auth.security import decode_access_token
+
+_ACTIVITY_DEBOUNCE = timedelta(seconds=60)
+_logger = logging.getLogger(__name__)
 
 
 def _get_token_from_request(request: Request) -> str | None:
@@ -58,6 +63,23 @@ async def _resolve_user_from_request(
         if required:
             raise AppError(status_code=403, detail="inactive_user")
         return None
+
+    # Touch last_activity_at (debounced; uses a separate session to avoid
+    # interfering with the request's own transaction/ORM state).
+    now = datetime.now(UTC)
+    if not user.last_activity_at or (now - user.last_activity_at) > _ACTIVITY_DEBOUNCE:
+        try:
+            async with async_session_factory() as activity_session:
+                await activity_session.execute(
+                    update(User)
+                    .where(User.id == user.id)
+                    .values(last_activity_at=now)
+                )
+                await activity_session.commit()
+            user.last_activity_at = now  # keep in-memory object current
+        except Exception:
+            _logger.debug("Failed to update last_activity_at for user %s", user.id, exc_info=True)
+
     return user
 
 
