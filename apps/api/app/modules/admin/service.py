@@ -41,7 +41,7 @@ async def list_creators_admin(
 
     count_q = (
         select(func.count(User.id))
-        .join(Profile, Profile.user_id == User.id)
+        .outerjoin(Profile, Profile.user_id == User.id)
     )
     if where:
         count_q = count_q.where(*where)
@@ -49,7 +49,7 @@ async def list_creators_admin(
 
     q = (
         select(User, Profile)
-        .join(Profile, Profile.user_id == User.id)
+        .outerjoin(Profile, Profile.user_id == User.id)
     )
     if where:
         q = q.where(*where)
@@ -64,12 +64,12 @@ async def list_creators_admin(
             "role": user.role,
             "is_active": user.is_active,
             "onboarding_state": user.onboarding_state,
-            "handle": profile.handle,
-            "display_name": profile.display_name,
-            "bio": profile.bio,
-            "discoverable": profile.discoverable,
-            "featured": getattr(profile, "featured", False),
-            "verified": profile.verified,
+            "handle": profile.handle if profile else None,
+            "display_name": profile.display_name if profile else user.email.split("@")[0],
+            "bio": profile.bio if profile else None,
+            "discoverable": profile.discoverable if profile else False,
+            "featured": getattr(profile, "featured", False) if profile else False,
+            "verified": profile.verified if profile else False,
             "created_at": user.created_at,
         })
     return items, total
