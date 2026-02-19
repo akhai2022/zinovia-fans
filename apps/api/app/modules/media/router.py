@@ -176,7 +176,9 @@ async def create_download_url(
     if not allowed:
         raise AppError(status_code=404, detail="media_not_found")
     result = await session.execute(select(MediaObject).where(MediaObject.id == media_uuid))
-    media = result.scalar_one()
+    media = result.scalar_one_or_none()
+    if not media:
+        raise AppError(status_code=404, detail="media_not_found")
     object_key = await resolve_download_object_key(
         session, media_uuid, media.object_key, variant
     )
@@ -197,7 +199,7 @@ async def media_mine(
 ) -> MediaMinePage:
     if not get_settings().enable_vault:
         raise AppError(status_code=404, detail="feature_disabled")
-    if user.role != CREATOR_ROLE:
+    if user.role not in (CREATOR_ROLE, "admin"):
         raise AppError(status_code=403, detail="creator_only")
     q = select(MediaObject).where(MediaObject.owner_user_id == user.id)
     if type == "image":
@@ -256,7 +258,7 @@ async def delete_media_endpoint(
         media_uuid = UUID(media_id)
     except ValueError as exc:
         raise AppError(status_code=404, detail="media_not_found") from exc
-    if user.role != CREATOR_ROLE:
+    if user.role not in (CREATOR_ROLE, "admin"):
         raise AppError(status_code=403, detail="creator_only")
     await delete_media(session, media_uuid, user.id)
     await log_audit_event(

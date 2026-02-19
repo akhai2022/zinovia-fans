@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getApiErrorMessage } from "@/lib/errors";
+import { getApiErrorCode, getApiErrorMessage } from "@/lib/errors";
 import { useRequireRole } from "@/lib/hooks/useRequireRole";
 import { MediaService } from "@/features/media/api";
 import "@/lib/api";
@@ -134,17 +134,8 @@ export default function SettingsProfilePage() {
         return;
       }
       const { message } = getApiErrorMessage(err);
-      let detail = "";
-      if (err instanceof ApiError && err.body && typeof err.body === "object" && "detail" in err.body) {
-        const d = (err.body as { detail?: unknown }).detail;
-        if (Array.isArray(d) && d.length > 0 && d[0] && typeof d[0] === "object" && "msg" in d[0]) {
-          detail = String((d[0] as { msg?: string }).msg);
-        } else {
-          detail = String(d);
-        }
-      }
-      const friendly =
-        detail && PROFILE_ERROR_MESSAGES[detail] ? PROFILE_ERROR_MESSAGES[detail] : detail || message;
+      const code = getApiErrorCode(err);
+      const friendly = PROFILE_ERROR_MESSAGES[code] || message;
       addToast(friendly, "error");
     } finally {
       setLoading(false);

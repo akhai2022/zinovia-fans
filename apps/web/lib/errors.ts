@@ -31,6 +31,23 @@ const FRIENDLY_MESSAGES: Record<string, string> = {
 };
 
 /**
+ * Extract the error code string from an API error response.
+ * Handles both legacy `{detail: "code"}` and structured `{detail: {code, message}}`.
+ */
+export function getApiErrorCode(err: unknown): string {
+  const body =
+    (err instanceof ApiClientError || err instanceof ApiError)
+      ? (err.body as { detail?: unknown } | undefined)
+      : undefined;
+  const raw = body && typeof body === "object" && "detail" in body ? body.detail : null;
+  if (typeof raw === "string") return raw;
+  if (raw && typeof raw === "object" && "code" in (raw as Record<string, unknown>)) {
+    return String((raw as Record<string, string>).code);
+  }
+  return "";
+}
+
+/**
  * Normalize API failures into a consistent shape for UI.
  *
  * Handles both the `ApiError` class from @zinovia/contracts (used by OpenAPI

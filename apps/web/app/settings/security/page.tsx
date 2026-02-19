@@ -3,14 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ApiError } from "@zinovia/contracts";
 import { Page } from "@/components/brand/Page";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
-import { apiFetch } from "@/lib/api/client";
+import { ApiClientError, apiFetch } from "@/lib/api/client";
+import { getApiErrorCode } from "@/lib/errors";
 import "@/lib/api";
 
 const MIN_PASSWORD_LENGTH = 10;
@@ -67,15 +67,12 @@ export default function SecuritySettingsPage() {
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
+      if (err instanceof ApiClientError && err.status === 401) {
         router.replace("/login?next=/settings/security");
         return;
       }
-      let detail = "";
-      if (err instanceof ApiError && err.body && typeof err.body === "object" && "detail" in err.body) {
-        detail = String((err.body as { detail?: unknown }).detail);
-      }
-      const message = ERROR_MESSAGES[detail] || detail || "Failed to change password.";
+      const code = getApiErrorCode(err);
+      const message = ERROR_MESSAGES[code] || "Failed to change password.";
       addToast(message, "error");
     } finally {
       setLoading(false);

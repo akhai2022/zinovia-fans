@@ -7,6 +7,33 @@ import { listNotifications, markAllNotificationsRead, markNotificationRead, type
 import { Page } from "@/components/brand/Page";
 import { Button } from "@/components/ui/button";
 
+/** Turn a notification type + payload into a human-readable sentence. */
+function formatNotification(type: string, payload: Record<string, unknown>): string {
+  switch (type) {
+    case "COMMENT_ON_POST":
+      return "Someone commented on your post.";
+    case "LIKE_ON_POST":
+      return "Someone liked your post.";
+    case "NEW_FOLLOWER":
+      return "You have a new follower.";
+    case "NEW_SUBSCRIBER":
+      return "You have a new subscriber.";
+    case "POST_PUBLISHED":
+      return "Your scheduled post has been published.";
+    case "MESSAGE_RECEIVED":
+      return "You received a new message.";
+    case "TIP_RECEIVED":
+      return "You received a tip.";
+    case "PPV_UNLOCKED":
+      return "Your content was unlocked.";
+    default: {
+      const msg = payload?.message;
+      if (typeof msg === "string") return msg;
+      return type.replace(/_/g, " ").toLowerCase();
+    }
+  }
+}
+
 export default function NotificationsPage() {
   const router = useRouter();
   const [items, setItems] = useState<NotificationOut[]>([]);
@@ -59,9 +86,7 @@ export default function NotificationsPage() {
             <li key={item.id} className="rounded-brand border border-border bg-card p-3">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm">
-                  <span className="font-medium">{item.type}</span>
-                  {" "}
-                  {JSON.stringify(item.payload_json)}
+                  {formatNotification(item.type, item.payload_json as Record<string, unknown>)}
                 </p>
                 {!item.read_at && (
                   <Button size="sm" variant="ghost" onClick={() => markRead(item.id)}>

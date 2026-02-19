@@ -2,11 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ApiError } from "@zinovia/contracts";
 import { CreatorsService } from "../api";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { getApiErrorMessage } from "@/lib/errors";
+import { getApiErrorCode, getApiErrorMessage } from "@/lib/errors";
 
 type FollowButtonProps = {
   creatorId: string;
@@ -45,14 +44,11 @@ export function FollowButton({
       setFollowing(previous);
       onToggle?.(previous);
       const { kind, message } = getApiErrorMessage(err);
+      const code = getApiErrorCode(err);
       const displayMessage =
         kind === "unauthorized"
           ? "Sign in to follow"
-          : err instanceof ApiError &&
-              err.body &&
-              typeof err.body === "object" &&
-              "detail" in err.body &&
-              String((err.body as { detail?: unknown }).detail) === "cannot_follow_self"
+          : code === "cannot_follow_self"
             ? "You can't follow yourself"
             : message;
       setError(displayMessage);

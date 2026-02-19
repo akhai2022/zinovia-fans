@@ -46,7 +46,7 @@ async def get_or_create_conversation(
     if not creator_id:
         raise AppError(status_code=400, detail="creator_handle_or_creator_id_required")
 
-    if current_user_role == CREATOR_ROLE:
+    if current_user_role in (CREATOR_ROLE, "admin"):
         if not fan_id:
             raise AppError(status_code=400, detail="fan_id_required_when_creator_initiates")
         creator_user_id = current_user_id
@@ -89,7 +89,9 @@ async def get_or_create_conversation(
                 )
             )
         )
-        conv = result.scalar_one()
+        conv = result.scalar_one_or_none()
+        if not conv:
+            raise AppError(status_code=500, detail="internal_server_error")
         return conv
 
 
@@ -202,7 +204,7 @@ async def create_message(
     if not conv:
         raise AppError(status_code=404, detail="conversation_not_found")
 
-    sender_role = SENDER_ROLE_CREATOR if user_role == CREATOR_ROLE else SENDER_ROLE_FAN
+    sender_role = SENDER_ROLE_CREATOR if user_role in (CREATOR_ROLE, "admin") else SENDER_ROLE_FAN
 
     if type == MESSAGE_TYPE_TEXT:
         if not text or not text.strip():

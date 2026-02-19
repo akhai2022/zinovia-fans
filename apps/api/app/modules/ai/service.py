@@ -140,7 +140,7 @@ async def apply_ai_image(
         return ("landing.hero", object_key, public_url)
 
     if apply_to in ("creator.avatar", "creator.banner"):
-        if user.role != CREATOR_ROLE:
+        if user.role not in (CREATOR_ROLE, "admin"):
             raise AppError(status_code=403, detail="creator_role_required")
         profile_result = await session.execute(
             select(Profile).where(Profile.user_id == user.id)
