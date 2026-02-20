@@ -88,6 +88,7 @@ export default function SignupPage() {
           <div className="mb-6 flex gap-2 rounded-xl border border-border bg-muted/50 p-1">
             <button
               type="button"
+              data-testid="signup-type-fan"
               onClick={() => setAccountType("fan")}
               className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 accountType === "fan"
@@ -99,6 +100,7 @@ export default function SignupPage() {
             </button>
             <button
               type="button"
+              data-testid="signup-type-creator"
               onClick={() => setAccountType("creator")}
               className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 accountType === "creator"

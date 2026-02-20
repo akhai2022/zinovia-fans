@@ -36,7 +36,7 @@ export function Footer() {
   ];
 
   return (
-    <footer className="mt-16 border-t border-white/[0.06] bg-[rgb(14,14,18)]">
+    <footer className="mt-16 border-t border-white/[0.06] bg-background">
       <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
         <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
           <div className="flex flex-col items-center gap-3 sm:items-start">

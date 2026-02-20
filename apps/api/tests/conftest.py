@@ -48,7 +48,7 @@ async def signup_verify_login(
         "/auth/signup",
         json={"email": email, "password": password, "display_name": display_name},
     )
-    # Promote to creator role if needed (before login so JWT has correct role)
+    # Promote to creator role (before login so JWT has correct role)
     if role == "creator":
         async with async_session_factory() as session:
             await session.execute(
@@ -64,6 +64,15 @@ async def signup_verify_login(
         json={"token": verification_token},
         headers={"Idempotency-Key": str(uuid.uuid4())},
     )
+    # Step: simulate KYC approval so tests pass KYC enforcement
+    if role == "creator":
+        async with async_session_factory() as session:
+            await session.execute(
+                update(User)
+                .where(User.email == email)
+                .values(onboarding_state="KYC_APPROVED")
+            )
+            await session.commit()
     # Step: login
     login_r = await client.post(
         "/auth/login",

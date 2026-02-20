@@ -16,8 +16,9 @@ function SuccessContent() {
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("return") ?? "/feed";
   const creatorId = searchParams.get("creator_id");
+  const creatorHandle = searchParams.get("creator_handle");
   const returnLabel = returnTo.startsWith("/creators/")
-    ? "Back to creator"
+    ? `Back to @${creatorHandle || "creator"}`
     : "Go to feed";
 
   const [entitlementConfirmed, setEntitlementConfirmed] = useState(false);
@@ -50,6 +51,10 @@ function SuccessContent() {
     return () => clearTimeout(timer);
   }, [creatorId, entitlementConfirmed, pollCount]);
 
+  const headingText = creatorHandle
+    ? `Subscribed to @${creatorHandle}`
+    : "Payment successful";
+
   return (
     <Page className="flex min-h-[50vh] flex-col items-center justify-center gap-6">
       <Card className="w-full max-w-md">
@@ -61,7 +66,7 @@ function SuccessContent() {
               </svg>
             </div>
             <h1 className="font-display text-premium-h3 font-semibold text-foreground">
-              Payment successful
+              {headingText}
             </h1>
           </div>
         </CardHeader>
@@ -88,11 +93,15 @@ function SuccessContent() {
             </p>
           )}
           <div className="flex flex-wrap gap-3">
-            <Button asChild>
+            {creatorHandle && (
+              <Button asChild>
+                <Link href={`/creators/${creatorHandle}`}>
+                  View @{creatorHandle}
+                </Link>
+              </Button>
+            )}
+            <Button variant={creatorHandle ? "secondary" : "default"} asChild>
               <Link href="/feed">Go to feed</Link>
-            </Button>
-            <Button variant="secondary" asChild>
-              <Link href={returnTo}>{returnLabel}</Link>
             </Button>
             <Button variant="ghost" size="sm" asChild>
               <Link href="/billing/manage">Manage subscriptions</Link>

@@ -12,7 +12,7 @@ const variantClasses: Record<NonNullable<BadgeProps["variant"]>, string> = {
   primary: "bg-primary/12 text-primary",
   success: "bg-success/12 text-success",
   popular: "bg-primary/12 text-primary",
-  verified: "bg-primary/10 text-primary",
+  verified: "bg-brand-gold/12 text-brand-gold",
   nsfw: "bg-destructive/12 text-destructive",
   subscriber: "bg-accent/12 text-accent",
 };

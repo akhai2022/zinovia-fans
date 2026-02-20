@@ -53,6 +53,9 @@ function PostCell({
         ? formatPpvPrice(post.price_cents, post.currency)
         : "Subscribe to unlock";
 
+  const firstAssetId = post.asset_ids?.[0];
+  const preview = firstAssetId ? (post as any).media_previews?.[firstAssetId] : undefined;
+
   const imageCell = hasImageAsset ? (
     <div className={cn("h-full w-full bg-muted", locked && "blur-[2px] opacity-90")}>
       <PostMediaImage
@@ -60,6 +63,8 @@ function PostCell({
         variant={locked ? "thumb" : undefined}
         className="h-full w-full object-cover"
         watermark={showWatermark && !locked}
+        initialBlurhash={preview?.blurhash}
+        initialDominantColor={preview?.dominant_color}
       />
     </div>
   ) : post.type === "IMAGE" ? (

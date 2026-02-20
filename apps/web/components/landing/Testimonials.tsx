@@ -22,13 +22,13 @@ export function Testimonials({ t }: { t: Dictionary["testimonials"] }) {
         {TESTIMONIALS.map(({ quote, author, role, initials }) => (
           <div
             key={author}
-            className="card-hover-lift flex flex-col rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-6"
+            className="card-hover-lift flex flex-col rounded-2xl border border-white/[0.06] bg-card p-6"
           >
             <p className="flex-1 text-sm leading-relaxed text-muted-foreground">
               &ldquo;{quote}&rdquo;
             </p>
             <div className="mt-5 flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-500/10 text-xs font-semibold text-violet-400">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
                 {initials}
               </div>
               <div>

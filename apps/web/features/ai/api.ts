@@ -45,7 +45,7 @@ export const AiImagesService = {
   generate: (body: AiImageGenerateIn) =>
     apiFetch<AiImageGenerateOut>("/ai/images/generate", {
       method: "POST",
-      body: JSON.stringify(body),
+      body,
     }),
 
   get: (jobId: string) =>
@@ -57,7 +57,7 @@ export const AiImagesService = {
   apply: (jobId: string, body: AiImageApplyIn) =>
     apiFetch<AiImageApplyOut>(`/ai/images/${jobId}/apply`, {
       method: "POST",
-      body: JSON.stringify(body),
+      body,
     }),
 };
 

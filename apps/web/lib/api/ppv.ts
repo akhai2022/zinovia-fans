@@ -2,7 +2,7 @@ import { apiFetch } from "@/lib/apiFetch";
 
 export interface PpvIntentOut {
   purchase_id: string | null;
-  client_secret: string | null;
+  checkout_url: string | null;
   amount_cents: number;
   currency: string;
   status: string;
@@ -21,7 +21,12 @@ export async function createPpvIntent(messageMediaId: string): Promise<PpvIntent
   });
 }
 
+export async function createPpvPostIntent(postId: string): Promise<PpvIntentOut> {
+  return apiFetch(`/ppv/posts/${postId}/create-intent`, {
+    method: "POST",
+  });
+}
+
 export async function getPpvStatus(messageMediaId: string): Promise<PpvStatusOut> {
   return apiFetch(`/ppv/message-media/${messageMediaId}/status`);
 }
-

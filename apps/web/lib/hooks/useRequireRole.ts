@@ -7,10 +7,15 @@ import { useApiFetch } from "@/lib/hooks/useApiFetch";
 
 type Role = "creator" | "admin" | "fan";
 
+const KYC_DONE_STATES = new Set(["KYC_APPROVED", "COMPLETED"]);
+
 /**
  * Client-side role guard. Fetches the current user via `/auth/me` and
  * redirects to `redirectTo` (default `/`) if the user's role does not
  * match `requiredRole`.
+ *
+ * For creators, also checks that KYC is complete. If not, redirects
+ * to `/onboarding` so they can finish identity verification.
  *
  * Returns `{ user, isLoading, authorized }` so pages can show a loading
  * skeleton until the check completes.
@@ -25,6 +30,12 @@ export function useRequireRole(
   const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
   const hasRole = !!user && roles.includes(user.role as Role);
 
+  // Creators must complete KYC; admins bypass
+  const needsKyc =
+    hasRole &&
+    user?.role === "creator" &&
+    !KYC_DONE_STATES.has(user.onboarding_state ?? "");
+
   useEffect(() => {
     if (isLoading) return;
     // Not authenticated — middleware should already redirect, but handle edge case
@@ -34,8 +45,16 @@ export function useRequireRole(
     }
     if (!hasRole) {
       router.replace(redirectTo);
+      return;
     }
-  }, [isLoading, user, error, hasRole, router, redirectTo]);
+    if (needsKyc) {
+      router.replace("/onboarding");
+    }
+  }, [isLoading, user, error, hasRole, needsKyc, router, redirectTo]);
 
-  return { user: hasRole ? user : null, isLoading, authorized: hasRole && !isLoading };
+  return {
+    user: hasRole && !needsKyc ? user : null,
+    isLoading,
+    authorized: hasRole && !needsKyc && !isLoading,
+  };
 }

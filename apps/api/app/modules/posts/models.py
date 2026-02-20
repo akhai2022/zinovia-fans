@@ -41,6 +41,9 @@ class PostMedia(Base):
     position: Mapped[int] = mapped_column(Integer, default=0)
 
     post: Mapped["Post"] = relationship("Post", back_populates="media")
+    media_object: Mapped["MediaObject"] = relationship(
+        "app.modules.media.models.MediaObject", lazy="noload",
+    )
 
 
 class PostLike(Base):

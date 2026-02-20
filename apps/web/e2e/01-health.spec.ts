@@ -1,5 +1,5 @@
 /**
- * STEP 0 — Baseline Health & Configuration checks.
+ * STEP 01 — Baseline Health & Configuration checks.
  * These must pass before any functional tests run.
  */
 
@@ -13,9 +13,13 @@ test.describe("Baseline Health", () => {
     expect(res.body).toHaveProperty("ok", true);
   });
 
-  test("API /ready returns ok", async () => {
+  test("API /ready returns ok with checks", async () => {
     const res = await apiFetch("/ready");
     expect(res.ok).toBe(true);
+    expect(res.body).toHaveProperty("status");
+    expect(res.body).toHaveProperty("checks");
+    expect(res.body.checks).toHaveProperty("database");
+    expect(res.body.checks).toHaveProperty("redis");
   });
 
   test("Web homepage loads (HTTP 200)", async ({ page }) => {
@@ -44,6 +48,8 @@ test.describe("Baseline Health", () => {
   test("Billing health endpoint accessible", async () => {
     const res = await apiFetch("/billing/health");
     expect(res.ok).toBe(true);
-    expect(res.body).toHaveProperty("stripe_configured");
+    expect(res.body).toHaveProperty("payment_provider");
+    expect(res.body).toHaveProperty("configured");
+    expect(res.body).toHaveProperty("webhook_configured");
   });
 });

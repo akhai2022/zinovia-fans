@@ -17,7 +17,7 @@ export const metadata = {
 
 const COMPARISONS = [
   { slug: "patreon", name: "Patreon", tagline: "Lower fees, faster payouts, private content delivery" },
-  { slug: "onlyfans", name: "OnlyFans", tagline: "Better creator tools, multilingual, Stripe-powered payments" },
+  { slug: "onlyfans", name: "OnlyFans", tagline: "Better creator tools, multilingual, secure global payments" },
   { slug: "fanvue", name: "Fanvue", tagline: "More features, global reach, transparent pricing" },
   { slug: "fansly", name: "Fansly", tagline: "Built-in messaging, analytics, and verified creator profiles" },
 ];
@@ -39,7 +39,7 @@ export default function ComparePage() {
           <Link
             key={c.slug}
             href={`/compare/${c.slug}`}
-            className="group rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-6 transition-colors hover:border-white/[0.12]"
+            className="group rounded-2xl border border-white/[0.06] bg-card p-6 transition-colors hover:border-white/[0.12]"
           >
             <h2 className="font-display text-lg font-semibold text-foreground group-hover:text-gradient-brand">
               Zinovia vs {c.name}

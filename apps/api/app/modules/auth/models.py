@@ -32,6 +32,7 @@ class User(TimestampMixin, Base):
     # Creator onboarding (Feature 1)
     onboarding_state: Mapped[str | None] = mapped_column(String(32), nullable=True)
     country: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
     explicit_intent: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     explicit_intent_locked: Mapped[bool] = mapped_column(Boolean, default=False)
 

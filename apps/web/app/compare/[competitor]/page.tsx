@@ -64,7 +64,7 @@ export default function ComparisonPage({ params }: { params: { competitor: strin
         <div className="overflow-x-auto rounded-2xl border border-white/[0.06]">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/[0.06] bg-[rgb(18,18,24)]">
+              <tr className="border-b border-white/[0.06] bg-card">
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Feature</th>
                 <th className="px-4 py-3 text-center font-medium text-foreground">Zinovia</th>
                 <th className="px-4 py-3 text-center font-medium text-muted-foreground">{data.name}</th>
@@ -72,7 +72,7 @@ export default function ComparisonPage({ params }: { params: { competitor: strin
             </thead>
             <tbody>
               {data.features.map((row, i) => (
-                <tr key={row.feature} className={i % 2 === 0 ? "bg-[rgb(14,14,18)]" : "bg-[rgb(18,18,24)]"}>
+                <tr key={row.feature} className={i % 2 === 0 ? "bg-background" : "bg-card"}>
                   <td className="px-4 py-3 text-foreground/90">{row.feature}</td>
                   <td className="px-4 py-3 text-center text-foreground">{row.zinovia}</td>
                   <td className="px-4 py-3 text-center text-muted-foreground">{row.competitor}</td>
@@ -89,7 +89,7 @@ export default function ComparisonPage({ params }: { params: { competitor: strin
         <div className="overflow-x-auto rounded-2xl border border-white/[0.06]">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/[0.06] bg-[rgb(18,18,24)]">
+              <tr className="border-b border-white/[0.06] bg-card">
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Fee Type</th>
                 <th className="px-4 py-3 text-center font-medium text-foreground">Zinovia</th>
                 <th className="px-4 py-3 text-center font-medium text-muted-foreground">{data.name}</th>
@@ -97,7 +97,7 @@ export default function ComparisonPage({ params }: { params: { competitor: strin
             </thead>
             <tbody>
               {data.fees.map((row, i) => (
-                <tr key={row.label} className={i % 2 === 0 ? "bg-[rgb(14,14,18)]" : "bg-[rgb(18,18,24)]"}>
+                <tr key={row.label} className={i % 2 === 0 ? "bg-background" : "bg-card"}>
                   <td className="px-4 py-3 text-foreground/90">{row.label}</td>
                   <td className="px-4 py-3 text-center text-foreground">{row.zinovia}</td>
                   <td className="px-4 py-3 text-center text-muted-foreground">{row.competitor}</td>
@@ -110,11 +110,11 @@ export default function ComparisonPage({ params }: { params: { competitor: strin
 
       {/* Payout Speed */}
       <section className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-6 text-center">
+        <div className="rounded-2xl border border-white/[0.06] bg-card p-6 text-center">
           <p className="text-sm text-muted-foreground">Zinovia Payout Speed</p>
           <p className="mt-2 font-display text-3xl font-bold text-gradient-brand">{data.payoutSpeed.zinovia}</p>
         </div>
-        <div className="rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-6 text-center">
+        <div className="rounded-2xl border border-white/[0.06] bg-card p-6 text-center">
           <p className="text-sm text-muted-foreground">{data.name} Payout Speed</p>
           <p className="mt-2 font-display text-3xl font-bold text-foreground/60">{data.payoutSpeed.competitor}</p>
         </div>
@@ -124,11 +124,11 @@ export default function ComparisonPage({ params }: { params: { competitor: strin
       <section className="space-y-4">
         <h2 className="font-display text-xl font-semibold text-foreground">Which Is Right for You?</h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-6">
+          <div className="rounded-2xl border border-white/[0.06] bg-card p-6">
             <h3 className="text-sm font-semibold text-foreground">Choose Zinovia if you want:</h3>
             <p className="mt-2 text-sm text-muted-foreground">{data.bestFor.zinovia}</p>
           </div>
-          <div className="rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-6">
+          <div className="rounded-2xl border border-white/[0.06] bg-card p-6">
             <h3 className="text-sm font-semibold text-foreground">Choose {data.name} if you want:</h3>
             <p className="mt-2 text-sm text-muted-foreground">{data.bestFor.competitor}</p>
           </div>
@@ -154,7 +154,7 @@ export default function ComparisonPage({ params }: { params: { competitor: strin
       </section>
 
       {/* CTA */}
-      <section className="rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-8 text-center">
+      <section className="rounded-2xl border border-white/[0.06] bg-card p-8 text-center">
         <h2 className="font-display text-xl font-bold text-foreground">Ready to try Zinovia?</h2>
         <p className="mx-auto mt-3 max-w-lg text-sm text-muted-foreground">
           Join thousands of creators earning on their own terms. Fast payouts, secure content, 9 languages.

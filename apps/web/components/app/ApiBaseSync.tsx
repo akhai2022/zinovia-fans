@@ -4,9 +4,16 @@ import { useEffect } from "react";
 import { OpenAPI } from "@zinovia/contracts";
 import { getBrowserApiBaseUrl } from "@/lib/env";
 
+// Set BASE at module load time so it's available before any useEffect fires.
+// React fires child effects before parent effects, so relying solely on
+// useEffect would leave OpenAPI.BASE unset for the first child effect cycle.
+if (typeof window !== "undefined") {
+  OpenAPI.BASE = getBrowserApiBaseUrl();
+}
+
 /**
- * Ensures OpenAPI.BASE is set in the browser before any API call.
- * Module-level init in lib/api.ts can run during SSR (no window); this runs once on client mount.
+ * Keeps OpenAPI.BASE in sync; the module-level init above handles the
+ * initial load, this useEffect serves as a safety net.
  */
 export function ApiBaseSync() {
   useEffect(() => {

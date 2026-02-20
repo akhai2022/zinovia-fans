@@ -21,7 +21,7 @@ from app.modules.onboarding.constants import (
     KYC_SUBMITTED,
 )
 from app.modules.onboarding.deps import require_idempotency_key
-from app.modules.onboarding.kyc_provider import KycProvider, MockKycProvider
+from app.modules.onboarding.kyc_provider import BuiltInKycProvider, KycProvider
 from app.modules.onboarding.models import KycSession
 from app.modules.onboarding.schemas import (
     KycSessionResponse,
@@ -39,11 +39,7 @@ router = APIRouter()
 
 
 def _get_kyc_provider() -> KycProvider:
-    settings = get_settings()
-    # Local/staging always use mock; production requires explicit feature flag.
-    if settings.environment in ("local", "staging") or settings.enable_mock_kyc:
-        return MockKycProvider()
-    raise AppError(status_code=501, detail="kyc_provider_not_configured")
+    return BuiltInKycProvider()
 
 
 @router.post(
@@ -72,14 +68,22 @@ async def create_kyc_session(
     async def _do() -> dict:
         active = await get_active_kyc_session(session, user.id)
         if active:
+            # Regenerate URL to ensure it points to current verification page
+            provider = _get_kyc_provider()
+            result = await provider.create_session(
+                creator_id=user.id, kyc_session_id=active.id
+            )
+            if active.redirect_url != result.redirect_url:
+                active.redirect_url = result.redirect_url
+                await session.commit()
             return {
-                "redirect_url": active.redirect_url or "",
+                "redirect_url": result.redirect_url,
                 "session_id": str(active.id),
             }
         provider = _get_kyc_provider()
         kyc_session = KycSession(
             creator_id=user.id,
-            provider="mock",
+            provider="builtin",
             provider_session_id=None,
             status="CREATED",
             redirect_url=None,
@@ -119,19 +123,16 @@ async def create_kyc_session(
 
 
 @router.post(
-    "/mock-complete",
+    "/complete",
     status_code=200,
-    operation_id="kyc_mock_complete",
+    operation_id="kyc_complete",
 )
-async def mock_kyc_complete(
+async def kyc_complete(
     request: Request,
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict:
-    """Simulate KYC provider completion. Available in local/staging or when ENABLE_MOCK_KYC=true."""
-    settings = get_settings()
-    if settings.environment not in ("local", "staging") and not settings.enable_mock_kyc:
-        raise AppError(status_code=404, detail="not_available")
+    """Complete KYC verification. Called by /kyc/verify page after user submits documents."""
     body = await request.json()
     session_id = body.get("session_id")
     status_action = body.get("status")
@@ -150,27 +151,27 @@ async def mock_kyc_complete(
     kyc = result.scalar_one_or_none()
     if not kyc or kyc.creator_id != user.id:
         raise AppError(status_code=404, detail="session_not_found")
-    event_id = f"mock_{session_id}_{status_action}"
+    event_id = f"kyc_{session_id}_{status_action}"
     kyc.raw_webhook_payload = {
         "provider_session_id": kyc.provider_session_id,
         "status": status_action,
         "event_id": event_id,
     }
     kyc.status = status_action
-    # Mock provider simulates the full lifecycle: KYC_PENDING -> KYC_SUBMITTED -> final.
+    # Transition lifecycle: KYC_PENDING -> KYC_SUBMITTED -> APPROVED/REJECTED
     if user.onboarding_state == KYC_PENDING:
         await transition_creator_state(
             session,
             user.id,
             KYC_SUBMITTED,
-            "mock_kyc_submitted",
+            "kyc_submitted",
             {"event_id": event_id},
         )
     await transition_creator_state(
         session,
         user.id,
         KYC_APPROVED if status_action == "APPROVED" else KYC_REJECTED,
-        f"mock_kyc_{status_action.lower()}",
+        f"kyc_{status_action.lower()}",
         {"event_id": event_id},
     )
     await session.commit()

@@ -23,8 +23,8 @@ export function LandingHero() {
     >
       {/* Background glow effects */}
       <div className="pointer-events-none absolute inset-0" aria-hidden>
-        <div className="absolute left-1/2 top-0 h-[600px] w-[900px] -translate-x-1/2 -translate-y-1/3 rounded-full bg-gradient-to-br from-violet-600/20 via-purple-500/10 to-pink-500/5 blur-3xl" />
-        <div className="absolute right-0 top-1/4 h-[400px] w-[400px] rounded-full bg-pink-500/10 blur-3xl" />
+        <div className="absolute left-1/2 top-0 h-[600px] w-[900px] -translate-x-1/2 -translate-y-1/3 rounded-full bg-gradient-to-br from-pink-600/20 via-rose-500/10 to-fuchsia-500/5 blur-3xl" />
+        <div className="absolute right-0 top-1/4 h-[400px] w-[400px] rounded-full bg-rose-500/10 blur-3xl" />
       </div>
 
       <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-20 sm:px-6 sm:pb-24 sm:pt-28 md:pb-28 md:pt-32">

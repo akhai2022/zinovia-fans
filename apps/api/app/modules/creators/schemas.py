@@ -25,12 +25,16 @@ class CreatorProfilePublic(BaseModel):
     followers_count: int
     posts_count: int = 0
     is_following: bool = False
+    is_subscriber: bool = False
     subscription_price: Decimal | None = Field(
         None, description="Monthly subscription price in major currency units (e.g. 4.99)"
     )
     subscription_currency: str | None = Field(
         None, description="ISO 4217 currency code (e.g. eur)"
     )
+    phone: str | None = None
+    country: str | None = None
+    onboarding_state: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -45,6 +49,8 @@ class CreatorProfileUpdate(BaseModel):
     nsfw: bool | None = None
     avatar_media_id: UUID | None = None
     banner_media_id: UUID | None = None
+    phone: str | None = Field(None, min_length=6, max_length=20, description="Phone number with country code (e.g. +33612345678)")
+    country: str | None = Field(None, min_length=2, max_length=2, description="ISO 3166-1 alpha-2 country code (e.g. FR, US)")
 
 
 class CreatorFollowedItem(BaseModel):

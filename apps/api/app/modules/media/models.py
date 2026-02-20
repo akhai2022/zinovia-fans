@@ -20,6 +20,8 @@ class MediaObject(TimestampMixin, Base):
     object_key: Mapped[str] = mapped_column(String(255), unique=True)
     content_type: Mapped[str] = mapped_column(String(120))
     size_bytes: Mapped[int] = mapped_column(BigInteger)
+    blurhash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    dominant_color: Mapped[str | None] = mapped_column(String(7), nullable=True)
 
     derived: Mapped[list["MediaDerivedAsset"]] = relationship(
         "MediaDerivedAsset",

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import uuid
 from io import BytesIO
 
@@ -18,19 +19,77 @@ from worker.storage_io import get_media_bucket, put_object_bytes
 
 logger = logging.getLogger(__name__)
 
+# Aspect ratios per image type (Imagen 4 uses aspect_ratio, not width/height)
+ASPECT_RATIOS: dict[str, str] = {
+    "HERO": "16:9",
+    "AVATAR": "1:1",
+    "BANNER": "16:9",
+}
 
-def _mock_generate_images(prompt: str, negative_prompt: str, count: int) -> list[bytes]:
-    """
-    Mock provider: returns count placeholder PNG bytes.
-    Replace with real AI provider adapter (e.g. Replicate, Stability) later.
-    """
+DEFAULT_ASPECT_RATIO = "1:1"
+
+# Fallback pixel sizes for mock provider
+IMAGE_SIZES: dict[str, tuple[int, int]] = {
+    "HERO": (1792, 1024),
+    "AVATAR": (1024, 1024),
+    "BANNER": (1792, 1024),
+}
+
+DEFAULT_SIZE = (1024, 1024)
+
+
+def _mock_generate_images(
+    prompt: str, negative_prompt: str, count: int, width: int, height: int
+) -> list[bytes]:
+    """Mock provider: returns placeholder PNGs. Used when AI_PROVIDER=mock."""
     images: list[bytes] = []
     for i in range(count):
-        img = Image.new("RGB", (512, 512), color=(40 + i * 20, 60, 80))
+        img = Image.new("RGB", (width, height), color=(40 + i * 20, 60, 80))
         buf = BytesIO()
         img.save(buf, format="PNG")
         buf.seek(0)
         images.append(buf.read())
+    return images
+
+
+def _replicate_generate_images(
+    prompt: str, negative_prompt: str, count: int, aspect_ratio: str
+) -> list[bytes]:
+    """Generate images via Replicate (Google Imagen 4). Returns list of PNG bytes."""
+    import httpx
+    import replicate
+
+    token = os.environ.get("REPLICATE_API_TOKEN", "")
+    if not token:
+        raise RuntimeError("REPLICATE_API_TOKEN not set")
+
+    os.environ["REPLICATE_API_TOKEN"] = token
+
+    images: list[bytes] = []
+    for _ in range(count):
+        output = replicate.run(
+            "google/imagen-4",
+            input={
+                "prompt": prompt,
+                "aspect_ratio": aspect_ratio,
+                "safety_filter_level": "block_medium_and_above",
+            },
+        )
+
+        # Imagen 4 returns a single FileOutput or URL
+        if isinstance(output, (list, tuple)):
+            url = output[0] if output else None
+        else:
+            url = output
+
+        if not url:
+            raise RuntimeError("Replicate returned no image")
+
+        with httpx.Client(timeout=120) as client:
+            r = client.get(str(url))
+            r.raise_for_status()
+            images.append(r.content)
+
     return images
 
 
@@ -75,13 +134,25 @@ def generate_images(job_id: str) -> dict[str, str | list[str]]:
 
         prompt = job.prompt or ""
         negative_prompt = job.negative_prompt or ""
+        image_type = (job.image_type or "").upper()
+        aspect_ratio = ASPECT_RATIOS.get(image_type, DEFAULT_ASPECT_RATIO)
+        width, height = IMAGE_SIZES.get(image_type, DEFAULT_SIZE)
         count = 1
+
         try:
-            images = _mock_generate_images(prompt, negative_prompt, count)
+            provider = os.environ.get("AI_PROVIDER", "mock")
+            if provider == "replicate":
+                images = _replicate_generate_images(
+                    prompt, negative_prompt, count, aspect_ratio
+                )
+            else:
+                images = _mock_generate_images(
+                    prompt, negative_prompt, count, width, height
+                )
         except Exception as e:
             logger.exception("Provider failed", extra={"job_id": job_id})
-            asyncio.run(_update_job_status(job_uuid, "FAILED"))
-            return {"status": "FAILED", "error": str(e)}
+            await _update_job_status(job_uuid, "FAILED")
+            return {"status": "FAILED", "error": str(e)[:500]}
 
         bucket = get_media_bucket()
         user_id = str(job.user_id)
@@ -92,7 +163,7 @@ def generate_images(job_id: str) -> dict[str, str | list[str]]:
             put_object_bytes(bucket, obj_key, img_bytes, "image/png")
             result_keys.append(obj_key)
 
-        asyncio.run(_update_job_status(job_uuid, "READY", result_object_keys=result_keys))
+        await _update_job_status(job_uuid, "READY", result_object_keys=result_keys)
         logger.info("AI images ready", extra={"job_id": job_id, "count": len(result_keys)})
         return {"status": "READY", "result_object_keys": result_keys}
 

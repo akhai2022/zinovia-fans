@@ -40,31 +40,57 @@ resource "aws_secretsmanager_secret_version" "csrf_secret" {
   }
 }
 
-resource "aws_secretsmanager_secret" "stripe_secret_key" {
-  name                    = "${var.name_prefix}-stripe-secret-key"
+resource "aws_secretsmanager_secret" "ccbill_salt" {
+  name                    = "${var.name_prefix}-ccbill-salt"
   recovery_window_in_days = 7
-  tags                    = { Name = "${var.name_prefix}-stripe-secret-key" }
-  # lifecycle { prevent_destroy = true }  # Uncomment after initial deploy
+  tags                    = { Name = "${var.name_prefix}-ccbill-salt" }
 }
 
-resource "aws_secretsmanager_secret_version" "stripe_secret_key" {
-  secret_id     = aws_secretsmanager_secret.stripe_secret_key.id
-  secret_string = "sk_placeholder"
+resource "aws_secretsmanager_secret_version" "ccbill_salt" {
+  secret_id     = aws_secretsmanager_secret.ccbill_salt.id
+  secret_string = "CHANGE-ME-set-in-console"
   lifecycle {
     ignore_changes = [secret_string]
   }
 }
 
-resource "aws_secretsmanager_secret" "stripe_webhook_secret" {
-  name                    = "${var.name_prefix}-stripe-webhook-secret"
+resource "aws_secretsmanager_secret" "ccbill_datalink_password" {
+  name                    = "${var.name_prefix}-ccbill-datalink-password"
   recovery_window_in_days = 7
-  tags                    = { Name = "${var.name_prefix}-stripe-webhook-secret" }
-  # lifecycle { prevent_destroy = true }  # Uncomment after initial deploy
+  tags                    = { Name = "${var.name_prefix}-ccbill-datalink-password" }
 }
 
-resource "aws_secretsmanager_secret_version" "stripe_webhook_secret" {
-  secret_id     = aws_secretsmanager_secret.stripe_webhook_secret.id
-  secret_string = "whsec_placeholder"
+resource "aws_secretsmanager_secret_version" "ccbill_datalink_password" {
+  secret_id     = aws_secretsmanager_secret.ccbill_datalink_password.id
+  secret_string = "CHANGE-ME-set-in-console"
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
+}
+
+resource "aws_secretsmanager_secret" "resend_api_key" {
+  name                    = "${var.name_prefix}-resend-api-key"
+  recovery_window_in_days = 7
+  tags                    = { Name = "${var.name_prefix}-resend-api-key" }
+}
+
+resource "aws_secretsmanager_secret_version" "resend_api_key" {
+  secret_id     = aws_secretsmanager_secret.resend_api_key.id
+  secret_string = var.resend_api_key != "" ? var.resend_api_key : "re_placeholder"
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
+}
+
+resource "aws_secretsmanager_secret" "replicate_api_token" {
+  name                    = "${var.name_prefix}-replicate-api-token"
+  recovery_window_in_days = 7
+  tags                    = { Name = "${var.name_prefix}-replicate-api-token" }
+}
+
+resource "aws_secretsmanager_secret_version" "replicate_api_token" {
+  secret_id     = aws_secretsmanager_secret.replicate_api_token.id
+  secret_string = "CHANGE-ME-set-in-console"
   lifecycle {
     ignore_changes = [secret_string]
   }

@@ -17,7 +17,7 @@ const FAQ_ITEMS = [
   {
     question: "How do subscriptions and payments work?",
     answer:
-      "Payments are processed securely through Stripe. Fans subscribe to creators at the price set by the creator. Creators receive payouts directly to their Stripe-connected account on Stripe's standard payout schedule.",
+      "Payments are processed securely through our payment processor. Fans subscribe to creators at the price set by the creator. Creators receive payouts directly to their connected bank account on the standard payout schedule.",
   },
   {
     question: "How do I change my email or password?",

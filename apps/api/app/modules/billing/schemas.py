@@ -12,7 +12,7 @@ class WebhookAck(BaseModel):
 
 
 class CheckoutSubscriptionCreate(BaseModel):
-    """Start subscription checkout for a creator. Provide creator_id or creator_handle. success_url/cancel_url optional (from env)."""
+    """Start subscription checkout for a creator. Provide creator_id or creator_handle."""
 
     creator_id: UUID | None = None
     creator_handle: str | None = Field(None, min_length=1, max_length=64)
@@ -35,10 +35,9 @@ class CheckoutSubscriptionOut(BaseModel):
 
 
 class BillingHealthOut(BaseModel):
-    stripe_mode: str
-    stripe_configured: bool
+    payment_provider: str = "ccbill"
+    configured: bool
     webhook_configured: bool
-    webhook_previous_configured: bool
     checkout_defaults_configured: bool
 
 
@@ -46,7 +45,7 @@ class SubscriptionStatusItem(BaseModel):
     subscription_id: UUID
     creator_user_id: UUID
     status: str
-    stripe_subscription_id: str | None = None
+    ccbill_subscription_id: str | None = None
     current_period_end: datetime | None = None
     cancel_at_period_end: bool = False
     cancel_at: datetime | None = None

@@ -37,7 +37,8 @@ export type ApiFetchOptions = Omit<RequestInit, "body"> & {
 function buildUrl(path: string, query?: QueryParams, baseUrl?: string): string {
   const base = baseUrl || getApiBaseUrl();
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  const url = new URL(`${base}${normalizedPath}`);
+  const raw = `${base}${normalizedPath}`;
+  const url = raw.startsWith("http") ? new URL(raw) : new URL(raw, typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
   if (query) {
     for (const [key, value] of Object.entries(query)) {
       if (value === undefined || value === null || value === "") continue;

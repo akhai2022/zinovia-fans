@@ -14,7 +14,7 @@ class EarningsSummary(BaseModel):
     gross_cents: int = Field(..., description="Total gross in minor units")
     fee_cents: int = Field(..., description="Platform fees in minor units")
     net_cents: int = Field(..., description="Net after fees in minor units")
-    currency: str = "usd"
+    currency: str = "eur"
 
 
 class LedgerEventOut(BaseModel):
@@ -32,18 +32,12 @@ class LedgerEventOut(BaseModel):
 
 
 class PayoutMethodStatus(BaseModel):
-    """Stripe Connect payout method status (or not configured)."""
+    """Payout method status (placeholder for future payout provider integration)."""
 
-    stripe_account_id: str | None = None
     payouts_enabled: bool = False
-    charges_enabled: bool = False
-    requirements_due: dict | None = Field(
-        default=None,
-        description="Stripe requirements summary when account has pending items",
-    )
     configured: bool = Field(
         default=False,
-        description="True if Stripe Connect is set up for this creator",
+        description="True if payout method is set up for this creator",
     )
 
 

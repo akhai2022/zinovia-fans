@@ -64,4 +64,7 @@ enable_mock_kyc        = true
 # Currency
 default_currency = "eur"
 
+# AI
+ai_provider = "replicate"
+
 # route53_zone_id = "Z0123456789ABCDEF"

@@ -35,6 +35,9 @@ class UserOut(BaseModel):
     is_active: bool
     profile: ProfileOut | None
     last_login_at: datetime | None = None
+    onboarding_state: str | None = None
+    country: str | None = None
+    phone: str | None = None
     created_at: datetime
     updated_at: datetime
 

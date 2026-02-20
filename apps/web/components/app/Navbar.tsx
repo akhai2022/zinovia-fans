@@ -23,6 +23,7 @@ import {
   Menu,
   Compass,
   Clock,
+  HelpCircle,
 } from "lucide-react";
 import { type UserOut } from "@zinovia/contracts";
 import { Button } from "@/components/ui/button";
@@ -75,7 +76,7 @@ export function Navbar({
     { href: "/search", label: "Search", icon: Search },
   ];
 
-  const isCreator = user?.role === "creator";
+  const isCreator = user?.role === "creator" || user?.role === "admin";
 
   const NAV_LINKS_AUTH = [
     { href: "/feed", label: t.nav.feed, icon: Rss },
@@ -115,7 +116,7 @@ export function Navbar({
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-white/[0.06] bg-[rgb(10,10,14)]/95 backdrop-blur supports-[backdrop-filter]:bg-[rgb(10,10,14)]/80">
+    <header data-testid="navbar" className="sticky top-0 z-40 w-full border-b border-white/[0.06] bg-[rgb(10,10,14)]/95 backdrop-blur supports-[backdrop-filter]:bg-[rgb(10,10,14)]/80">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link
           href="/"
@@ -250,6 +251,12 @@ export function Navbar({
                     {t.nav.subscriptions}
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/contact" className="flex items-center gap-2">
+                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                    {t.nav.support}
+                  </Link>
+                </DropdownMenuItem>
                 {user?.role === "admin" && (
                   <DropdownMenuItem asChild>
                     <Link href="/admin" className="flex items-center gap-2">
@@ -323,22 +330,56 @@ export function Navbar({
           })}
 
           {user && (
-            <Link
-              href="/notifications"
-              onClick={() => setMobileOpen(false)}
-              className={cn(
-                "flex items-center gap-3 rounded-brand border border-border px-3 py-2.5 text-sm font-medium text-foreground transition-colors",
-                pathname === "/notifications" ? "bg-white/10 border-primary/30" : "bg-card hover:bg-white/5"
+            <>
+              <Link
+                href="/notifications"
+                onClick={() => setMobileOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 rounded-brand border border-border px-3 py-2.5 text-sm font-medium text-foreground transition-colors",
+                  pathname === "/notifications" ? "bg-white/10 border-primary/30" : "bg-card hover:bg-white/5"
+                )}
+              >
+                <Bell className="h-4 w-4 text-muted-foreground" />
+                {t.nav.notifications}
+                {unreadNotifications > 0 && (
+                  <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-white">
+                    {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                  </span>
+                )}
+              </Link>
+              <Link
+                href="/contact"
+                onClick={() => setMobileOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 rounded-brand border border-border px-3 py-2.5 text-sm font-medium text-foreground transition-colors",
+                  pathname === "/contact" ? "bg-white/10 border-primary/30" : "bg-card hover:bg-white/5"
+                )}
+              >
+                <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                {t.nav.support}
+              </Link>
+              {user?.role === "admin" && (
+                <Link
+                  href="/admin"
+                  onClick={() => setMobileOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-brand border border-border px-3 py-2.5 text-sm font-medium text-foreground transition-colors",
+                    pathname.startsWith("/admin") ? "bg-white/10 border-primary/30" : "bg-card hover:bg-white/5"
+                  )}
+                >
+                  <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                  {t.nav.admin}
+                </Link>
               )}
-            >
-              <Bell className="h-4 w-4 text-muted-foreground" />
-              {t.nav.notifications}
-              {unreadNotifications > 0 && (
-                <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-white">
-                  {unreadNotifications > 99 ? "99+" : unreadNotifications}
-                </span>
-              )}
-            </Link>
+              <button
+                type="button"
+                onClick={() => { setMobileOpen(false); handleLogout(); }}
+                className="flex w-full items-center gap-3 rounded-brand border border-border px-3 py-2.5 text-sm font-medium text-foreground transition-colors bg-card hover:bg-white/5"
+              >
+                <LogOut className="h-4 w-4 text-muted-foreground" />
+                {t.nav.logout}
+              </button>
+            </>
           )}
 
           {!user && (

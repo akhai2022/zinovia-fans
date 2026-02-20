@@ -73,7 +73,7 @@ export default function NichePage({ params }: { params: { niche: string } }) {
         </h2>
         <div className="grid gap-4 md:grid-cols-3">
           {data.painPoints.map((point) => (
-            <div key={point.title} className="rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-6">
+            <div key={point.title} className="rounded-2xl border border-white/[0.06] bg-card p-6">
               <h3 className="text-sm font-semibold text-foreground">{point.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{point.description}</p>
             </div>
@@ -91,8 +91,8 @@ export default function NichePage({ params }: { params: { niche: string } }) {
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {data.features.map((feature) => (
-            <div key={feature.title} className="flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-6">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10 text-violet-400">
+            <div key={feature.title} className="flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-card p-6">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" d={feature.icon} />
                 </svg>
@@ -115,7 +115,7 @@ export default function NichePage({ params }: { params: { niche: string } }) {
             { step: "02", title: "Publish content", description: "Upload exclusive content, set your subscription price, and start building your library." },
             { step: "03", title: "Get paid", description: "Earn from subscriptions, paid unlocks, tips, and DMs. Payouts arrive within 48 hours." },
           ].map(({ step, title, description }) => (
-            <div key={step} className="rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-6">
+            <div key={step} className="rounded-2xl border border-white/[0.06] bg-card p-6">
               <span className="text-gradient-brand text-4xl font-bold">{step}</span>
               <h3 className="mt-3 text-base font-semibold text-foreground">{title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
@@ -143,7 +143,7 @@ export default function NichePage({ params }: { params: { niche: string } }) {
       </section>
 
       {/* CTA */}
-      <section className="rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-8 text-center">
+      <section className="rounded-2xl border border-white/[0.06] bg-card p-8 text-center">
         <h2 className="font-display text-xl font-bold text-foreground">Start earning as a {data.name.toLowerCase().replace(/s$/, "")}</h2>
         <p className="mx-auto mt-3 max-w-lg text-sm text-muted-foreground">
           Join thousands of creators building sustainable income on Zinovia. No upfront costs, no monthly fees.

@@ -20,8 +20,14 @@ type AdminCreator = {
   handle: string | null;
   display_name: string;
   bio: string | null;
+  phone: string | null;
+  country: string | null;
   discoverable: boolean;
   featured: boolean;
+  verified: boolean;
+  signup_ip: string | null;
+  last_login_ip: string | null;
+  last_login_at: string | null;
   created_at: string;
 };
 
@@ -191,6 +197,9 @@ export default function AdminPage() {
                         @{c.handle}
                       </span>
                     )}
+                    {c.verified && (
+                      <span className="ml-1 text-xs text-blue-500">Verified</span>
+                    )}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {c.email} · {c.role} ·{" "}
@@ -198,6 +207,11 @@ export default function AdminPage() {
                     {c.is_active ? "Active" : "Suspended"} ·{" "}
                     {c.featured ? "Featured" : "Not featured"} ·{" "}
                     Onboarding: {c.onboarding_state || "N/A"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Phone: {c.phone || "—"} · Country: {c.country || "—"} ·{" "}
+                    Signup IP: {c.signup_ip || "—"} · Last login IP: {c.last_login_ip || "—"} ·{" "}
+                    Last login: {c.last_login_at ? new Date(c.last_login_at).toLocaleString() : "Never"}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-1.5">

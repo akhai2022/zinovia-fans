@@ -9,9 +9,17 @@ export type CreatorProfileUpdate = {
     avatar_media_id?: (string | null);
     banner_media_id?: (string | null);
     bio?: (string | null);
+    /**
+     * ISO 3166-1 alpha-2 country code (e.g. FR, US)
+     */
+    country?: (string | null);
     discoverable?: (boolean | null);
     display_name?: (string | null);
     handle?: (string | null);
     nsfw?: (boolean | null);
+    /**
+     * Phone number with country code (e.g. +33612345678)
+     */
+    phone?: (string | null);
 };
 

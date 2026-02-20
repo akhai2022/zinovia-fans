@@ -18,13 +18,21 @@ def require_creator(user: User = Depends(get_current_user)) -> User:
     return user
 
 
+_ALLOWED_ONBOARDING_STATES = {"KYC_APPROVED", "COMPLETED"}
+
+
 async def require_creator_with_profile(
     session: AsyncSession = Depends(get_async_session),
     user: User = Depends(require_creator),
 ) -> User:
-    """Require user has creator profile with handle set (e.g. for POST /posts)."""
+    """Require user has creator profile with handle set and email verified."""
+    # Admins bypass all profile/onboarding checks
+    if user.role == "admin":
+        return user
     result = await session.execute(select(Profile).where(Profile.user_id == user.id))
     profile = result.scalar_one_or_none()
     if not profile or not profile.handle:
-        raise AppError(status_code=403, detail="creator_only")
+        raise AppError(status_code=403, detail="profile_incomplete")
+    if user.onboarding_state not in _ALLOWED_ONBOARDING_STATES:
+        raise AppError(status_code=403, detail="kyc_required")
     return user

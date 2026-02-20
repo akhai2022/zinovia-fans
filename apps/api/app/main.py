@@ -49,6 +49,7 @@ from app.modules.onboarding.router import router as onboarding_router
 from app.modules.onboarding.webhook_router import router as webhook_kyc_router
 from app.modules.admin.router import router as admin_router
 from app.modules.collections.router import router as collections_router
+from app.modules.contact.router import router as contact_router
 from app.modules.posts.router import feed_router, router as posts_router
 
 logger = logging.getLogger(__name__)
@@ -75,15 +76,15 @@ def create_app() -> FastAPI:
     )
 
     configure_logging(get_request_id)
-    from app.modules.billing.service import stripe_mode
+    from app.modules.billing.ccbill_client import ccbill_configured
 
     # Startup diagnostics — log critical config (no secrets)
     logger.info(
-        "startup config: env=%s cors_origins=%s mail_provider=%s stripe_mode=%s storage=%s",
+        "startup config: env=%s cors_origins=%s mail_provider=%s ccbill_configured=%s storage=%s",
         settings.environment,
         settings.cors_origins_list(),
         settings.mail_provider,
-        stripe_mode(),
+        ccbill_configured(),
         settings.storage,
     )
 
@@ -96,6 +97,8 @@ def create_app() -> FastAPI:
         "/health",
         "/ready",
         "/auth/",
+        "/contact",
+        "/__e2e__/",
     )
 
     @app.middleware("http")
@@ -171,14 +174,14 @@ def create_app() -> FastAPI:
     async def ready() -> dict[str, object]:
         db_ok = await check_db()
         redis_ok = await check_redis()
-        stripe_ok = bool((settings.stripe_secret_key or "").strip() and settings.stripe_secret_key != "sk_test_placeholder")
+        ccbill_ok = ccbill_configured()
         status = "ok" if db_ok and redis_ok else "degraded"
         return {
             "status": status,
             "checks": {
                 "database": db_ok,
                 "redis": redis_ok,
-                "stripe_configured": stripe_ok,
+                "ccbill_configured": ccbill_ok,
             },
             "version": settings.git_sha or "dev",
             "environment": settings.environment,
@@ -205,6 +208,14 @@ def create_app() -> FastAPI:
     app.include_router(ledger_router, prefix="/ledger", tags=["ledger"])
     app.include_router(collections_router, prefix="/collections", tags=["collections"])
     app.include_router(admin_router, prefix="/admin", tags=["admin"])
+    app.include_router(contact_router, tags=["contact"])
+
+    # E2E test-only endpoints — gated by E2E_ENABLE + E2E_SECRET, never in production
+    if settings.e2e_enable and not settings.is_production:
+        from app.modules.e2e.router import router as e2e_router
+        app.include_router(e2e_router)
+        logger.info("E2E test endpoints enabled at /__e2e__/*")
+
     return app
 
 

@@ -186,7 +186,11 @@ async def create_download_url(
         raise AppError(status_code=404, detail="variant_not_found")
     storage = get_storage_client()
     download_url = generate_signed_download(storage, object_key)
-    return SignedUrlResponse(download_url=download_url)
+    return SignedUrlResponse(
+        download_url=download_url,
+        blurhash=media.blurhash,
+        dominant_color=media.dominant_color,
+    )
 
 
 @router.get("/mine", response_model=MediaMinePage, operation_id="media_mine")

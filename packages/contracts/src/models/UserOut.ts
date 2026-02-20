@@ -9,6 +9,7 @@ export type UserOut = {
     id: string;
     is_active: boolean;
     last_login_at: (string | null);
+    onboarding_state: (string | null);
     profile: (ProfileOut | null);
     role: string;
     updated_at: string;

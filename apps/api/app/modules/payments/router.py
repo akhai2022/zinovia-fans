@@ -1,4 +1,4 @@
-"""Payments router: tips, PPV intents."""
+"""Payments router: tips, PPV intents (CCBill redirect-based)."""
 
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ async def tip_create_intent(
         raise AppError(status_code=400, detail="amount_below_minimum")
     if payload.amount_cents > settings.tip_max_cents:
         raise AppError(status_code=400, detail="amount_above_maximum")
-    tip, client_secret = await create_tip_intent(
+    tip, checkout_url = await create_tip_intent(
         session,
         tipper_id=user.id,
         creator_id=payload.creator_id,
@@ -41,7 +41,7 @@ async def tip_create_intent(
         conversation_id=payload.conversation_id,
         message_id=payload.message_id,
     )
-    return TipIntentOut(client_secret=client_secret, tip_id=tip.id)
+    return TipIntentOut(checkout_url=checkout_url, tip_id=tip.id)
 
 
 @router.post("/ppv/create-intent", response_model=PpvIntentOut)
@@ -50,9 +50,9 @@ async def ppv_create_intent(
     session: AsyncSession = Depends(get_async_session),
     user: User = Depends(get_current_user),
 ):
-    purchase, client_secret = await create_ppv_intent(
+    purchase, checkout_url = await create_ppv_intent(
         session,
         purchaser_id=user.id,
         message_media_id=payload.message_media_id,
     )
-    return PpvIntentOut(client_secret=client_secret, purchase_id=purchase.id)
+    return PpvIntentOut(checkout_url=checkout_url, purchase_id=purchase.id)

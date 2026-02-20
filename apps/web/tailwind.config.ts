@@ -80,6 +80,10 @@ const config: Config = {
           800: "rgb(var(--color-text-primary) / 0.9)",
           900: "rgb(var(--color-text-primary) / <alpha-value>)",
         },
+        verified: {
+          DEFAULT: "rgb(var(--color-brand-gold) / <alpha-value>)",
+          bg: "rgb(var(--color-brand-gold) / 0.12)",
+        },
         success: {
           DEFAULT: "rgb(var(--color-success) / <alpha-value>)",
           500: "rgb(var(--color-success) / <alpha-value>)",

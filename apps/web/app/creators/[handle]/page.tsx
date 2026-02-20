@@ -13,7 +13,9 @@ import { Card } from "@/components/ui/card";
 import { BioExpand } from "@/components/premium";
 import type { PostItem } from "@/types/creator";
 import { ApiClientError, apiFetchServer } from "@/lib/api/client";
+import { getServerApiBaseUrl } from "@/lib/env";
 import { SubscribeCheckoutButton } from "@/features/billing/components/SubscribeCheckoutButton";
+import { MessageButton } from "@/features/messaging/MessageButton";
 import { CreatorPostsSection } from "./CreatorPostsSection";
 
 const SITE_URL = "https://zinovia.ai";
@@ -31,7 +33,7 @@ export async function generateMetadata({
     typeof params.handle === "string" ? params.handle : params.handle[0]
   );
   try {
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+    const apiBase = getServerApiBaseUrl();
     const res = await fetch(`${apiBase}/creators/${encodeURIComponent(handle)}`, {
       next: { revalidate: 600 },
     });
@@ -76,6 +78,7 @@ type CreatorProfile = {
   followers_count: number;
   posts_count: number;
   is_following?: boolean;
+  is_subscriber?: boolean;
   subscription_price?: string | null;
   subscription_currency?: string | null;
 };
@@ -206,22 +209,56 @@ export default async function CreatorProfilePage({
               {creator.verified && <Badge variant="verified">Verified</Badge>}
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <FollowButton creatorId={creator.user_id} initialFollowing={creator.is_following ?? false} />
-            <Button variant="secondary" size="sm" asChild>
-              <Link href="/messages">Message</Link>
-            </Button>
-            <SubscribeCheckoutButton
-              creatorId={creator.user_id}
-              creatorHandle={creator.handle}
-              price={creator.subscription_price ?? undefined}
-              currency={creator.subscription_currency ?? undefined}
-            />
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-wrap gap-2">
+              <FollowButton creatorId={creator.user_id} initialFollowing={creator.is_following ?? false} />
+              <MessageButton creatorId={creator.user_id} />
+              {creator.is_subscriber ? (
+                <Badge variant="subscriber" className="flex items-center gap-1 px-3 py-1.5 text-sm">
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  Subscribed
+                </Badge>
+              ) : (
+                <SubscribeCheckoutButton
+                  creatorId={creator.user_id}
+                  creatorHandle={creator.handle}
+                  price={creator.subscription_price ?? undefined}
+                  currency={creator.subscription_currency ?? undefined}
+                  isSubscriber={creator.is_subscriber}
+                />
+              )}
+            </div>
+            {!creator.is_subscriber && creator.subscription_price && (
+              <p className="text-xs text-muted-foreground">
+                {parseFloat(creator.subscription_price).toFixed(2)} {(creator.subscription_currency || "EUR").toUpperCase()}/month &middot; Cancel anytime
+              </p>
+            )}
           </div>
         </div>
         {creator.bio && (
           <div className="mt-4">
             <BioExpand text={creator.bio} />
+          </div>
+        )}
+        {!creator.is_subscriber && creator.subscription_price && (
+          <div className="mt-4 rounded-xl border border-border bg-muted/30 p-4">
+            <p className="text-sm font-medium text-foreground">What you get</p>
+            <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
+              <li className="flex items-center gap-2">
+                <svg className="h-3.5 w-3.5 shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                Full access to subscriber-only posts
+              </li>
+              <li className="flex items-center gap-2">
+                <svg className="h-3.5 w-3.5 shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                Direct messages with {creator.display_name}
+              </li>
+              <li className="flex items-center gap-2">
+                <svg className="h-3.5 w-3.5 shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                Cancel anytime — no commitment
+              </li>
+            </ul>
           </div>
         )}
       </div>
@@ -239,6 +276,7 @@ export default async function CreatorProfilePage({
             creatorHandle={creator.handle}
             creatorName={creator.display_name}
             creatorId={creator.user_id}
+            isSubscriber={creator.is_subscriber}
           />
         )}
       </div>

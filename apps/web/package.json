@@ -11,12 +11,18 @@
     "start": "next start",
     "lint": "next lint",
     "test": "playwright test",
-    "test:unit": "vitest run ./lib/uuid.test.ts"
+    "test:unit": "vitest run ./lib/uuid.test.ts",
+    "e2e": "playwright test",
+    "e2e:headed": "playwright test --headed",
+    "e2e:ui": "playwright test --ui",
+    "e2e:debug": "playwright test --debug",
+    "e2e:report": "playwright show-report /tmp/zinovia-pw-report",
+    "e2e:pom": "playwright test 20- 21- 22- 23- 24- 25- 26-",
+    "e2e:regression": "playwright test 26-pom-regression"
   },
   "dependencies": {
-    "@stripe/react-stripe-js": "^2.4.0",
-    "@stripe/stripe-js": "^2.4.0",
     "@zinovia/contracts": "0.1.0",
+    "blurhash": "^2.0.5",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.574.0",

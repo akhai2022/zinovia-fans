@@ -36,17 +36,22 @@ export function PostCard({ post, creator }: PostCardProps) {
       )}
       {post.type === "IMAGE" && post.asset_ids && post.asset_ids.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-2">
-          {post.asset_ids.map((assetId) => (
-            <div
-              key={assetId}
-              className="overflow-hidden rounded-lg border border-border bg-muted"
-            >
-              <PostMediaImage
-                assetId={assetId}
-                className="h-32 w-32 object-cover sm:h-40 sm:w-40"
-              />
-            </div>
-          ))}
+          {post.asset_ids.map((assetId) => {
+            const preview = (post as any).media_previews?.[assetId];
+            return (
+              <div
+                key={assetId}
+                className="overflow-hidden rounded-lg border border-border bg-muted"
+              >
+                <PostMediaImage
+                  assetId={assetId}
+                  className="h-32 w-32 object-cover sm:h-40 sm:w-40"
+                  initialBlurhash={preview?.blurhash}
+                  initialDominantColor={preview?.dominant_color}
+                />
+              </div>
+            );
+          })}
         </div>
       )}
       {post.type === "VIDEO" && post.asset_ids && post.asset_ids.length > 0 && (

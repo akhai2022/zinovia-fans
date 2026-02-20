@@ -37,66 +37,11 @@ locals {
   web_domains   = var.web_use_apex ? [var.domain_name, local.www_domain] : [local.app_domain]
   web_base_url  = (var.enable_alb && var.enable_custom_domain) ? (var.web_use_apex ? "https://${var.domain_name}" : "https://${local.app_domain}") : ""
   cors_origins  = join(",", concat([for d in local.web_domains : "https://${d}"], ["https://${local.api_domain}"]))
-  mail_provider = var.environment == "prod" ? "ses" : "console"
+  mail_provider = var.environment == "prod" ? "resend" : "console"
   mail_from     = "noreply@${var.domain_name}"
+  mail_reply_to = "support@${var.domain_name}"
   # API Settings expects "production" not "prod"
   api_environment = var.environment == "prod" ? "production" : var.environment
-}
-
-# -----------------------------------------------------------------------------
-# SES identity (domain verification + DKIM + custom MAIL FROM)
-# -----------------------------------------------------------------------------
-resource "aws_ses_domain_identity" "main" {
-  count  = var.enable_route53 ? 1 : 0
-  domain = var.domain_name
-}
-
-resource "aws_route53_record" "ses_verification" {
-  count   = var.enable_route53 ? 1 : 0
-  zone_id = local.zone_id
-  name    = "_amazonses.${var.domain_name}"
-  type    = "TXT"
-  ttl     = 600
-  records = [aws_ses_domain_identity.main[0].verification_token]
-}
-
-resource "aws_ses_domain_dkim" "main" {
-  count  = var.enable_route53 ? 1 : 0
-  domain = aws_ses_domain_identity.main[0].domain
-}
-
-resource "aws_route53_record" "ses_dkim" {
-  count   = var.enable_route53 ? 3 : 0
-  zone_id = local.zone_id
-  name    = "${aws_ses_domain_dkim.main[0].dkim_tokens[count.index]}._domainkey.${var.domain_name}"
-  type    = "CNAME"
-  ttl     = 600
-  records = ["${aws_ses_domain_dkim.main[0].dkim_tokens[count.index]}.dkim.amazonses.com"]
-}
-
-resource "aws_ses_domain_mail_from" "main" {
-  count                  = var.enable_route53 ? 1 : 0
-  domain                 = aws_ses_domain_identity.main[0].domain
-  mail_from_domain       = "mail.${var.domain_name}"
-  behavior_on_mx_failure = "UseDefaultValue"
-}
-
-resource "aws_route53_record" "ses_mail_from_mx" {
-  count   = var.enable_route53 ? 1 : 0
-  zone_id = local.zone_id
-  name    = aws_ses_domain_mail_from.main[0].mail_from_domain
-  type    = "MX"
-  ttl     = 600
-  records = ["10 feedback-smtp.${var.aws_region}.amazonses.com"]
-}
-
-resource "aws_route53_record" "ses_mail_from_txt" {
-  count   = var.enable_route53 ? 1 : 0
-  zone_id = local.zone_id
-  name    = aws_ses_domain_mail_from.main[0].mail_from_domain
-  type    = "TXT"
-  ttl     = 600
-  records = ["v=spf1 include:amazonses.com -all"]
 }
 
 resource "aws_route53_record" "dmarc" {
@@ -105,79 +50,46 @@ resource "aws_route53_record" "dmarc" {
   name    = "_dmarc.${var.domain_name}"
   type    = "TXT"
   ttl     = 600
-  records = ["v=DMARC1; p=none; rua=mailto:dmarc@${var.domain_name}"]
+  records = ["v=DMARC1; p=quarantine; adkim=s; aspf=s; pct=100; rua=mailto:dmarc@${var.domain_name}"]
 }
 
 # -----------------------------------------------------------------------------
-# SES configuration set (delivery metrics + suppression)
+# Resend DNS records (DKIM, SPF/MAIL-FROM, inbound MX)
 # -----------------------------------------------------------------------------
-resource "aws_sesv2_configuration_set" "main" {
-  count                  = var.enable_route53 ? 1 : 0
-  configuration_set_name = "${local.name_prefix}-mail"
-
-  reputation_options {
-    reputation_metrics_enabled = true
-  }
-
-  sending_options {
-    sending_enabled = true
-  }
-
-  suppression_options {
-    suppressed_reasons = ["BOUNCE", "COMPLAINT"]
-  }
+resource "aws_route53_record" "resend_dkim" {
+  count   = var.enable_route53 ? 1 : 0
+  zone_id = local.zone_id
+  name    = "resend._domainkey.${var.domain_name}"
+  type    = "TXT"
+  ttl     = 600
+  records = ["p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDi5bCrv0i65UPUFjU5XurIvfPPvKHNA2KLi+hP+0c/IzZKILZFGbTh69trge32o/aEYgArDo279jp9J3rH8neRIzyL29fsSrjm1c83FRJJQXlMaK/FLtIm8wFcGH8lSYZlEM3HAaOeEaDIDoxjbaKD94bYSHU0J98Fvhrswt2BVQIDAQAB"]
 }
 
-resource "aws_sesv2_configuration_set_event_destination" "cloudwatch" {
-  count                  = var.enable_route53 ? 1 : 0
-  configuration_set_name = aws_sesv2_configuration_set.main[0].configuration_set_name
-  event_destination_name = "cloudwatch-metrics"
-
-  event_destination {
-    enabled              = true
-    matching_event_types = ["SEND", "DELIVERY", "BOUNCE", "COMPLAINT", "REJECT"]
-
-    cloud_watch_destination {
-      dimension_configuration {
-        default_dimension_value = "default"
-        dimension_name          = "EmailType"
-        dimension_value_source  = "MESSAGE_TAG"
-      }
-    }
-  }
+resource "aws_route53_record" "resend_spf_mx" {
+  count   = var.enable_route53 ? 1 : 0
+  zone_id = local.zone_id
+  name    = "send.${var.domain_name}"
+  type    = "MX"
+  ttl     = 600
+  records = ["10 feedback-smtp.us-east-1.amazonses.com"]
 }
 
-# -----------------------------------------------------------------------------
-# CloudWatch alarms for SES bounce and complaint rates
-# -----------------------------------------------------------------------------
-resource "aws_cloudwatch_metric_alarm" "ses_bounce_rate" {
-  count               = var.enable_route53 ? 1 : 0
-  alarm_name          = "${local.name_prefix}-ses-bounce-rate"
-  alarm_description   = "SES bounce rate exceeds 2% — investigate immediately"
-  comparison_operator = "GreaterThanOrEqualToThreshold"
-  evaluation_periods  = 1
-  datapoints_to_alarm = 1
-  metric_name         = "Reputation.BounceRate"
-  namespace           = "AWS/SES"
-  period              = 300
-  statistic           = "Average"
-  threshold           = 0.02
-  treat_missing_data  = "notBreaching"
+resource "aws_route53_record" "resend_spf_txt" {
+  count   = var.enable_route53 ? 1 : 0
+  zone_id = local.zone_id
+  name    = "send.${var.domain_name}"
+  type    = "TXT"
+  ttl     = 600
+  records = ["v=spf1 include:amazonses.com ~all"]
 }
 
-resource "aws_cloudwatch_metric_alarm" "ses_complaint_rate" {
-  count               = var.enable_route53 ? 1 : 0
-  alarm_name          = "${local.name_prefix}-ses-complaint-rate"
-  alarm_description   = "SES complaint rate exceeds 0.1% — investigate immediately"
-  comparison_operator = "GreaterThanOrEqualToThreshold"
-  evaluation_periods  = 1
-  datapoints_to_alarm = 1
-  metric_name         = "Reputation.ComplaintRate"
-  namespace           = "AWS/SES"
-  period              = 300
-  statistic           = "Average"
-  threshold           = 0.001
-  treat_missing_data  = "notBreaching"
+resource "aws_route53_record" "resend_inbound_mx" {
+  count   = var.enable_route53 ? 1 : 0
+  zone_id = local.zone_id
+  name    = var.domain_name
+  type    = "MX"
+  ttl     = 600
+  records = ["10 inbound-smtp.us-east-1.amazonaws.com"]
 }
 
 # -----------------------------------------------------------------------------
@@ -302,9 +214,10 @@ module "rds" {
 # Secrets Manager
 # -----------------------------------------------------------------------------
 module "secrets" {
-  source      = "./modules/secrets"
-  name_prefix = local.name_prefix
-  db_password = random_password.db.result
+  source         = "./modules/secrets"
+  name_prefix    = local.name_prefix
+  db_password    = random_password.db.result
+  resend_api_key = var.resend_api_key
 }
 
 # Full DATABASE_URL for ECS (built from RDS endpoint + password)
@@ -1058,27 +971,11 @@ resource "aws_iam_role_policy" "ecs_task_secrets" {
         module.secrets.db_password_secret_arn,
         module.secrets.jwt_secret_arn,
         module.secrets.csrf_secret_arn,
-        module.secrets.stripe_secret_key_arn,
-        module.secrets.stripe_webhook_secret_arn
+        module.secrets.ccbill_salt_arn,
+        module.secrets.ccbill_datalink_password_arn,
+        module.secrets.resend_api_key_arn,
+        module.secrets.replicate_api_token_arn
       ]
-    }]
-  })
-}
-
-resource "aws_iam_role_policy" "ecs_task_ses" {
-  name = "ses-mail"
-  role = aws_iam_role.ecs_task.id
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "ses:SendEmail",
-        "ses:SendRawEmail",
-        "ses:GetAccount",
-        "ses:SendTemplatedEmail"
-      ]
-      Resource = "*"
     }]
   })
 }
@@ -1096,8 +993,10 @@ resource "aws_iam_role_policy" "ecs_execution_secrets" {
         aws_secretsmanager_secret.database_url.arn,
         module.secrets.jwt_secret_arn,
         module.secrets.csrf_secret_arn,
-        module.secrets.stripe_secret_key_arn,
-        module.secrets.stripe_webhook_secret_arn
+        module.secrets.ccbill_salt_arn,
+        module.secrets.ccbill_datalink_password_arn,
+        module.secrets.resend_api_key_arn,
+        module.secrets.replicate_api_token_arn
       ]
     }]
   })
@@ -1136,11 +1035,12 @@ resource "aws_ecs_task_definition" "api" {
         { name = "JWT_ALGORITHM", value = "HS256" },
         { name = "JWT_EXPIRE_MINUTES", value = "60" },
         { name = "COOKIE_SECURE", value = local.api_environment == "production" ? "true" : "false" },
-        { name = "COOKIE_SAMESITE", value = "none" },
+        { name = "COOKIE_SAMESITE", value = "lax" },
+        { name = "COOKIE_DOMAIN", value = var.enable_custom_domain ? ".${var.domain_name}" : "" },
         { name = "CORS_ORIGINS", value = local.cors_origins },
         { name = "MAIL_PROVIDER", value = local.mail_provider },
         { name = "MAIL_FROM", value = local.mail_from },
-        { name = "SES_CONFIGURATION_SET", value = var.enable_route53 ? aws_sesv2_configuration_set.main[0].configuration_set_name : "" },
+        { name = "MAIL_REPLY_TO", value = local.mail_reply_to },
         { name = "MEDIA_URL_TTL_SECONDS", value = "3600" },
         { name = "RATE_LIMIT_MAX", value = "60" },
         { name = "RATE_LIMIT_WINDOW_SECONDS", value = "60" },
@@ -1158,7 +1058,14 @@ resource "aws_ecs_task_definition" "api" {
         { name = "ENABLE_ANALYTICS", value = tostring(var.enable_analytics) },
         { name = "ENABLE_MOBILE_NAV_POLISH", value = tostring(var.enable_mobile_nav_polish) },
         { name = "ENABLE_MOCK_KYC", value = tostring(var.enable_mock_kyc) },
-        { name = "DEFAULT_CURRENCY", value = var.default_currency }
+        { name = "DEFAULT_CURRENCY", value = var.default_currency },
+        { name = "CCBILL_ACCOUNT_NUMBER", value = var.ccbill_account_number },
+        { name = "CCBILL_SUB_ACCOUNT", value = var.ccbill_sub_account },
+        { name = "CCBILL_FLEX_FORM_ID", value = var.ccbill_flex_form_id },
+        { name = "CCBILL_DATALINK_USERNAME", value = var.ccbill_datalink_username },
+        { name = "CCBILL_TEST_MODE", value = tostring(var.ccbill_test_mode) },
+        { name = "CHECKOUT_SUCCESS_URL", value = local.web_base_url != "" ? "${local.web_base_url}/billing/success" : "http://localhost:3000/billing/success" },
+        { name = "CHECKOUT_CANCEL_URL", value = local.web_base_url != "" ? "${local.web_base_url}/billing/cancel" : "http://localhost:3000/billing/cancel" }
       ],
       local.web_base_url != "" ? [
         { name = "APP_BASE_URL", value = local.web_base_url },
@@ -1169,8 +1076,9 @@ resource "aws_ecs_task_definition" "api" {
       { name = "DATABASE_URL", valueFrom = aws_secretsmanager_secret.database_url.arn },
       { name = "JWT_SECRET", valueFrom = module.secrets.jwt_secret_arn },
       { name = "CSRF_SECRET", valueFrom = module.secrets.csrf_secret_arn },
-      { name = "STRIPE_SECRET_KEY", valueFrom = module.secrets.stripe_secret_key_arn },
-      { name = "STRIPE_WEBHOOK_SECRET", valueFrom = module.secrets.stripe_webhook_secret_arn }
+      { name = "CCBILL_SALT", valueFrom = module.secrets.ccbill_salt_arn },
+      { name = "CCBILL_DATALINK_PASSWORD", valueFrom = module.secrets.ccbill_datalink_password_arn },
+      { name = "RESEND_API_KEY", valueFrom = module.secrets.resend_api_key_arn }
     ]
     healthCheck = {
       command     = ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
@@ -1252,11 +1160,13 @@ resource "aws_ecs_task_definition" "worker" {
       { name = "REDIS_URL", value = local.redis_url },
       { name = "CELERY_CONCURRENCY", value = "2" },
       { name = "ENABLE_NOTIFICATIONS", value = tostring(var.enable_notifications) },
-      { name = "ENABLE_SCHEDULED_POSTS", value = tostring(var.enable_scheduled_posts) }
+      { name = "ENABLE_SCHEDULED_POSTS", value = tostring(var.enable_scheduled_posts) },
+      { name = "AI_PROVIDER", value = var.ai_provider }
     ]
     secrets = [
       { name = "DATABASE_URL", valueFrom = aws_secretsmanager_secret.database_url.arn },
-      { name = "JWT_SECRET", valueFrom = module.secrets.jwt_secret_arn }
+      { name = "JWT_SECRET", valueFrom = module.secrets.jwt_secret_arn },
+      { name = "REPLICATE_API_TOKEN", valueFrom = module.secrets.replicate_api_token_arn }
     ]
   }])
 }

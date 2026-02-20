@@ -32,6 +32,7 @@ from app.modules.creators.service import (
     user_is_online,
 )
 from app.modules.billing.models import CreatorPlan
+from app.modules.billing.service import is_active_subscriber
 from app.modules.posts.schemas import PostOut, PostPage
 from app.modules.posts.service import get_creator_posts_page, _post_to_out, _post_to_out_locked
 
@@ -121,6 +122,8 @@ async def update_me(
 ) -> CreatorProfilePublic:
     update_data = payload.model_dump(exclude_unset=True)
     profile = await update_creator_profile(session, current_user.id, update_data)
+    # Refresh user to pick up phone/country changes
+    await session.refresh(current_user)
     user = current_user
     followers_count_result = await session.execute(
         select(func.count(Follow.id)).where(Follow.creator_user_id == user.id)
@@ -144,6 +147,9 @@ async def update_me(
         is_following=False,
         subscription_price=plan_price,
         subscription_currency=plan_currency,
+        phone=user.phone,
+        country=user.country,
+        onboarding_state=user.onboarding_state,
         created_at=profile.created_at,
         updated_at=profile.updated_at,
     )
@@ -185,6 +191,9 @@ async def get_me(
         is_following=False,
         subscription_price=plan_price,
         subscription_currency=plan_currency,
+        phone=user.phone,
+        country=user.country,
+        onboarding_state=user.onboarding_state,
         created_at=profile.created_at,
         updated_at=profile.updated_at,
     )
@@ -230,6 +239,9 @@ async def get_creator(
     )
     posts_count = await get_posts_count(session, user.id)
     plan_price, plan_currency = await _get_plan_price(session, user.id)
+    subscriber = False
+    if current_user_id:
+        subscriber = await is_active_subscriber(session, current_user_id, user.id)
     return CreatorProfilePublic(
         user_id=user.id,
         handle=profile.handle or "",
@@ -244,6 +256,7 @@ async def get_creator(
         followers_count=followers_count,
         posts_count=posts_count,
         is_following=is_following,
+        is_subscriber=subscriber,
         subscription_price=plan_price,
         subscription_currency=plan_currency,
         created_at=profile.created_at,

@@ -71,7 +71,7 @@ export default function FeaturePage({ params }: { params: { feature: string } })
         <h2 className="font-display text-xl font-semibold text-foreground text-center">Why creators choose this</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           {data.benefits.map((benefit) => (
-            <div key={benefit.title} className="rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-6">
+            <div key={benefit.title} className="rounded-2xl border border-white/[0.06] bg-card p-6">
               <h3 className="text-sm font-semibold text-foreground">{benefit.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{benefit.description}</p>
             </div>
@@ -84,7 +84,7 @@ export default function FeaturePage({ params }: { params: { feature: string } })
         <h2 className="font-display text-xl font-semibold text-foreground text-center">How it works</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           {data.details.map((detail) => (
-            <div key={detail.title} className="rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-6">
+            <div key={detail.title} className="rounded-2xl border border-white/[0.06] bg-card p-6">
               <h3 className="text-sm font-semibold text-foreground">{detail.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{detail.description}</p>
             </div>
@@ -111,7 +111,7 @@ export default function FeaturePage({ params }: { params: { feature: string } })
       </section>
 
       {/* CTA */}
-      <section className="rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-8 text-center">
+      <section className="rounded-2xl border border-white/[0.06] bg-card p-8 text-center">
         <h2 className="font-display text-xl font-bold text-foreground">Ready to get started?</h2>
         <p className="mx-auto mt-3 max-w-lg text-sm text-muted-foreground">
           Create your creator account in under 5 minutes. No upfront costs.

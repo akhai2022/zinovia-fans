@@ -1,4 +1,4 @@
-"""Print current subscriptions from DB for debugging (Stripe E2E). Run: python -m app.tools.print_subscriptions."""
+"""Print current subscriptions from DB for debugging. Run: python -m app.tools.print_subscriptions."""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ async def run() -> None:
         print(
             f"  fan={sub.fan_user_id} creator={sub.creator_user_id} "
             f"status={sub.status} period_end={sub.current_period_end} "
-            f"stripe_sub={sub.stripe_subscription_id or '-'} active_effective={active}"
+            f"ccbill_sub={sub.ccbill_subscription_id or '-'} active_effective={active}"
         )
 
 

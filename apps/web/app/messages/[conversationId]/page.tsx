@@ -3,8 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
 import { z } from "zod";
 import { AuthService } from "@zinovia/contracts";
 import { getMessages, getMediaDownloadUrl, listConversations, sendMessage, type MessageOut } from "@/features/messaging/api";
@@ -14,57 +12,16 @@ import { Page } from "@/components/brand/Page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Modal } from "@/components/ui/modal";
 import { LockedMediaCard } from "@/components/media/LockedMediaCard";
 
 const DEFAULT_CURRENCY = "eur";
 const MIN_PPV_CENTS = 100;
 const MAX_PPV_CENTS = 20000;
 const ENABLE_PPVM = process.env.NEXT_PUBLIC_ENABLE_PPVM === "true";
-const STRIPE_PK = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
-const stripePromise = STRIPE_PK ? loadStripe(STRIPE_PK) : null;
 
 const lockSchema = z.object({
   priceDollars: z.coerce.number().min(1).max(200),
 });
-
-function UnlockPaymentForm({
-  onSuccess,
-}: {
-  onSuccess: () => void;
-}) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const submit = async () => {
-    if (!stripe || !elements) return;
-    setSubmitting(true);
-    setError(null);
-    const res = await stripe.confirmPayment({
-      elements,
-      redirect: "if_required",
-    });
-    if (res.error) {
-      setError(res.error.message || "Payment failed.");
-      setSubmitting(false);
-      return;
-    }
-    onSuccess();
-    setSubmitting(false);
-  };
-
-  return (
-    <div className="space-y-3">
-      <PaymentElement />
-      {error && <p className="text-sm text-destructive">{error}</p>}
-      <Button size="sm" onClick={submit} disabled={submitting || !stripe || !elements}>
-        {submitting ? "Processing..." : "Confirm unlock"}
-      </Button>
-    </div>
-  );
-}
 
 export default function ConversationPage() {
   const { conversationId } = useParams<{ conversationId: string }>();
@@ -76,8 +33,6 @@ export default function ConversationPage() {
   const [isCreator, setIsCreator] = useState(false);
   const [lockEnabled, setLockEnabled] = useState(false);
   const [priceInput, setPriceInput] = useState("5");
-  const [unlockClientSecret, setUnlockClientSecret] = useState<string | null>(null);
-  const [unlockingMediaId, setUnlockingMediaId] = useState<string | null>(null);
   const [composerError, setComposerError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -151,19 +106,16 @@ export default function ConversationPage() {
   };
 
   const startUnlock = async (messageMediaId: string) => {
-    setUnlockingMediaId(messageMediaId);
     const intent = await createPpvIntent(messageMediaId);
     if (intent.status === "ALREADY_UNLOCKED") {
       await load();
-      setUnlockingMediaId(null);
       return;
     }
-    if (!intent.client_secret) {
+    if (!intent.checkout_url) {
       setComposerError("Unable to initialize payment.");
-      setUnlockingMediaId(null);
       return;
     }
-    setUnlockClientSecret(intent.client_secret);
+    window.location.assign(intent.checkout_url);
   };
 
   return (
@@ -200,7 +152,7 @@ export default function ConversationPage() {
                           <LockedMediaCard
                             title="Locked media"
                             priceCents={media.price_cents}
-                            currency={media.currency || "usd"}
+                            currency={media.currency || "eur"}
                             onUnlock={() => startUnlock(media.id)}
                           />
                         </div>
@@ -211,26 +163,6 @@ export default function ConversationPage() {
               </li>
             ))}
           </ul>
-          <Modal
-            open={Boolean(unlockingMediaId && unlockClientSecret && stripePromise)}
-            onClose={() => {
-              setUnlockClientSecret(null);
-              setUnlockingMediaId(null);
-            }}
-            title="Unlock content"
-          >
-            {unlockClientSecret && stripePromise && (
-              <Elements stripe={stripePromise} options={{ clientSecret: unlockClientSecret }}>
-                <UnlockPaymentForm
-                  onSuccess={async () => {
-                    setUnlockClientSecret(null);
-                    setUnlockingMediaId(null);
-                    await load();
-                  }}
-                />
-              </Elements>
-            )}
-          </Modal>
           <Card className="mt-4 p-3">
             <Input
               value={text}
@@ -258,7 +190,7 @@ export default function ConversationPage() {
                   <Input
                     value={priceInput}
                     onChange={(e) => setPriceInput(e.target.value)}
-                    placeholder="Price in dollars (e.g. 5)"
+                    placeholder="Price in euros (e.g. 5)"
                   />
                 )}
               </div>
@@ -291,4 +223,3 @@ export default function ConversationPage() {
     </Page>
   );
 }
-

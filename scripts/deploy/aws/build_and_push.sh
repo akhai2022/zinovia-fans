@@ -7,9 +7,10 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 TF_DIR="${TF_DIR:-$REPO_ROOT/infra/aws/terraform}"
 ENV="${ENV:-prod}"
 API_BASE_URL="${API_BASE_URL:-https://api.zinovia.ai}"
-# Disabled: the web container cannot resolve api.zinovia.ai from inside the VPC.
-# Browser calls https://api.zinovia.ai directly; CORS is configured to allow this.
-API_SAME_ORIGIN_PROXY="${API_SAME_ORIGIN_PROXY:-false}"
+# Same-origin proxy: browser calls /api/* which Next.js rewrites to the API.
+# Avoids cross-origin cookie issues (Safari ITP, Chrome third-party restrictions).
+# The web container reaches api.zinovia.ai via NAT gateway.
+API_SAME_ORIGIN_PROXY="${API_SAME_ORIGIN_PROXY:-true}"
 STRIPE_PUBLISHABLE_KEY="${STRIPE_PUBLISHABLE_KEY:-}"
 RETRY_ATTEMPTS="${RETRY_ATTEMPTS:-5}"
 RETRY_SLEEP_BASE_SECONDS="${RETRY_SLEEP_BASE_SECONDS:-2}"

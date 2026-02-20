@@ -1,4 +1,4 @@
-"""Billing tests: webhook idempotency, subscription visibility, checkout 501 (no Stripe API calls)."""
+"""Billing tests: CCBill webhook idempotency, subscription visibility, checkout 501."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from conftest import signup_verify_login
 
 from app.core.settings import get_settings
-from app.modules.billing.models import StripeEvent, Subscription
+from app.modules.billing.models import PaymentEvent, Subscription
 
 
 def _unique_email() -> str:
@@ -21,10 +21,10 @@ def _unique_email() -> str:
 
 
 @pytest.mark.asyncio
-async def test_checkout_returns_501_when_stripe_not_configured(
+async def test_checkout_returns_501_when_ccbill_not_configured(
     async_client: AsyncClient,
 ) -> None:
-    """POST /billing/checkout/subscription returns 501 with clear message when Stripe keys not configured."""
+    """POST /billing/checkout/subscription returns 501 when CCBill not configured."""
     fan_email = _unique_email()
     creator_email = _unique_email()
     token_c = await signup_verify_login(async_client, creator_email, display_name="Creator")
@@ -44,37 +44,34 @@ async def test_checkout_returns_501_when_stripe_not_configured(
     data = r.json()
     assert "detail" in data
     detail_msg = data["detail"]["message"] if isinstance(data["detail"], dict) else data["detail"]
-    assert "stripe" in detail_msg.lower() or "configured" in detail_msg.lower()
+    assert "configured" in detail_msg.lower() or "payment" in detail_msg.lower()
 
 
 @pytest.mark.asyncio
-async def test_webhook_stripe_idempotent_duplicate_ignored(
+async def test_webhook_ccbill_idempotent_duplicate_ignored(
     async_client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Same event_id sent twice: first processed, second returns duplicate_ignored (test bypass)."""
-    monkeypatch.setenv("STRIPE_WEBHOOK_TEST_BYPASS", "true")
+    """Same event sent twice: first processed, second returns duplicate_ignored (test bypass)."""
+    monkeypatch.setenv("CCBILL_WEBHOOK_TEST_BYPASS", "true")
     get_settings.cache_clear()
     try:
-        event_id = f"evt_test_{uuid.uuid4().hex}"
+        transaction_id = f"txn_{uuid.uuid4().hex[:12]}"
         body = {
-            "id": event_id,
-            "type": "invoice.paid",
-            "data": {"object": {"id": "in_xxx", "subscription": None, "amount_paid": 0}},
+            "eventType": "NewSaleFailure",
+            "transactionId": transaction_id,
         }
         r1 = await async_client.post(
-            "/billing/webhooks/stripe",
+            "/billing/webhooks/ccbill",
             json=body,
-            headers={"Stripe-Signature": "bypass"},
         )
         assert r1.status_code == 200
         data1 = r1.json()
         assert data1["status"] in ("processed", "duplicate_ignored")
 
         r2 = await async_client.post(
-            "/billing/webhooks/stripe",
+            "/billing/webhooks/ccbill",
             json=body,
-            headers={"Stripe-Signature": "bypass"},
         )
         assert r2.status_code == 200
         assert r2.json()["status"] == "duplicate_ignored"
@@ -87,7 +84,7 @@ async def test_subscriber_sees_subscribers_posts(
     async_client: AsyncClient,
     db_session: AsyncSession,
 ) -> None:
-    """Creator + SUBSCRIBERS post; active subscription row: fan sees post (no Stripe API)."""
+    """Creator + SUBSCRIBERS post; active subscription row: fan sees post."""
     email_creator = _unique_email()
     email_fan = _unique_email()
     token_c = await signup_verify_login(async_client, email_creator, display_name="Creator")
@@ -118,7 +115,7 @@ async def test_subscriber_sees_subscribers_posts(
         fan_user_id=UUID(fan_id) if isinstance(fan_id, str) else fan_id,
         creator_user_id=UUID(creator_id) if isinstance(creator_id, str) else creator_id,
         status="active",
-        stripe_subscription_id=f"sub_{uuid.uuid4().hex}",
+        ccbill_subscription_id=f"sub_{uuid.uuid4().hex}",
     )
     db_session.add(sub)
     await db_session.commit()
@@ -138,10 +135,7 @@ async def test_subscriber_sees_subscribers_posts(
 async def test_non_subscriber_cannot_see_subscribers_posts(
     async_client: AsyncClient,
 ) -> None:
-    """Creator + SUBSCRIBERS post; fan with no subscription does not see it on creator page (include_locked=false).
-
-    Feed shows SUBSCRIBERS posts as locked teasers to encourage subscription.
-    """
+    """Creator + SUBSCRIBERS post; fan with no subscription does not see it (include_locked=false)."""
     email_creator = _unique_email()
     email_fan = _unique_email()
     token_c = await signup_verify_login(async_client, email_creator, display_name="Creator")
@@ -217,7 +211,7 @@ async def test_billing_status_returns_authenticated_fan_subscriptions(
         fan_user_id=UUID(fan_id),
         creator_user_id=UUID(creator_id),
         status="active",
-        stripe_subscription_id=f"sub_{uuid.uuid4().hex}",
+        ccbill_subscription_id=f"sub_{uuid.uuid4().hex}",
     )
     db_session.add(sub)
     await db_session.commit()
@@ -233,182 +227,31 @@ async def test_billing_status_returns_authenticated_fan_subscriptions(
 
 
 @pytest.mark.asyncio
-async def test_webhook_missing_signature_returns_400(
+async def test_webhook_missing_event_type_returns_400(
     async_client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """POST /billing/webhooks/stripe without Stripe-Signature returns 400 when bypass is off."""
-    monkeypatch.setenv("STRIPE_WEBHOOK_TEST_BYPASS", "false")
-    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_test")
+    """POST /billing/webhooks/ccbill without eventType returns 400."""
+    monkeypatch.setenv("CCBILL_WEBHOOK_TEST_BYPASS", "true")
     get_settings.cache_clear()
     try:
         r = await async_client.post(
-            "/billing/webhooks/stripe",
-            json={"id": "evt_1", "type": "checkout.session.completed"},
-            headers={},
+            "/billing/webhooks/ccbill",
+            json={"transactionId": "txn_123"},
         )
         assert r.status_code == 400
-        assert r.json().get("detail", {}).get("code") == "missing_signature"
     finally:
         get_settings.cache_clear()
 
 
 @pytest.mark.asyncio
-async def test_webhook_valid_signature_accepted_with_mock_construct_event(
-    async_client: AsyncClient,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    class _Evt:
-        def __init__(self, event_id: str, event_type: str) -> None:
-            self.id = event_id
-            self.type = event_type
-
-        def get(self, key: str, default: object = None) -> object:
-            if key == "id":
-                return self.id
-            if key == "type":
-                return self.type
-            return default
-
-    def _construct_event(*, payload: bytes, sig_header: str, secret: str) -> _Evt:
-        assert payload
-        assert sig_header
-        assert secret == "whsec_primary"
-        return _Evt(f"evt_{uuid.uuid4().hex}", "unknown.event.type")
-
-    monkeypatch.setenv("STRIPE_WEBHOOK_TEST_BYPASS", "false")
-    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_primary")
-    monkeypatch.setattr(
-        "app.modules.billing.service.stripe.Webhook.construct_event",
-        _construct_event,
-    )
-    get_settings.cache_clear()
-    try:
-        response = await async_client.post(
-            "/billing/webhooks/stripe",
-            content=b'{"ok":true}',
-            headers={"Stripe-Signature": "t=1,v1=fakesig"},
-        )
-        assert response.status_code == 200
-        assert response.json()["status"] == "ignored"
-    finally:
-        get_settings.cache_clear()
-
-
-@pytest.mark.asyncio
-async def test_webhook_invalid_signature_rejected(
-    async_client: AsyncClient,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    import stripe
-
-    def _construct_event(*, payload: bytes, sig_header: str, secret: str):
-        raise stripe.error.SignatureVerificationError(
-            message="bad sig",
-            sig_header=sig_header,
-            http_body=payload.decode("utf-8", errors="ignore"),
-        )
-
-    monkeypatch.setenv("STRIPE_WEBHOOK_TEST_BYPASS", "false")
-    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_primary")
-    monkeypatch.setattr(
-        "app.modules.billing.service.stripe.Webhook.construct_event",
-        _construct_event,
-    )
-    get_settings.cache_clear()
-    try:
-        response = await async_client.post(
-            "/billing/webhooks/stripe",
-            content=b'{"ok":true}',
-            headers={"Stripe-Signature": "t=1,v1=bad"},
-        )
-        assert response.status_code == 400
-        assert response.json().get("detail", {}).get("code") == "invalid_signature"
-    finally:
-        get_settings.cache_clear()
-
-
-@pytest.mark.asyncio
-async def test_webhook_duplicate_event_noop_no_side_effects(
-    async_client: AsyncClient,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    event_id = f"evt_duplicate_{uuid.uuid4().hex}"
-
-    class _Evt:
-        id = event_id
-        type = "unknown.event.type"
-
-        def get(self, key: str, default: object = None) -> object:
-            if key == "id":
-                return self.id
-            if key == "type":
-                return self.type
-            return default
-
-    async def _handle(*args, **kwargs):
-        _handle.calls += 1
-        return "ignored"
-
-    _handle.calls = 0
-
-    monkeypatch.setenv("STRIPE_WEBHOOK_TEST_BYPASS", "false")
-    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_primary")
-    monkeypatch.setattr(
-        "app.modules.billing.service.stripe.Webhook.construct_event",
-        lambda **kwargs: _Evt(),
-    )
-    monkeypatch.setattr("app.modules.billing.router.handle_stripe_event", _handle)
-    get_settings.cache_clear()
-    try:
-        first = await async_client.post(
-            "/billing/webhooks/stripe",
-            content=b'{"ok":true}',
-            headers={"Stripe-Signature": "t=1,v1=ok"},
-        )
-        second = await async_client.post(
-            "/billing/webhooks/stripe",
-            content=b'{"ok":true}',
-            headers={"Stripe-Signature": "t=1,v1=ok"},
-        )
-        assert first.status_code == 200
-        assert second.status_code == 200
-        assert second.json()["status"] == "duplicate_ignored"
-        assert _handle.calls == 1
-    finally:
-        get_settings.cache_clear()
-
-
-@pytest.mark.asyncio
-async def test_webhook_no_secret_returns_501(
-    async_client: AsyncClient,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """POST /billing/webhooks/stripe when STRIPE_WEBHOOK_SECRET is not set returns 501."""
-    monkeypatch.setenv("STRIPE_WEBHOOK_TEST_BYPASS", "false")
-    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "")
-    get_settings.cache_clear()
-    try:
-        r = await async_client.post(
-            "/billing/webhooks/stripe",
-            json={"id": "evt_1", "type": "ping"},
-            headers={"Stripe-Signature": "x"},
-        )
-        assert r.status_code == 501
-        detail_msg = r.json().get("detail", {}).get("message", "") if isinstance(r.json().get("detail"), dict) else (r.json().get("detail") or "")
-        assert "stripe" in detail_msg.lower() or "configured" in detail_msg.lower()
-    finally:
-        get_settings.cache_clear()
-
-
-@pytest.mark.asyncio
-async def test_webhook_checkout_session_completed_upserts_subscription(
+async def test_webhook_new_sale_success_creates_subscription(
     async_client: AsyncClient,
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """With bypass: valid checkout.session.completed creates event row and subscription (ACTIVE). No Stripe network."""
-    monkeypatch.setenv("STRIPE_WEBHOOK_TEST_BYPASS", "true")
+    """CCBill NewSaleSuccess webhook creates subscription."""
+    monkeypatch.setenv("CCBILL_WEBHOOK_TEST_BYPASS", "true")
     get_settings.cache_clear()
     email_creator = _unique_email()
     email_fan = _unique_email()
@@ -418,32 +261,34 @@ async def test_webhook_checkout_session_completed_upserts_subscription(
     token_f = await signup_verify_login(async_client, email_fan, display_name="Fan")
     me_f = await async_client.get("/auth/me", headers={"Authorization": f"Bearer {token_f}"})
     fan_id = me_f.json()["id"]
-    event_id = f"evt_cs_{uuid.uuid4().hex}"
+
+    subscription_id = f"sub_{uuid.uuid4().hex[:12]}"
+    transaction_id = f"txn_{uuid.uuid4().hex[:12]}"
     body = {
-        "id": event_id,
-        "type": "checkout.session.completed",
-        "data": {
-            "object": {
-                "mode": "subscription",
-                "subscription": None,
-                "metadata": {"fan_user_id": fan_id, "creator_user_id": creator_id},
-                "customer": "cus_mock",
-            }
-        },
+        "eventType": "NewSaleSuccess",
+        "subscriptionId": subscription_id,
+        "transactionId": transaction_id,
+        "zv_fan_user_id": fan_id,
+        "zv_creator_user_id": creator_id,
+        "zv_payment_type": "SUBSCRIPTION",
+        "billedInitialPrice": "4.99",
+        "billedCurrencyCode": "978",
     }
     try:
         r = await async_client.post(
-            "/billing/webhooks/stripe",
+            "/billing/webhooks/ccbill",
             json=body,
-            headers={"Stripe-Signature": "bypass"},
         )
         assert r.status_code == 200
         assert r.json()["status"] == "processed"
 
-        result = await db_session.execute(select(StripeEvent).where(StripeEvent.event_id == event_id))
+        # Verify event was recorded
+        event_key = f"NewSaleSuccess:{transaction_id}"
+        result = await db_session.execute(select(PaymentEvent).where(PaymentEvent.event_id == event_key))
         ev = result.scalar_one_or_none()
         assert ev is not None
 
+        # Verify subscription was created
         sub_result = await db_session.execute(
             select(Subscription).where(
                 Subscription.fan_user_id == UUID(fan_id),
@@ -453,11 +298,12 @@ async def test_webhook_checkout_session_completed_upserts_subscription(
         sub = sub_result.scalar_one_or_none()
         assert sub is not None
         assert sub.status == "active"
+        assert sub.ccbill_subscription_id == subscription_id
 
+        # Duplicate event is ignored
         r2 = await async_client.post(
-            "/billing/webhooks/stripe",
+            "/billing/webhooks/ccbill",
             json=body,
-            headers={"Stripe-Signature": "bypass"},
         )
         assert r2.status_code == 200
         assert r2.json()["status"] == "duplicate_ignored"
@@ -466,12 +312,12 @@ async def test_webhook_checkout_session_completed_upserts_subscription(
 
 
 @pytest.mark.asyncio
-async def test_webhook_invoice_payment_failed_marks_subscription_past_due(
+async def test_webhook_renewal_failure_marks_subscription_past_due(
     async_client: AsyncClient,
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("STRIPE_WEBHOOK_TEST_BYPASS", "true")
+    monkeypatch.setenv("CCBILL_WEBHOOK_TEST_BYPASS", "true")
     get_settings.cache_clear()
     creator_email = _unique_email()
     fan_email = _unique_email()
@@ -488,26 +334,25 @@ async def test_webhook_invoice_payment_failed_marks_subscription_past_due(
         headers={"Authorization": f"Bearer {fan_token}"},
     )
     fan_id = UUID(fan_me.json()["id"])
-    stripe_sub_id = f"sub_{uuid.uuid4().hex}"
+    ccbill_sub_id = f"sub_{uuid.uuid4().hex[:12]}"
     sub = Subscription(
         fan_user_id=fan_id,
         creator_user_id=creator_id,
         status="active",
-        stripe_subscription_id=stripe_sub_id,
+        ccbill_subscription_id=ccbill_sub_id,
     )
     db_session.add(sub)
     await db_session.commit()
 
     body = {
-        "id": f"evt_fail_{uuid.uuid4().hex}",
-        "type": "invoice.payment_failed",
-        "data": {"object": {"id": "in_failed", "subscription": stripe_sub_id}},
+        "eventType": "RenewalFailure",
+        "subscriptionId": ccbill_sub_id,
+        "transactionId": f"txn_{uuid.uuid4().hex[:12]}",
     }
     try:
         response = await async_client.post(
-            "/billing/webhooks/stripe",
+            "/billing/webhooks/ccbill",
             json=body,
-            headers={"Stripe-Signature": "bypass"},
         )
         assert response.status_code == 200
         await db_session.refresh(sub)
@@ -517,22 +362,22 @@ async def test_webhook_invoice_payment_failed_marks_subscription_past_due(
 
 
 @pytest.mark.asyncio
-async def test_billing_health_reports_test_mode(
+async def test_billing_health_reports_status(
     async_client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_123")
-    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_test")
-    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET_PREVIOUS", "whsec_old")
+    monkeypatch.setenv("CCBILL_ACCOUNT_NUMBER", "900000")
+    monkeypatch.setenv("CCBILL_SUB_ACCOUNT", "0000")
+    monkeypatch.setenv("CCBILL_FLEX_FORM_ID", "test-form")
+    monkeypatch.setenv("CCBILL_SALT", "test-salt")
     monkeypatch.setenv("ENVIRONMENT", "local")
     get_settings.cache_clear()
     try:
         response = await async_client.get("/billing/health")
         assert response.status_code == 200
         payload = response.json()
-        assert payload["stripe_mode"] == "test"
-        assert payload["stripe_configured"] is True
+        assert payload["payment_provider"] == "ccbill"
+        assert payload["configured"] is True
         assert payload["webhook_configured"] is True
-        assert payload["webhook_previous_configured"] is True
     finally:
         get_settings.cache_clear()

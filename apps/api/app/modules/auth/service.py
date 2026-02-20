@@ -62,8 +62,6 @@ async def authenticate_user(session: AsyncSession, email: str, password: str) ->
     # Block login for users who haven't verified their email yet.
     if user.onboarding_state == "CREATED":
         raise AppError(status_code=401, detail="email_not_verified")
-    user.last_login_at = datetime.now(UTC)
-    await session.commit()
     return user
 
 

@@ -1,19 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { MediaService } from "@/features/media/api";
+import { blurhashToDataURL } from "@/lib/blurhash";
 import "@/lib/api";
 
-/** Session-only cache: assetId -> signed URL. Avoids refetch when same asset is used in multiple cells. */
-const signedUrlCache = new Map<string, string>();
+/** Session-only cache: assetId -> { url, blurhash?, dominantColor? }. */
+type CachedMedia = { url: string; blurhash?: string; dominantColor?: string };
+const mediaCache = new Map<string, CachedMedia>();
 
 const WATERMARK_SRC = "/brand/zinovia-verified.svg";
 
 /**
  * Renders a single post media asset by fetching a signed download URL.
  * Uses in-memory cache so repeated mounts (e.g. grid + feed) don't refetch.
- * Loading/error: same-size placeholder to avoid layout shift.
+ * Loading state: blurhash canvas placeholder (or dominant color, or muted gray).
  * Optional watermark overlay (e.g. for creator profile grid only).
  */
 export function PostMediaImage({
@@ -21,27 +23,46 @@ export function PostMediaImage({
   variant,
   className,
   watermark = false,
+  initialBlurhash,
+  initialDominantColor,
 }: {
   assetId: string;
-  variant?: "thumb" | "grid" | "full" | "poster";
+  variant?: "thumb" | "grid" | "full" | "poster" | "teaser";
   className?: string;
   /** Show "Validated by Zinovia Fans" badge bottom-right (e.g. profile grid only) */
   watermark?: boolean;
+  /** Pre-populated from post.media_previews — shows placeholder instantly */
+  initialBlurhash?: string;
+  /** Pre-populated from post.media_previews — fallback background color */
+  initialDominantColor?: string;
 }) {
   const cacheKey = variant ? `${assetId}:${variant}` : assetId;
-  const [url, setUrl] = useState<string | null>(() => signedUrlCache.get(cacheKey) ?? null);
+  const cached = mediaCache.get(cacheKey);
+  const [url, setUrl] = useState<string | null>(cached?.url ?? null);
+  const [blurhash, setBlurhash] = useState<string | undefined>(cached?.blurhash ?? initialBlurhash);
+  const [dominantColor, setDominantColor] = useState<string | undefined>(cached?.dominantColor ?? initialDominantColor);
 
   useEffect(() => {
-    if (signedUrlCache.has(cacheKey)) {
-      setUrl(signedUrlCache.get(cacheKey)!);
+    if (mediaCache.has(cacheKey)) {
+      const c = mediaCache.get(cacheKey)!;
+      setUrl(c.url);
+      setBlurhash(c.blurhash);
+      setDominantColor(c.dominantColor);
       return;
     }
     let cancelled = false;
     MediaService.mediaDownloadUrl(assetId, variant ?? null)
       .then((res) => {
-        if (!cancelled && res.download_url) {
-          signedUrlCache.set(cacheKey, res.download_url);
+        if (cancelled) return;
+        if (res.download_url) {
+          mediaCache.set(cacheKey, {
+            url: res.download_url,
+            blurhash: (res as Record<string, unknown>).blurhash as string | undefined,
+            dominantColor: (res as Record<string, unknown>).dominant_color as string | undefined,
+          });
           setUrl(res.download_url);
+          setBlurhash((res as Record<string, unknown>).blurhash as string | undefined);
+          setDominantColor((res as Record<string, unknown>).dominant_color as string | undefined);
         }
       })
       .catch(() => {
@@ -52,15 +73,25 @@ export function PostMediaImage({
     };
   }, [assetId, cacheKey, variant]);
 
-  const placeholder = (
-    <div
-      className={className}
-      style={{ background: "var(--muted)" }}
-      aria-hidden
-    />
-  );
+  // Decode blurhash to a data URL for the placeholder background
+  const blurhashDataUrl = useMemo(() => {
+    if (!blurhash || typeof window === "undefined") return undefined;
+    try {
+      return blurhashToDataURL(blurhash);
+    } catch {
+      return undefined;
+    }
+  }, [blurhash]);
 
-  if (!url) return placeholder;
+  const placeholderStyle: React.CSSProperties = blurhashDataUrl
+    ? { backgroundImage: `url(${blurhashDataUrl})`, backgroundSize: "cover" }
+    : dominantColor
+      ? { background: dominantColor }
+      : { background: "var(--muted)" };
+
+  if (!url) {
+    return <div className={className} style={placeholderStyle} aria-hidden />;
+  }
 
   return (
     <div className="relative h-full w-full">

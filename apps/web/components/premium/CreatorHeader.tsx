@@ -71,7 +71,7 @@ export function CreatorHeader({
           </span>
           {badge === "verified" && (
             <span
-              className="shrink-0 rounded-full bg-success-bg px-1.5 py-0.5 text-premium-label uppercase tracking-wide text-success-500"
+              className="shrink-0 rounded-full bg-brand-gold/12 px-1.5 py-0.5 text-premium-label uppercase tracking-wide text-brand-gold"
               aria-label="Verified creator"
             >
               Verified

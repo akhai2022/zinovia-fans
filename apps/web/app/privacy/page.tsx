@@ -33,8 +33,8 @@ export default function PrivacyPage() {
             details you provide during registration and onboarding.
           </li>
           <li>
-            <strong>Payment information:</strong> Billing details are processed directly by Stripe. We store
-            only Stripe customer and subscription identifiers — never full card numbers.
+            <strong>Payment information:</strong> Billing details are processed directly by our secure payment processor. We store
+            only customer and subscription identifiers — never full card numbers.
           </li>
           <li>
             <strong>Usage data:</strong> Pages visited, features used, device type, browser, IP address, and
@@ -64,7 +64,7 @@ export default function PrivacyPage() {
           We do not sell your personal information. We share data only with:
         </p>
         <ul className="list-disc space-y-2 pl-6 text-sm text-foreground/90">
-          <li><strong>Stripe:</strong> Payment processing.</li>
+          <li><strong>Payment processor:</strong> Secure payment processing.</li>
           <li><strong>AWS:</strong> Infrastructure hosting and email delivery (Amazon SES).</li>
           <li><strong>Law enforcement:</strong> When required by applicable law or court order.</li>
         </ul>

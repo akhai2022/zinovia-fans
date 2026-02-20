@@ -9,6 +9,7 @@ export type CreatorProfilePublic = {
     avatar_media_id: (string | null);
     banner_media_id: (string | null);
     bio: (string | null);
+    country?: (string | null);
     created_at: string;
     discoverable: boolean;
     display_name: string;
@@ -17,6 +18,8 @@ export type CreatorProfilePublic = {
     is_following?: boolean;
     is_online?: boolean;
     nsfw: boolean;
+    onboarding_state?: (string | null);
+    phone?: (string | null);
     posts_count?: number;
     /**
      * ISO 4217 currency code (e.g. eur)

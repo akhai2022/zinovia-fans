@@ -14,7 +14,7 @@ export function getServerApiBaseUrl(): string {
 export function getBrowserApiBaseUrl(): string {
   const useSameOriginProxy = process.env.NEXT_PUBLIC_API_SAME_ORIGIN_PROXY === "true";
   if (useSameOriginProxy) {
-    return "/api";
+    return typeof window !== "undefined" ? `${window.location.origin}/api` : "/api";
   }
   const configured = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "";
   if (configured) {

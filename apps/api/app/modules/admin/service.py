@@ -67,9 +67,14 @@ async def list_creators_admin(
             "handle": profile.handle if profile else None,
             "display_name": profile.display_name if profile else user.email.split("@")[0],
             "bio": profile.bio if profile else None,
+            "phone": user.phone,
+            "country": user.country,
             "discoverable": profile.discoverable if profile else False,
             "featured": getattr(profile, "featured", False) if profile else False,
             "verified": profile.verified if profile else False,
+            "signup_ip": user.signup_ip,
+            "last_login_ip": user.last_login_ip,
+            "last_login_at": user.last_login_at,
             "created_at": user.created_at,
         })
     return items, total

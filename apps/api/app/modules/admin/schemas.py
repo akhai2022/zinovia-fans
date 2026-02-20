@@ -15,9 +15,14 @@ class AdminCreatorOut(BaseModel):
     handle: str | None
     display_name: str
     bio: str | None
+    phone: str | None = None
+    country: str | None = None
     discoverable: bool
     featured: bool
     verified: bool = False
+    signup_ip: str | None = None
+    last_login_ip: str | None = None
+    last_login_at: datetime | None = None
     created_at: datetime
 
 

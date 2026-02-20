@@ -9,15 +9,15 @@ import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class KycService {
     /**
-     * Mock Kyc Complete
-     * Simulate KYC provider completion. Available in local/staging or when ENABLE_MOCK_KYC=true.
+     * Kyc Complete
+     * Complete KYC verification after user submits documents.
      * @returns any Successful Response
      * @throws ApiError
      */
-    public static kycMockComplete(): CancelablePromise<Record<string, any>> {
+    public static kycComplete(): CancelablePromise<Record<string, any>> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/kyc/mock-complete',
+            url: '/kyc/complete',
         });
     }
     /**

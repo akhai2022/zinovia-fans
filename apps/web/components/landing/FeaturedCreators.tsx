@@ -22,7 +22,7 @@ function CreatorCard({ name, handle, niche, image, subscribeLabel }: typeof CREA
       className={cn(
         "group relative flex-shrink-0 overflow-hidden rounded-2xl",
         "w-[220px] sm:w-[240px] md:w-full",
-        "border border-white/[0.06] bg-[rgb(18,18,24)]",
+        "border border-white/[0.06] bg-card",
         "transition-all duration-300",
         "hover:-translate-y-1 hover:border-white/10 hover:shadow-lg",
         "motion-reduce:hover:translate-y-0"
@@ -47,7 +47,7 @@ function CreatorCard({ name, handle, niche, image, subscribeLabel }: typeof CREA
         </div>
       </div>
       <div className="flex items-center justify-between px-4 py-3">
-        <span className="rounded-full bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-400">
+        <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
           {niche}
         </span>
         <Button size="sm" className="btn-cta-primary h-8 px-4 text-xs" asChild>

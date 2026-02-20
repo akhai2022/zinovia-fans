@@ -42,10 +42,10 @@ const STEPS = [
   {
     step: "03",
     title: "Get paid",
-    description: "Earn from monthly subscriptions, paid unlocks, tips, and direct messages. Stripe Connect processes your payouts within 48 hours, directly to your bank account.",
+    description: "Earn from monthly subscriptions, paid unlocks, tips, and direct messages. Payouts are processed within 48 hours via secure bank transfer, directly to your bank account.",
     details: [
       "4 revenue streams in one platform",
-      "48-hour payouts via Stripe Connect",
+      "48-hour payouts via secure bank transfer",
       "No minimum payout threshold",
       "40+ countries supported",
     ],
@@ -98,7 +98,7 @@ export default function HowItWorksPage() {
       {/* Steps */}
       <section className="space-y-6">
         {STEPS.map(({ step, title, description, details }) => (
-          <div key={step} className="rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-8">
+          <div key={step} className="rounded-2xl border border-white/[0.06] bg-card p-8">
             <div className="flex items-start gap-6">
               <span className="shrink-0 text-gradient-brand text-5xl font-bold">{step}</span>
               <div className="space-y-3">
@@ -125,8 +125,8 @@ export default function HowItWorksPage() {
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           {REVENUE_STREAMS.map((stream) => (
-            <div key={stream.title} className="flex gap-4 rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-6">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/10 text-violet-400">
+            <div key={stream.title} className="flex gap-4 rounded-2xl border border-white/[0.06] bg-card p-6">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" d={stream.icon} />
                 </svg>
@@ -159,7 +159,7 @@ export default function HowItWorksPage() {
       </section>
 
       {/* CTA */}
-      <section className="rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-8 text-center">
+      <section className="rounded-2xl border border-white/[0.06] bg-card p-8 text-center">
         <h2 className="font-display text-xl font-bold text-foreground">Ready to start?</h2>
         <p className="mx-auto mt-3 max-w-lg text-sm text-muted-foreground">
           Create your creator account in under 5 minutes. No upfront costs, no monthly fees.

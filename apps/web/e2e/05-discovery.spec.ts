@@ -1,12 +1,12 @@
 /**
- * Creator Discovery & Search — /creators page, profile page, search.
+ * STEP 05 — Creator discovery, search, public profiles.
  */
 
 import { test, expect } from "@playwright/test";
 import { apiFetch } from "./helpers";
 
-test.describe("Creator Discovery", () => {
-  test("GET /creators API returns list", async () => {
+test.describe("Creator Discovery API", () => {
+  test("GET /creators returns paginated list", async () => {
     const res = await apiFetch("/creators?page=1&page_size=10");
     expect(res.ok).toBe(true);
     expect(res.body).toHaveProperty("items");
@@ -14,15 +14,7 @@ test.describe("Creator Discovery", () => {
     expect(res.body).toHaveProperty("total");
   });
 
-  test("/creators page loads and shows grid", async ({ page }) => {
-    await page.goto("/creators");
-    await page.waitForLoadState("networkidle");
-    // Page should render without error
-    const heading = page.locator("h1, h2").first();
-    await expect(heading).toBeVisible({ timeout: 10000 });
-  });
-
-  test("creator search API works", async () => {
+  test("creator search with query works", async () => {
     const res = await apiFetch("/creators?q=test&page=1&page_size=5");
     expect(res.ok).toBe(true);
     expect(res.body).toHaveProperty("items");
@@ -35,11 +27,25 @@ test.describe("Creator Discovery", () => {
   });
 });
 
+test.describe("Creator Discovery UI", () => {
+  test("/creators page loads and shows content", async ({ page }) => {
+    await page.goto("/creators");
+    await page.waitForLoadState("networkidle");
+    const heading = page.locator("h1, h2").first();
+    await expect(heading).toBeVisible({ timeout: 10000 });
+  });
+
+  test("/search page loads", async ({ page }) => {
+    await page.goto("/search");
+    await page.waitForLoadState("networkidle");
+    expect(page.url()).toContain("/search");
+  });
+});
+
 test.describe("Creator Profile Page", () => {
   let firstHandle: string | null = null;
 
   test.beforeAll(async () => {
-    // Find a creator handle to test with
     const res = await apiFetch("/creators?page=1&page_size=1");
     if (res.ok && res.body.items?.length > 0) {
       firstHandle = res.body.items[0].handle;
@@ -50,19 +56,8 @@ test.describe("Creator Profile Page", () => {
     test.skip(!firstHandle, "No creators available to test");
     await page.goto(`/creators/${firstHandle}`);
     await page.waitForLoadState("networkidle");
-    // Check page doesn't show error
     const errorText = page.locator("text=Something went wrong");
-    const hasError = await errorText.count();
-    expect(hasError).toBe(0);
-  });
-
-  test("creator profile shows name and posts grid", async ({ page }) => {
-    test.skip(!firstHandle, "No creators available to test");
-    await page.goto(`/creators/${firstHandle}`);
-    await page.waitForLoadState("networkidle");
-    // Should have at least a display name somewhere
-    const body = await page.textContent("body");
-    expect(body).toBeTruthy();
+    expect(await errorText.count()).toBe(0);
   });
 
   test("creator API returns profile data", async () => {
@@ -78,5 +73,10 @@ test.describe("Creator Profile Page", () => {
     const res = await apiFetch(`/creators/${firstHandle}/posts?page_size=20&include_locked=true`);
     expect(res.ok).toBe(true);
     expect(res.body).toHaveProperty("items");
+  });
+
+  test("non-existent creator returns 404", async () => {
+    const res = await apiFetch("/creators/nonexistent_handle_xyz_999");
+    expect(res.status).toBe(404);
   });
 });

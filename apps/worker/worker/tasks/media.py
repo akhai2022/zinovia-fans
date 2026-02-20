@@ -1,4 +1,11 @@
-"""Media tasks: generate derived image variants (thumb, grid, full) with optional watermark."""
+"""Media tasks: generate derived image variants (thumb, grid, full) with optional watermark.
+
+Enhanced features:
+- Blurhash placeholder generation
+- Dominant color extraction
+- Attention-aware smart crops (face detection → saliency → center)
+- Blurred teaser variant for locked posts
+"""
 
 from __future__ import annotations
 
@@ -7,9 +14,12 @@ import logging
 import uuid
 from io import BytesIO
 
-from PIL import Image
+import blurhash as blurhash_lib
+import cv2
+import numpy as np
+from PIL import Image, ImageFilter
 from celery import shared_task
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.settings import get_settings
@@ -26,6 +36,9 @@ VARIANT_SPECS: dict[str, int] = {
     "grid": 600,
     "full": 1200,
 }
+
+TEASER_BLUR_RADIUS = 30
+SMART_CROP_GRID = 4  # NxN grid for saliency fallback
 
 
 def _derived_object_key(parent_key: str, variant: str) -> str:
@@ -52,6 +65,124 @@ def _strip_exif(img: Image.Image) -> Image.Image:
     out = img.copy()
     out.info.clear()
     return out
+
+
+# ---------------------------------------------------------------------------
+# Blurhash + dominant color
+# ---------------------------------------------------------------------------
+
+
+def _compute_blurhash(img: Image.Image) -> str:
+    """Compute a compact blurhash string from a PIL image (resized to ≤64px for speed)."""
+    small = img.copy()
+    small.thumbnail((64, 64), Image.Resampling.LANCZOS)
+    return blurhash_lib.encode(small, x_components=4, y_components=3)
+
+
+def _compute_dominant_color(img: Image.Image) -> str:
+    """Return hex dominant color (#RRGGBB) by resizing to 1×1."""
+    pixel = img.resize((1, 1), Image.Resampling.LANCZOS).getpixel((0, 0))
+    if isinstance(pixel, int):
+        return f"#{pixel:02x}{pixel:02x}{pixel:02x}"
+    r, g, b = pixel[0], pixel[1], pixel[2]
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
+# ---------------------------------------------------------------------------
+# Attention-aware smart crop
+# ---------------------------------------------------------------------------
+
+_FACE_CASCADE: cv2.CascadeClassifier | None = None
+
+
+def _get_face_cascade() -> cv2.CascadeClassifier:
+    """Lazy-load Haar cascade for frontal face detection."""
+    global _FACE_CASCADE
+    if _FACE_CASCADE is None:
+        cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+        _FACE_CASCADE = cv2.CascadeClassifier(cascade_path)
+    return _FACE_CASCADE
+
+
+def _compute_smart_crop(img: Image.Image, target_w: int, target_h: int) -> Image.Image:
+    """Crop img to target_w×target_h using attention-aware strategy.
+
+    Priority: face center → saliency hotspot → geometric center.
+    """
+    w, h = img.size
+    if w <= target_w and h <= target_h:
+        return img.copy()
+
+    # Determine the crop region center
+    cx, cy = w / 2, h / 2
+
+    # Try face detection
+    arr = np.array(img)
+    gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
+    cascade = _get_face_cascade()
+    faces = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+
+    if len(faces) > 0:
+        # Center on the largest face
+        largest = max(faces, key=lambda f: f[2] * f[3])
+        fx, fy, fw, fh = largest
+        cx = fx + fw / 2
+        cy = fy + fh / 2
+    else:
+        # Saliency fallback: find region with highest intensity variance
+        grid_n = SMART_CROP_GRID
+        cell_w, cell_h = w // grid_n, h // grid_n
+        if cell_w > 0 and cell_h > 0:
+            best_var = -1.0
+            for gi in range(grid_n):
+                for gj in range(grid_n):
+                    x0, y0 = gj * cell_w, gi * cell_h
+                    cell = gray[y0 : y0 + cell_h, x0 : x0 + cell_w]
+                    v = float(cell.var())
+                    if v > best_var:
+                        best_var = v
+                        cx = x0 + cell_w / 2
+                        cy = y0 + cell_h / 2
+
+    # Compute crop box centered on (cx, cy), clamped to image bounds
+    left = max(0, int(cx - target_w / 2))
+    top = max(0, int(cy - target_h / 2))
+    if left + target_w > w:
+        left = w - target_w
+    if top + target_h > h:
+        top = h - target_h
+    left = max(0, left)
+    top = max(0, top)
+
+    return img.crop((left, top, left + target_w, top + target_h))
+
+
+# ---------------------------------------------------------------------------
+# Teaser variant (heavy Gaussian blur for locked posts)
+# ---------------------------------------------------------------------------
+
+
+def _generate_teaser_image(img: Image.Image) -> Image.Image:
+    """Apply a heavy Gaussian blur suitable for locked-post teasers."""
+    return img.filter(ImageFilter.GaussianBlur(radius=TEASER_BLUR_RADIUS))
+
+
+# ---------------------------------------------------------------------------
+# DB helpers
+# ---------------------------------------------------------------------------
+
+
+async def _update_asset_placeholders(
+    parent_asset_id: uuid.UUID, bh: str, color: str
+) -> None:
+    """Store computed blurhash + dominant_color on the media_assets row."""
+    async with async_session_factory() as session:
+        await session.execute(
+            update(MediaObject)
+            .where(MediaObject.id == parent_asset_id)
+            .values(blurhash=bh, dominant_color=color)
+        )
+        await session.commit()
 
 
 async def _insert_derived(parent_asset_id: uuid.UUID, variant: str, object_key: str) -> None:
@@ -105,6 +236,16 @@ def _generate_one_variant(
     img = Image.open(BytesIO(raw))
     img = img.convert("RGB")
 
+    # Smart crop for thumb variant: attention-aware square crop before resize
+    if variant == "thumb":
+        w, h = img.size
+        crop_dim = min(w, h)
+        if w != h and crop_dim >= max_dim:
+            try:
+                img = _compute_smart_crop(img, crop_dim, crop_dim)
+            except Exception:
+                logger.warning("Smart crop failed, falling back to center crop", extra={"variant": variant})
+
     img = _resize_no_upscale(img, max_dim)
     img = _strip_exif(img)
 
@@ -151,7 +292,8 @@ def generate_derived_variants(
     owner_handle: str | None = None,
 ) -> dict[str, str]:
     """
-    Generate thumb, grid, full variants; optionally apply footer watermark.
+    Generate thumb, grid, full, teaser variants; compute blurhash + dominant color.
+    Optionally apply footer watermark. Uses attention-aware smart crops.
     Idempotent: skips variant if media_derived_assets already has (asset_id, variant).
     Original object_key is never modified.
     """
@@ -180,6 +322,45 @@ def generate_derived_variants(
         except Exception as e:
             logger.exception("Failed to generate variant", extra={"asset_id": asset_id, "variant": variant})
             raise e
+
+    # --- Blurhash + dominant color ---
+    try:
+        bucket = get_media_bucket()
+        raw = get_object_bytes(bucket, object_key)
+        img = Image.open(BytesIO(raw)).convert("RGB")
+
+        bh = _compute_blurhash(img)
+        color = _compute_dominant_color(img)
+        asyncio.run(_update_asset_placeholders(parent_id, bh, color))
+        result["blurhash"] = bh
+        result["dominant_color"] = color
+        logger.info("Blurhash + color computed", extra={"asset_id": asset_id, "blurhash": bh, "color": color})
+    except Exception:
+        logger.exception("Failed to compute blurhash/color", extra={"asset_id": asset_id})
+
+    # --- Teaser variant (blurred preview for locked posts) ---
+    try:
+        if not asyncio.run(_get_derived_exists(parent_id, "teaser")):
+            bucket = get_media_bucket()
+            raw = get_object_bytes(bucket, object_key)
+            img = Image.open(BytesIO(raw)).convert("RGB")
+            teaser_img = _resize_no_upscale(img, VARIANT_SPECS["grid"])
+            teaser_img = _generate_teaser_image(teaser_img)
+            teaser_img = _strip_exif(teaser_img)
+
+            buf = BytesIO()
+            teaser_img.save(buf, format="JPEG", quality=60)
+            buf.seek(0)
+            teaser_key = _derived_object_key(object_key, "teaser")
+            put_object_bytes(bucket, teaser_key, buf.getvalue(), "image/jpeg")
+            asyncio.run(_insert_derived(parent_id, "teaser", teaser_key))
+            result["teaser"] = teaser_key
+            logger.info("Teaser generated", extra={"asset_id": asset_id, "key": teaser_key})
+        else:
+            logger.info("Teaser already exists, skipping", extra={"asset_id": asset_id})
+    except Exception:
+        logger.exception("Failed to generate teaser", extra={"asset_id": asset_id})
+
     return result
 
 

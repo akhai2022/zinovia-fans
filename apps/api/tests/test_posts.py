@@ -828,7 +828,7 @@ async def test_subscriber_sees_subscribers_posts_on_creator_page(
         fan_user_id=fan_id,
         creator_user_id=creator_id,
         status="active",
-        stripe_subscription_id=f"sub_test_{uuid.uuid4().hex}",
+        ccbill_subscription_id=f"sub_test_{uuid.uuid4().hex}",
     )
     db_session.add(sub)
     await db_session.commit()

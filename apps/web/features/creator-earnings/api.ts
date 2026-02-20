@@ -22,10 +22,7 @@ export interface LedgerEventOut {
 }
 
 export interface PayoutMethodStatus {
-  stripe_account_id: string | null;
   payouts_enabled: boolean;
-  charges_enabled: boolean;
-  requirements_due: Record<string, unknown> | null;
   configured: boolean;
 }
 

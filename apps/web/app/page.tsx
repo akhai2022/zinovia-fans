@@ -5,6 +5,7 @@ import { LandingHero } from "@/components/landing/LandingHero";
 import { FeaturedCreators } from "@/components/landing/FeaturedCreators";
 import { SubscribeInviteVideo } from "@/components/landing/SubscribeInviteVideo";
 import { SafetyPrivacy } from "@/components/landing/SafetyPrivacy";
+import { SmartMedia } from "@/components/landing/SmartMedia";
 import { ScrollReveal } from "@/components/landing/ScrollReveal";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { DEFAULT_LOCALE, LOCALE_COOKIE, SUPPORTED_LOCALES, type Locale } from "@/lib/i18n/config";
@@ -96,9 +97,9 @@ export default async function HomePage() {
             {FEATURES.map(({ title, description }, i) => (
               <div
                 key={title}
-                className="card-hover-lift flex flex-col gap-4 rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-6"
+                className="card-hover-lift flex flex-col gap-4 rounded-2xl border border-white/[0.06] bg-card p-6"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10 text-violet-400">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
                     <path strokeLinecap="round" strokeLinejoin="round" d={FEATURE_ICONS[i]} />
                   </svg>
@@ -128,7 +129,7 @@ export default async function HomePage() {
           </div>
           <div className="mt-10 grid gap-6 md:grid-cols-3">
             {HOW_IT_WORKS.map(({ step, title, description }) => (
-              <div key={step} className="relative rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-6">
+              <div key={step} className="relative rounded-2xl border border-white/[0.06] bg-card p-6">
                 <span className="text-gradient-brand text-4xl font-bold">{step}</span>
                 <h3 className="mt-3 text-base font-semibold text-foreground">{title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
@@ -136,6 +137,10 @@ export default async function HomePage() {
             ))}
           </div>
         </section>
+      </ScrollReveal>
+
+      <ScrollReveal>
+        <SmartMedia t={t.smartMedia} />
       </ScrollReveal>
 
       <ScrollReveal>

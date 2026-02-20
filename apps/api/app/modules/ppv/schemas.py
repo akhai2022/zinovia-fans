@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 class PpvCreateIntentOut(BaseModel):
     purchase_id: UUID | None = None
-    client_secret: str | None = None
+    checkout_url: str | None = None
     amount_cents: int
     currency: str
     status: str
@@ -25,4 +25,3 @@ class PpvPostStatusOut(BaseModel):
     viewer_has_unlocked: bool
     price_cents: int | None = None
     currency: str | None = None
-

@@ -10,10 +10,18 @@ output "csrf_secret_arn" {
   value = aws_secretsmanager_secret.csrf_secret.arn
 }
 
-output "stripe_secret_key_arn" {
-  value = aws_secretsmanager_secret.stripe_secret_key.arn
+output "ccbill_salt_arn" {
+  value = aws_secretsmanager_secret.ccbill_salt.arn
 }
 
-output "stripe_webhook_secret_arn" {
-  value = aws_secretsmanager_secret.stripe_webhook_secret.arn
+output "ccbill_datalink_password_arn" {
+  value = aws_secretsmanager_secret.ccbill_datalink_password.arn
+}
+
+output "resend_api_key_arn" {
+  value = aws_secretsmanager_secret.resend_api_key.arn
+}
+
+output "replicate_api_token_arn" {
+  value = aws_secretsmanager_secret.replicate_api_token.arn
 }

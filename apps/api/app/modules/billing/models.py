@@ -13,8 +13,8 @@ from app.db.base import Base
 from app.db.mixins import TimestampMixin
 
 
-class StripeEvent(TimestampMixin, Base):
-    __tablename__ = "stripe_events"
+class PaymentEvent(TimestampMixin, Base):
+    __tablename__ = "payment_events"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     event_id: Mapped[str] = mapped_column(String(255), unique=True, index=True)
@@ -36,8 +36,6 @@ class CreatorPlan(TimestampMixin, Base):
     price: Mapped[Decimal] = mapped_column(Numeric(18, 2))
     currency: Mapped[str] = mapped_column(String(8))
     active: Mapped[bool] = mapped_column(Boolean, default=True)
-    stripe_price_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    stripe_product_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
 class Subscription(TimestampMixin, Base):
@@ -51,8 +49,7 @@ class Subscription(TimestampMixin, Base):
     cancel_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     current_period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, default=False)
-    stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True, index=True)
-    stripe_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    ccbill_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True, index=True)
 
     __table_args__ = (
         UniqueConstraint("fan_user_id", "creator_user_id", name="uq_subscription_fan_creator"),

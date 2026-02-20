@@ -65,6 +65,13 @@ class PostUpdate(BaseModel):
     price_cents: int | None = Field(default=None, description="Required when visibility=PPV.")
 
 
+class MediaPreview(BaseModel):
+    """Compact placeholder data for an asset (blurhash + dominant color)."""
+
+    blurhash: str | None = None
+    dominant_color: str | None = None
+
+
 class PostOut(BaseModel):
     """Post as returned by API (asset_ids only; client uses download endpoint)."""
 
@@ -77,6 +84,10 @@ class PostOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     asset_ids: list[UUID] = Field(default_factory=list)
+    media_previews: dict[str, MediaPreview] = Field(
+        default_factory=dict,
+        description="Map of asset_id → {blurhash, dominant_color} for instant placeholders.",
+    )
     publish_at: datetime | None = None
     status: str = Field(
         default=POST_STATUS_PUBLISHED,
@@ -103,6 +114,10 @@ class PostWithCreator(BaseModel):
     created_at: datetime
     updated_at: datetime
     asset_ids: list[UUID] = Field(default_factory=list)
+    media_previews: dict[str, MediaPreview] = Field(
+        default_factory=dict,
+        description="Map of asset_id → {blurhash, dominant_color} for instant placeholders.",
+    )
     publish_at: datetime | None = None
     status: str = Field(
         default=POST_STATUS_PUBLISHED,

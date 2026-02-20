@@ -33,7 +33,7 @@ const SITE_URL = "https://zinovia.ai";
 export const metadata = {
   title: "Zinovia Fans — Premium Creator Subscription Platform",
   description:
-    "Subscribe to exclusive content from your favourite creators. Secure payouts, Stripe checkout, and private media delivery. For fans and creators.",
+    "Subscribe to exclusive content from your favourite creators. Secure payouts, encrypted checkout, and private media delivery. For fans and creators.",
   metadataBase: new URL(SITE_URL),
   alternates: {
     canonical: SITE_URL,
@@ -53,7 +53,7 @@ export const metadata = {
   openGraph: {
     title: "Zinovia Fans — Premium Creator Subscription Platform",
     description:
-      "Subscribe to exclusive content from your favourite creators. Secure payouts, Stripe checkout, and private media delivery.",
+      "Subscribe to exclusive content from your favourite creators. Secure payouts, encrypted checkout, and private media delivery.",
     url: SITE_URL,
     siteName: "Zinovia Fans",
     locale: "en_US",
@@ -97,7 +97,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       name: "Zinovia Fans",
       url: SITE_URL,
       description:
-        "Subscribe to exclusive content from your favourite creators. Secure payouts, Stripe checkout, and private media delivery.",
+        "Subscribe to exclusive content from your favourite creators. Secure payouts, encrypted checkout, and private media delivery.",
       publisher: { "@type": "Organization", name: "Zinovia", url: SITE_URL },
       potentialAction: {
         "@type": "SearchAction",

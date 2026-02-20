@@ -8,7 +8,7 @@ import logging
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.core.errors import AppError
 from app.core.settings import get_settings
@@ -173,9 +173,22 @@ async def create_post(
         except Exception:
             pass
     result = await session.execute(
-        select(Post).where(Post.id == post.id).options(selectinload(Post.media))
+        select(Post).where(Post.id == post.id).options(selectinload(Post.media).joinedload(PostMedia.media_object))
     )
     return result.scalar_one()
+
+
+def _extract_media_previews(post: Post) -> dict[str, dict]:
+    """Build asset_id → {blurhash, dominant_color} from eager-loaded PostMedia.media_object."""
+    previews: dict[str, dict] = {}
+    for pm in post.media:
+        mo = getattr(pm, "media_object", None)
+        if mo and (mo.blurhash or mo.dominant_color):
+            previews[str(pm.media_asset_id)] = {
+                "blurhash": mo.blurhash,
+                "dominant_color": mo.dominant_color,
+            }
+    return previews
 
 
 def _post_to_out(post: Post) -> dict:
@@ -189,6 +202,7 @@ def _post_to_out(post: Post) -> dict:
         "created_at": post.created_at,
         "updated_at": post.updated_at,
         "asset_ids": [pm.media_asset_id for pm in sorted(post.media, key=lambda m: m.position)],
+        "media_previews": _extract_media_previews(post),
         "publish_at": post.publish_at,
         "status": post.status,
         "is_locked": False,
@@ -285,7 +299,7 @@ async def get_creator_posts_page(
     query = (
         select(Post)
         .where(*where_conditions)
-        .options(selectinload(Post.media))
+        .options(selectinload(Post.media).joinedload(PostMedia.media_object))
         .order_by(Post.created_at.desc(), Post.id.desc())
     )
     count_result = await session.execute(
@@ -448,7 +462,7 @@ async def get_feed_page(
         .join(User, User.id == Post.creator_user_id)
         .join(Profile, Profile.user_id == User.id)
         .where(Post.id.in_(post_ids))
-        .options(selectinload(Post.media))
+        .options(selectinload(Post.media).joinedload(PostMedia.media_object))
     )
     rows = (await session.execute(posts_query)).all()
     order_map = {p.id: (p, u, prof) for p, u, prof in rows}
@@ -667,7 +681,7 @@ async def delete_post(session: AsyncSession, post_id: UUID, creator_user_id: UUI
     post = (
         await session.execute(
             select(Post).where(Post.id == post_id, Post.creator_user_id == creator_user_id)
-            .options(selectinload(Post.media))
+            .options(selectinload(Post.media).joinedload(PostMedia.media_object))
         )
     ).scalar_one_or_none()
     if not post:
@@ -694,7 +708,7 @@ async def update_post(
     post = (
         await session.execute(
             select(Post).where(Post.id == post_id, Post.creator_user_id == creator_user_id)
-            .options(selectinload(Post.media))
+            .options(selectinload(Post.media).joinedload(PostMedia.media_object))
         )
     ).scalar_one_or_none()
     if not post:
@@ -707,7 +721,7 @@ async def update_post(
         post.visibility = visibility
     await session.commit()
     result = await session.execute(
-        select(Post).where(Post.id == post.id).options(selectinload(Post.media))
+        select(Post).where(Post.id == post.id).options(selectinload(Post.media).joinedload(PostMedia.media_object))
     )
     return result.scalar_one()
 
@@ -792,7 +806,7 @@ async def search_posts(
         .join(User, User.id == Post.creator_user_id)
         .join(Profile, Profile.user_id == User.id)
         .where(*base_where)
-        .options(selectinload(Post.media))
+        .options(selectinload(Post.media).joinedload(PostMedia.media_object))
         .order_by(Post.created_at.desc())
         .offset(offset)
         .limit(limit)

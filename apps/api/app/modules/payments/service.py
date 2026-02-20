@@ -1,30 +1,19 @@
-"""Payments service: tips, PPV intent creation."""
+"""Payments service: tips, PPV intent creation via CCBill FlexForms."""
 
 from __future__ import annotations
 
 import logging
 from uuid import UUID
 
-import stripe
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
 from app.core.settings import get_settings
 from app.modules.auth.rate_limit import check_rate_limit_custom
+from app.modules.billing.ccbill_client import build_flexform_url, ccbill_configured
 from app.modules.payments.models import PpvPurchase, Tip
 
 logger = logging.getLogger(__name__)
-
-STRIPE_KEY_PLACEHOLDER = "sk_test_placeholder"
-
-
-def _get_stripe_key() -> str:
-    """Return the configured Stripe secret key or raise."""
-    settings = get_settings()
-    key = (settings.stripe_secret_key or "").strip()
-    if not key or key == STRIPE_KEY_PLACEHOLDER:
-        raise AppError(status_code=501, detail="stripe_not_configured")
-    return key
 
 
 async def create_tip_intent(
@@ -37,7 +26,7 @@ async def create_tip_intent(
     conversation_id: UUID | None = None,
     message_id: UUID | None = None,
 ) -> tuple[Tip, str]:
-    """Create Tip row and Stripe PaymentIntent. Return (tip, client_secret)."""
+    """Create Tip row and CCBill FlexForm URL. Return (tip, checkout_url)."""
     settings = get_settings()
     await check_rate_limit_custom(
         f"rl:pay:{tipper_id}",
@@ -49,7 +38,12 @@ async def create_tip_intent(
     if amount_cents > settings.tip_max_cents:
         raise AppError(status_code=400, detail="amount_above_maximum")
 
-    api_key = _get_stripe_key()
+    if not ccbill_configured():
+        raise AppError(status_code=501, detail="payment_not_configured")
+
+    from decimal import Decimal
+
+    price = Decimal(amount_cents) / 100
 
     tip = Tip(
         tipper_id=tipper_id,
@@ -58,27 +52,29 @@ async def create_tip_intent(
         message_id=message_id,
         amount_cents=amount_cents,
         currency=currency.lower(),
-        stripe_payment_intent_id="",  # set after PI created
+        ccbill_transaction_id=None,
         status="REQUIRES_PAYMENT",
     )
     session.add(tip)
     await session.flush()
 
-    pi = stripe.PaymentIntent.create(
-        amount=amount_cents,
+    checkout_url = build_flexform_url(
+        price=price,
         currency=currency.lower(),
-        metadata={
-            "type": "TIP",
-            "creator_id": str(creator_id),
-            "tip_id": str(tip.id),
+        initial_period_days=2,
+        recurring=False,
+        success_url=settings.checkout_success_url,
+        failure_url=settings.checkout_cancel_url,
+        custom_fields={
+            "zv_payment_type": "TIP",
+            "zv_fan_user_id": str(tipper_id),
+            "zv_creator_user_id": str(creator_id),
+            "zv_tip_id": str(tip.id),
         },
-        api_key=api_key,
     )
-    tip.stripe_payment_intent_id = pi.id
     await session.commit()
     await session.refresh(tip)
-    client_secret = pi.client_secret or ""
-    return tip, client_secret
+    return tip, checkout_url
 
 
 async def create_ppv_intent(
@@ -100,4 +96,4 @@ async def create_ppv_intent(
     purchase = await session.get(PpvPurchase, purchase_id)
     if not purchase:
         raise AppError(status_code=500, detail="ppv_purchase_missing")
-    return purchase, data.get("client_secret") or ""
+    return purchase, data.get("checkout_url") or ""

@@ -70,7 +70,7 @@ export async function createConversation(
 ): Promise<{ conversation_id: string }> {
   return apiFetch("/dm/conversations", {
     method: "POST",
-    body: JSON.stringify(body),
+    body,
   });
 }
 
@@ -93,7 +93,7 @@ export async function sendMessage(
 ): Promise<MessageOut> {
   return apiFetch(`/dm/conversations/${conversationId}/messages`, {
     method: "POST",
-    body: JSON.stringify(body),
+    body,
   });
 }
 

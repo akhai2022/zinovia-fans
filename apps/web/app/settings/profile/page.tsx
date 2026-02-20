@@ -50,6 +50,8 @@ const PROFILE_ERROR_MESSAGES: Record<string, string> = {
     "Handle can only use letters, numbers, hyphens and underscores (e.g. my-handle_1).",
   handle_reserved: "That handle is reserved.",
   profile_not_found: "Profile not found. Please try again.",
+  profile_incomplete: "Complete your profile (handle, avatar) before saving.",
+  kyc_required: "Identity verification required. Complete KYC to unlock full features.",
 };
 
 export default function SettingsProfilePage() {
@@ -59,6 +61,8 @@ export default function SettingsProfilePage() {
   const [handle, setHandle] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
+  const [phone, setPhone] = useState("");
+  const [country, setCountry] = useState("");
   const [discoverable, setDiscoverable] = useState(true);
   const [nsfw, setNsfw] = useState(false);
   const [avatarMediaId, setAvatarMediaId] = useState<string | null>(null);
@@ -77,6 +81,8 @@ export default function SettingsProfilePage() {
         setHandle(profile.handle ?? "");
         setDisplayName(profile.display_name ?? "");
         setBio(profile.bio ?? "");
+        setPhone(profile.phone ?? "");
+        setCountry(profile.country ?? "");
         setDiscoverable(profile.discoverable ?? true);
         setNsfw(profile.nsfw ?? false);
         setAvatarMediaId(profile.avatar_media_id ?? null);
@@ -116,10 +122,17 @@ export default function SettingsProfilePage() {
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setLoading(true);
+    if (!avatarMediaId) {
+      addToast("A profile photo is required.", "error");
+      setLoading(false);
+      return;
+    }
     const payload: CreatorProfileUpdate = {
       handle: handle.trim() || undefined,
       display_name: displayName || undefined,
       bio: bio || undefined,
+      phone: phone.trim() || undefined,
+      country: country.trim().toUpperCase() || undefined,
       discoverable,
       nsfw,
       avatar_media_id: avatarMediaId ?? undefined,
@@ -129,12 +142,13 @@ export default function SettingsProfilePage() {
       await CreatorsService.creatorsUpdateMe(payload);
       addToast("Profile saved", "success");
     } catch (err) {
+      const code = getApiErrorCode(err);
       if (err instanceof ApiError && err.status === 403) {
-        addToast("Creator-only. Set up your account as a creator to edit profile.", "error");
+        const friendly = PROFILE_ERROR_MESSAGES[code] || "Creator-only. Set up your account as a creator to edit profile.";
+        addToast(friendly, "error");
         return;
       }
       const { message } = getApiErrorMessage(err);
-      const code = getApiErrorCode(err);
       const friendly = PROFILE_ERROR_MESSAGES[code] || message;
       addToast(friendly, "error");
     } finally {
@@ -179,7 +193,12 @@ export default function SettingsProfilePage() {
         <CardContent>
           <form className="space-y-6" onSubmit={onSubmit}>
             <div className="space-y-2 rounded-premium-lg border border-border bg-surface-alt p-4">
-              <Label>Profile photo (avatar)</Label>
+              <Label>Profile photo (avatar) <span className="text-destructive">*</span></Label>
+              {!avatarMediaId && (
+                <p className="text-xs text-destructive">
+                  A profile photo is required to save your profile.
+                </p>
+              )}
               <div className="flex flex-wrap items-center gap-4">
                 {avatarMediaId && (
                   <CreatorAvatarAsset
@@ -257,6 +276,88 @@ export default function SettingsProfilePage() {
                 onChange={(e) => setBio(e.target.value)}
                 placeholder="Short bio"
               />
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone number <span className="text-destructive">*</span></Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+33 6 12 34 56 78"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Include country code (e.g. +33 for France, +1 for US).
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="country">Country <span className="text-destructive">*</span></Label>
+                <select
+                  id="country"
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value="">Select country…</option>
+                  <option value="FR">France</option>
+                  <option value="US">United States</option>
+                  <option value="GB">United Kingdom</option>
+                  <option value="DE">Germany</option>
+                  <option value="ES">Spain</option>
+                  <option value="IT">Italy</option>
+                  <option value="PT">Portugal</option>
+                  <option value="NL">Netherlands</option>
+                  <option value="BE">Belgium</option>
+                  <option value="CH">Switzerland</option>
+                  <option value="AT">Austria</option>
+                  <option value="CA">Canada</option>
+                  <option value="AU">Australia</option>
+                  <option value="JP">Japan</option>
+                  <option value="BR">Brazil</option>
+                  <option value="MX">Mexico</option>
+                  <option value="IN">India</option>
+                  <option value="SE">Sweden</option>
+                  <option value="NO">Norway</option>
+                  <option value="DK">Denmark</option>
+                  <option value="FI">Finland</option>
+                  <option value="PL">Poland</option>
+                  <option value="IE">Ireland</option>
+                  <option value="RO">Romania</option>
+                  <option value="CZ">Czech Republic</option>
+                  <option value="GR">Greece</option>
+                  <option value="HU">Hungary</option>
+                  <option value="HR">Croatia</option>
+                  <option value="BG">Bulgaria</option>
+                  <option value="SK">Slovakia</option>
+                  <option value="SI">Slovenia</option>
+                  <option value="LT">Lithuania</option>
+                  <option value="LV">Latvia</option>
+                  <option value="EE">Estonia</option>
+                  <option value="CY">Cyprus</option>
+                  <option value="LU">Luxembourg</option>
+                  <option value="MT">Malta</option>
+                  <option value="NZ">New Zealand</option>
+                  <option value="SG">Singapore</option>
+                  <option value="KR">South Korea</option>
+                  <option value="AE">United Arab Emirates</option>
+                  <option value="ZA">South Africa</option>
+                  <option value="AR">Argentina</option>
+                  <option value="CL">Chile</option>
+                  <option value="CO">Colombia</option>
+                  <option value="TH">Thailand</option>
+                  <option value="MY">Malaysia</option>
+                  <option value="PH">Philippines</option>
+                  <option value="IL">Israel</option>
+                  <option value="TR">Turkey</option>
+                  <option value="MA">Morocco</option>
+                  <option value="TN">Tunisia</option>
+                  <option value="DZ">Algeria</option>
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Your country of residence.
+                </p>
+              </div>
             </div>
             <div className="flex items-center justify-between rounded-brand border border-border bg-surface-alt p-4">
               <div>

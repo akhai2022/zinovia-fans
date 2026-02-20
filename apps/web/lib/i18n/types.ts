@@ -19,6 +19,7 @@ export interface Dictionary {
     reconnecting: string;
     vault: string;
     collections: string;
+    support: string;
   };
   hero: {
     badge: string;
@@ -92,6 +93,16 @@ export interface Dictionary {
     quote3: string;
     quote4: string;
   };
+  smartMedia: {
+    heading: string;
+    subheading: string;
+    instantPreviewsTitle: string;
+    instantPreviewsDesc: string;
+    smartThumbnailsTitle: string;
+    smartThumbnailsDesc: string;
+    securePreviewsTitle: string;
+    securePreviewsDesc: string;
+  };
   safety: {
     heading: string;
     subheading: string;
@@ -122,6 +133,34 @@ export interface Dictionary {
     description: string;
     ctaStart: string;
     ctaExplore: string;
+  };
+  contact: {
+    title: string;
+    subtitle: string;
+    categoryLabel: string;
+    categoryGeneral: string;
+    categoryBilling: string;
+    categoryAccount: string;
+    categoryContentReport: string;
+    categoryPartnerships: string;
+    categoryPrivacy: string;
+    emailLabel: string;
+    emailPlaceholder: string;
+    subjectLabel: string;
+    subjectPlaceholder: string;
+    messageLabel: string;
+    messagePlaceholder: string;
+    submit: string;
+    sending: string;
+    successTitle: string;
+    successMessage: string;
+    errorMessage: string;
+    channelsTitle: string;
+    abuseTitle: string;
+    abuseDescription: string;
+    beforeContactTitle: string;
+    beforeContactDescription: string;
+    responseTime: string;
   };
   footer: {
     privacy: string;

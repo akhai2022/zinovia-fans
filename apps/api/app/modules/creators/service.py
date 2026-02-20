@@ -239,6 +239,17 @@ async def update_creator_profile(
         profile.avatar_asset_id = payload["avatar_media_id"]
     if "banner_media_id" in payload and payload["banner_media_id"] is not None:
         profile.banner_asset_id = payload["banner_media_id"]
+    # phone and country are stored on User, not Profile
+    user_fields_changed = False
+    user_result = await session.execute(select(User).where(User.id == user_id))
+    user = user_result.scalar_one_or_none()
+    if user:
+        if "phone" in payload and payload["phone"] is not None:
+            user.phone = payload["phone"].strip()
+            user_fields_changed = True
+        if "country" in payload and payload["country"] is not None:
+            user.country = payload["country"].strip().upper()
+            user_fields_changed = True
     try:
         await session.commit()
     except IntegrityError:

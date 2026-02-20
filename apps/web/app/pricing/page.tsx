@@ -26,9 +26,9 @@ const COMPARISON = [
 
 const PRICING_FAQS = [
   { q: "Is Zinovia free to join?", a: "Yes. Creating a creator account is completely free. There are no monthly fees, setup costs, or minimum commitments. You only pay a platform fee when you earn." },
-  { q: "What fees does Zinovia charge?", a: "Zinovia charges a competitive platform fee on your earnings. Stripe's payment processing fee (2.9% + 30¢ per transaction) is charged separately by Stripe." },
-  { q: "Are there any hidden fees?", a: "No. What you see is what you get. Platform fee plus Stripe processing — nothing else. No payout fees, no storage fees, no bandwidth fees." },
-  { q: "How fast are payouts?", a: "Payouts are processed within 48 hours via Stripe Connect. Your earnings go directly to your bank account." },
+  { q: "What fees does Zinovia charge?", a: "Zinovia charges a competitive platform fee on your earnings. A standard payment processing fee is charged separately by our payment processor." },
+  { q: "Are there any hidden fees?", a: "No. What you see is what you get. Platform fee plus payment processing — nothing else. No payout fees, no storage fees, no bandwidth fees." },
+  { q: "How fast are payouts?", a: "Payouts are processed within 48 hours via secure bank transfer. Your earnings go directly to your bank account." },
   { q: "How does pricing compare to Patreon?", a: "Patreon charges 5-12% depending on your plan, plus payment processing. Patreon payouts take 30+ days. Zinovia offers competitive fees with 48-hour payouts." },
 ];
 
@@ -63,7 +63,7 @@ export default function PricingPage() {
       {/* Pricing Cards */}
       <section className="space-y-6">
         <div className="grid gap-6 md:grid-cols-2">
-          <div className="rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-8">
+          <div className="rounded-2xl border border-white/[0.06] bg-card p-8">
             <h2 className="text-sm font-medium text-muted-foreground">For Fans</h2>
             <p className="mt-4 font-display text-4xl font-bold text-foreground">Free</p>
             <p className="mt-2 text-sm text-muted-foreground">Browse, follow, and subscribe to creators</p>
@@ -79,7 +79,7 @@ export default function PricingPage() {
             </Button>
           </div>
 
-          <div className="relative rounded-2xl border-2 border-primary/50 bg-[rgb(18,18,24)] p-8">
+          <div className="relative rounded-2xl border-2 border-primary/50 bg-card p-8">
             <div className="absolute -top-3 left-1/2 -translate-x-1/2">
               <span className="rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">Creator</span>
             </div>
@@ -92,7 +92,7 @@ export default function PricingPage() {
               <li className="flex items-start gap-2"><span className="text-primary">&#10003;</span> Paid unlocks &amp; tips</li>
               <li className="flex items-start gap-2"><span className="text-primary">&#10003;</span> Private messaging</li>
               <li className="flex items-start gap-2"><span className="text-primary">&#10003;</span> Analytics dashboard</li>
-              <li className="flex items-start gap-2"><span className="text-primary">&#10003;</span> 48-hour payouts via Stripe</li>
+              <li className="flex items-start gap-2"><span className="text-primary">&#10003;</span> 48-hour payouts via bank transfer</li>
               <li className="flex items-start gap-2"><span className="text-primary">&#10003;</span> Content encryption &amp; signed URLs</li>
               <li className="flex items-start gap-2"><span className="text-primary">&#10003;</span> 9-language platform support</li>
             </ul>
@@ -109,7 +109,7 @@ export default function PricingPage() {
         <div className="overflow-x-auto rounded-2xl border border-white/[0.06]">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/[0.06] bg-[rgb(18,18,24)]">
+              <tr className="border-b border-white/[0.06] bg-card">
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Platform</th>
                 <th className="px-4 py-3 text-center font-medium text-muted-foreground">Platform Fee</th>
                 <th className="px-4 py-3 text-center font-medium text-muted-foreground">Payout Speed</th>
@@ -120,7 +120,7 @@ export default function PricingPage() {
               {COMPARISON.map((row, i) => (
                 <tr
                   key={row.platform}
-                  className={`${i % 2 === 0 ? "bg-[rgb(14,14,18)]" : "bg-[rgb(18,18,24)]"} ${row.highlight ? "font-medium text-foreground" : "text-muted-foreground"}`}
+                  className={`${i % 2 === 0 ? "bg-background" : "bg-card"} ${row.highlight ? "font-medium text-foreground" : "text-muted-foreground"}`}
                 >
                   <td className="px-4 py-3">{row.platform}{row.highlight && <span className="ml-2 text-xs text-primary">(You are here)</span>}</td>
                   <td className="px-4 py-3 text-center">{row.fee}</td>
@@ -152,7 +152,7 @@ export default function PricingPage() {
       </section>
 
       {/* CTA */}
-      <section className="rounded-2xl border border-white/[0.06] bg-[rgb(18,18,24)] p-8 text-center">
+      <section className="rounded-2xl border border-white/[0.06] bg-card p-8 text-center">
         <h2 className="font-display text-xl font-bold text-foreground">Start earning today</h2>
         <p className="mx-auto mt-3 max-w-lg text-sm text-muted-foreground">
           Join thousands of creators building sustainable income on Zinovia. No upfront costs, no monthly fees.

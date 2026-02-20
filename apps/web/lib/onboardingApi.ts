@@ -17,7 +17,7 @@ export type VerifyEmailResponse = { creator_id: string; state: string; role?: st
 export type OnboardingStatusResponse = { state: string; checklist: Record<string, boolean> };
 export type KycSessionResponse = { redirect_url: string; session_id: string };
 export type KycStatusResponse = { session_status: string; creator_state: string };
-export type KycMockCompleteResponse = { ack: boolean };
+export type KycCompleteResponse = { ack: boolean };
 export type ResendVerificationEmailResponse = {
   email_delivery_status: "sent" | "failed" | string;
   email_delivery_error_code?: string | null;
@@ -116,11 +116,11 @@ export async function getKycStatus(): Promise<KycStatusResponse> {
   return fetchJson("/kyc/status", { method: "GET" });
 }
 
-export async function kycMockComplete(
+export async function kycComplete(
   sessionId: string,
   status: "APPROVED" | "REJECTED"
-): Promise<KycMockCompleteResponse> {
-  return fetchJson("/kyc/mock-complete", {
+): Promise<KycCompleteResponse> {
+  return fetchJson("/kyc/complete", {
     method: "POST",
     jsonBody: { session_id: sessionId, status },
   });

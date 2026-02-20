@@ -44,7 +44,7 @@ export default function TermsPage() {
       <section className="space-y-3">
         <h2 className="font-display text-lg font-semibold text-foreground">4. Creator Accounts</h2>
         <p className="text-sm leading-relaxed text-foreground/90">
-          Creators may set subscription prices, publish content, and receive payments through Stripe. Creators
+          Creators may set subscription prices, publish content, and receive payments through our secure payment processor. Creators
           agree to comply with all applicable laws and our Content Policy. We reserve the right to review,
           restrict, or remove any content that violates these terms.
         </p>
@@ -53,10 +53,10 @@ export default function TermsPage() {
       <section className="space-y-3">
         <h2 className="font-display text-lg font-semibold text-foreground">5. Payments and Billing</h2>
         <ul className="list-disc space-y-2 pl-6 text-sm text-foreground/90">
-          <li>All payments are processed by Stripe. We do not store your full payment card information.</li>
+          <li>All payments are processed by our secure payment processor. We do not store your full payment card information.</li>
           <li>Subscription fees are billed on a recurring basis until cancelled.</li>
           <li>Refunds are handled on a case-by-case basis. Contact support for assistance.</li>
-          <li>Creators receive payouts according to Stripe&apos;s payout schedule, less applicable platform fees.</li>
+          <li>Creators receive payouts according to the standard payout schedule, less applicable platform fees.</li>
         </ul>
       </section>
 

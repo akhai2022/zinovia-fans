@@ -1,4 +1,4 @@
-"""Creator earnings service: aggregate ledger events and payout profile."""
+"""Creator earnings service: aggregate ledger events and payout status."""
 
 from __future__ import annotations
 
@@ -15,7 +15,6 @@ from app.modules.creator_earnings.schemas import (
     PayoutMethodStatus,
 )
 from app.modules.ledger.models import LedgerEvent
-from app.modules.payments.models import CreatorPayoutProfile
 
 
 async def get_creator_earnings(
@@ -46,7 +45,7 @@ async def get_creator_earnings(
     gross = int(row.gross or 0)
     fee = int(row.fee or 0)
     net = int(row.net or 0)
-    currency = row.currency or "usd"
+    currency = row.currency or "eur"
 
     summary = EarningsSummary(
         gross_cents=gross,
@@ -78,21 +77,8 @@ async def get_creator_earnings(
         for evt in events
     ]
 
-    # Payout profile
-    profile_result = await session.execute(
-        select(CreatorPayoutProfile).where(CreatorPayoutProfile.creator_id == creator_id)
-    )
-    profile = profile_result.scalar_one_or_none()
-    if profile and profile.stripe_account_id:
-        payout_method = PayoutMethodStatus(
-            stripe_account_id=profile.stripe_account_id,
-            payouts_enabled=profile.payouts_enabled,
-            charges_enabled=profile.charges_enabled,
-            requirements_due=profile.requirements_due,
-            configured=True,
-        )
-    else:
-        payout_method = PayoutMethodStatus(configured=False)
+    # Payout method — placeholder until payout provider is integrated
+    payout_method = PayoutMethodStatus(configured=False)
 
     return CreatorEarningsOut(
         summary=summary,

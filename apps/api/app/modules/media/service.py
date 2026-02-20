@@ -19,11 +19,11 @@ from app.modules.posts.constants import POST_STATUS_PUBLISHED, VISIBILITY_PUBLIC
 
 CONTENT_TYPE_VIDEO_MP4 = "video/mp4"
 
-VALID_DOWNLOAD_VARIANTS = frozenset({"thumb", "grid", "full", "poster"})
+VALID_DOWNLOAD_VARIANTS = frozenset({"thumb", "grid", "full", "poster", "teaser"})
 
 # Variants that must not fall back to original (e.g. poster for video: no poster => no URL)
-VARIANT_NO_FALLBACK = frozenset({"poster"})
-TEASER_VARIANTS = frozenset({"thumb", "grid"})
+VARIANT_NO_FALLBACK = frozenset({"poster", "teaser"})
+TEASER_VARIANTS = frozenset({"thumb", "grid", "teaser"})
 
 
 def validate_media_upload(content_type: str, size_bytes: int) -> None:
@@ -157,7 +157,8 @@ async def can_user_access_media(
                 and (post.publish_at is None or post.publish_at <= now)
             ):
                 return True
-    return False
+    # Fall back to anonymous access (profile avatars/banners, public posts)
+    return await can_anonymous_access_media(session, media_id, variant=variant)
 
 
 async def create_media_object(

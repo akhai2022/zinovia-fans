@@ -34,11 +34,22 @@ class PasswordResetEmailPayload:
     reset_url: str
 
 
+@dataclass(slots=True)
+class ContactFormEmailPayload:
+    sender_email: str
+    category: str
+    subject: str
+    message: str
+
+
 class MailProvider(Protocol):
     async def send_verification_email(self, payload: VerificationEmailPayload) -> None:
         ...
 
     async def send_password_reset_email(self, payload: PasswordResetEmailPayload) -> None:
+        ...
+
+    async def send_contact_form_email(self, payload: ContactFormEmailPayload) -> None:
         ...
 
 
@@ -86,6 +97,25 @@ class ConsoleMailProvider:
             },
         )
 
+    async def send_contact_form_email(self, payload: ContactFormEmailPayload) -> None:
+        settings = get_settings()
+        if settings.environment not in ("production", "prod"):
+            print(f"\n{'='*60}")
+            print(f"  CONTACT FORM (console provider)")
+            print(f"  From:     {payload.sender_email}")
+            print(f"  Category: {payload.category}")
+            print(f"  Subject:  {payload.subject}")
+            print(f"  Message:  {payload.message[:200]}")
+            print(f"{'='*60}\n")
+        logger.info(
+            "contact form email (console)",
+            extra={
+                "request_id": get_request_id(),
+                "provider": "console",
+                "outcome": "generated",
+            },
+        )
+
 
 def _wrap_html(body_content: str) -> str:
     """Wrap email body in a proper HTML document structure for deliverability."""
@@ -126,16 +156,33 @@ class ResendMailProvider:
         settings = get_settings()
         resend.api_key = settings.resend_api_key
         self._mail_from = f"Zinovia Fans <{settings.mail_from}>"
+        self._reply_to = settings.mail_reply_to
+        self._dry_run = settings.mail_dry_run
         web_base = (settings.public_web_base_url or settings.app_base_url).rstrip("/")
         self._unsubscribe_url = f"{web_base}/settings/profile"
 
     async def _send_email(
         self, *, recipient: str, subject: str, text_body: str, html_body: str, email_type: str
     ) -> None:
+        if self._dry_run:
+            logger.info(
+                "%s email DRY-RUN (not sent)",
+                email_type,
+                extra={
+                    "request_id": get_request_id(),
+                    "provider": "resend",
+                    "outcome": "dry_run",
+                    "to": recipient,
+                    "subject": subject,
+                    "from": self._mail_from,
+                },
+            )
+            return
         try:
             params: resend.Emails.SendParams = {
                 "from": self._mail_from,
                 "to": [recipient],
+                "reply_to": [self._reply_to],
                 "subject": subject,
                 "html": html_body,
                 "text": text_body,
@@ -218,6 +265,44 @@ class ResendMailProvider:
             email_type="verification",
         )
 
+    async def send_contact_form_email(self, payload: ContactFormEmailPayload) -> None:
+        settings = get_settings()
+        support_email = settings.mail_reply_to  # support@zinovia.ai
+        category_label = payload.category.replace("_", " ").title()
+        # Escape HTML in user-provided content
+        import html as _html
+        safe_message = _html.escape(payload.message).replace("\n", "<br/>")
+        safe_subject = _html.escape(payload.subject)
+        safe_email = _html.escape(payload.sender_email)
+        safe_category = _html.escape(category_label)
+
+        await self._send_email(
+            recipient=support_email,
+            subject=f"[Contact] {category_label}: {payload.subject}",
+            text_body=(
+                f"New contact form submission\n\n"
+                f"Category: {category_label}\n"
+                f"From: {payload.sender_email}\n"
+                f"Subject: {payload.subject}\n\n"
+                f"Message:\n{payload.message}\n"
+            ),
+            html_body=_wrap_html(
+                f'<p style="margin:0 0 16px;font-size:18px;font-weight:600;">New Contact Form Submission</p>'
+                f'<table style="width:100%;border-collapse:collapse;margin:0 0 16px;">'
+                f'<tr><td style="padding:6px 12px 6px 0;color:#6b7280;font-size:14px;vertical-align:top;">Category</td>'
+                f'<td style="padding:6px 0;font-size:14px;">{safe_category}</td></tr>'
+                f'<tr><td style="padding:6px 12px 6px 0;color:#6b7280;font-size:14px;vertical-align:top;">From</td>'
+                f'<td style="padding:6px 0;font-size:14px;"><a href="mailto:{safe_email}" style="color:#6366f1;">{safe_email}</a></td></tr>'
+                f'<tr><td style="padding:6px 12px 6px 0;color:#6b7280;font-size:14px;vertical-align:top;">Subject</td>'
+                f'<td style="padding:6px 0;font-size:14px;">{safe_subject}</td></tr>'
+                f'</table>'
+                f'<div style="background:#f3f4f6;border-radius:6px;padding:16px;font-size:14px;line-height:1.6;">'
+                f'{safe_message}'
+                f'</div>'
+            ),
+            email_type="contact_form",
+        )
+
     async def send_password_reset_email(self, payload: PasswordResetEmailPayload) -> None:
         await self._send_email(
             recipient=payload.recipient,
@@ -264,6 +349,7 @@ class MailpitProvider:
         self._host = settings.mailpit_host
         self._port = settings.mailpit_port
         self._mail_from = settings.mail_from
+        self._reply_to = settings.mail_reply_to
 
     async def _send_email(
         self, *, recipient: str, subject: str, text_body: str, html_body: str, email_type: str
@@ -276,6 +362,7 @@ class MailpitProvider:
         msg["Subject"] = subject
         msg["From"] = self._mail_from
         msg["To"] = recipient
+        msg["Reply-To"] = self._reply_to
         settings = get_settings()
         web_base = (settings.public_web_base_url or settings.app_base_url).rstrip("/")
         msg["List-Unsubscribe"] = f"<{web_base}/settings/profile>"
@@ -316,6 +403,30 @@ class MailpitProvider:
                 "<p>This link expires in 24 hours.</p>"
             ),
             email_type="verification",
+        )
+
+    async def send_contact_form_email(self, payload: ContactFormEmailPayload) -> None:
+        settings = get_settings()
+        support_email = settings.mail_reply_to
+        category_label = payload.category.replace("_", " ").title()
+        await self._send_email(
+            recipient=support_email,
+            subject=f"[Contact] {category_label}: {payload.subject}",
+            text_body=(
+                f"New contact form submission\n\n"
+                f"Category: {category_label}\n"
+                f"From: {payload.sender_email}\n"
+                f"Subject: {payload.subject}\n\n"
+                f"Message:\n{payload.message}\n"
+            ),
+            html_body=(
+                f"<p><strong>New Contact Form Submission</strong></p>"
+                f"<p>Category: {category_label}<br/>"
+                f"From: {payload.sender_email}<br/>"
+                f"Subject: {payload.subject}</p>"
+                f"<p>{payload.message}</p>"
+            ),
+            email_type="contact_form",
         )
 
     async def send_password_reset_email(self, payload: PasswordResetEmailPayload) -> None:
@@ -362,4 +473,19 @@ async def send_password_reset_email(recipient: str, reset_url: str) -> None:
     provider = get_mail_provider()
     await provider.send_password_reset_email(
         PasswordResetEmailPayload(recipient=recipient, reset_url=reset_url)
+    )
+
+
+async def send_contact_form_email(
+    *, sender_email: str, category: str, subject: str, message: str
+) -> None:
+    """Forward a contact form submission to support via the configured mail provider."""
+    provider = get_mail_provider()
+    await provider.send_contact_form_email(
+        ContactFormEmailPayload(
+            sender_email=sender_email,
+            category=category,
+            subject=subject,
+            message=message,
+        )
     )

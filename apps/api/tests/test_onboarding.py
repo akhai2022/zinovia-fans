@@ -187,7 +187,7 @@ async def test_kyc_session_after_verify(async_client: AsyncClient) -> None:
     data = r.json()
     assert "redirect_url" in data
     assert "session_id" in data
-    assert "/mock-kyc" in data["redirect_url"]
+    assert "/kyc/verify" in data["redirect_url"]
 
 
 @pytest.mark.asyncio
@@ -293,7 +293,7 @@ async def test_webhook_valid_hmac_and_audit(async_client: AsyncClient) -> None:
     )
     assert r.status_code == 200
     session_id = r.json()["session_id"]
-    provider_session_id = f"mock_{session_id}"
+    provider_session_id = f"kyc_{session_id}"
     secret = get_settings().kyc_webhook_hmac_secret.encode("utf-8")
     evt_sub = f"evt_sub_{uuid.uuid4().hex[:8]}"
     body = (
@@ -365,7 +365,7 @@ async def test_webhook_idempotent_by_event_id(async_client: AsyncClient) -> None
         headers={"Idempotency-Key": _idempotency_key()},
     )
     session_id = r.json()["session_id"]
-    provider_session_id = f"mock_{session_id}"
+    provider_session_id = f"kyc_{session_id}"
     secret = get_settings().kyc_webhook_hmac_secret.encode("utf-8")
     evt_idem = f"evt_idem_{uuid.uuid4().hex[:8]}"
     body = (
@@ -413,7 +413,7 @@ async def test_invalid_state_transition_returns_409(async_client: AsyncClient) -
         headers={"Idempotency-Key": _idempotency_key()},
     )
     session_id = r.json()["session_id"]
-    provider_session_id = f"mock_{session_id}"
+    provider_session_id = f"kyc_{session_id}"
     secret = get_settings().kyc_webhook_hmac_secret.encode("utf-8")
     body = (
         '{"provider_session_id":"'

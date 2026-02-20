@@ -22,3 +22,10 @@ variable "csrf_secret" {
   sensitive   = true
   description = "CSRF secret (leave empty to create placeholder)"
 }
+
+variable "resend_api_key" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "Resend API key for transactional email (leave empty to create placeholder)"
+}

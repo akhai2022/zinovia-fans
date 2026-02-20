@@ -43,15 +43,15 @@ async def get_earnings(
     "/payouts/setup-link",
     response_model=PayoutSetupLinkOut,
     operation_id="creator_payouts_setup_link",
-    summary="Stripe Connect setup link",
-    description="Generates Account Link for onboarding. Returns 'not_configured' if Stripe Connect is not enabled.",
+    summary="Payout setup link",
+    description="Returns payout setup link. Currently not configured — placeholder for future integration.",
 )
 async def payouts_setup_link(
     current_user: User = Depends(require_creator),
 ) -> PayoutSetupLinkOut:
-    """Stripe Connect is not configured; return stub. Extend when Connect is added."""
+    """Payout provider not yet configured; return stub."""
     return PayoutSetupLinkOut(
         configured=False,
         url=None,
-        message="Stripe Connect payouts not configured. Contact support.",
+        message="Payout method not yet configured. Contact support.",
     )

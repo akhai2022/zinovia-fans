@@ -6,9 +6,6 @@ from typing import Literal
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-STRIPE_KEY_PLACEHOLDER = "sk_test_placeholder"
-
-
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -58,13 +55,16 @@ class Settings(BaseSettings):
         alias="CORS_ORIGINS",
     )
 
-    stripe_secret_key: str = Field(default="sk_test_placeholder", alias="STRIPE_SECRET_KEY")
-    stripe_webhook_secret: str = Field(default="", alias="STRIPE_WEBHOOK_SECRET")
-    stripe_webhook_secret_previous: str = Field(
-        default="",
-        alias="STRIPE_WEBHOOK_SECRET_PREVIOUS",
-    )
-    stripe_webhook_test_bypass: bool = Field(default=False, alias="STRIPE_WEBHOOK_TEST_BYPASS")
+    # CCBill payment processor
+    ccbill_account_number: str = Field(default="", alias="CCBILL_ACCOUNT_NUMBER")
+    ccbill_sub_account: str = Field(default="", alias="CCBILL_SUB_ACCOUNT")
+    ccbill_flex_form_id: str = Field(default="", alias="CCBILL_FLEX_FORM_ID")
+    ccbill_salt: str = Field(default="", alias="CCBILL_SALT")
+    ccbill_datalink_username: str = Field(default="", alias="CCBILL_DATALINK_USERNAME")
+    ccbill_datalink_password: str = Field(default="", alias="CCBILL_DATALINK_PASSWORD")
+    ccbill_test_mode: bool = Field(default=True, alias="CCBILL_TEST_MODE")
+    # Webhook test bypass for automated tests (must be off in production)
+    ccbill_webhook_test_bypass: bool = Field(default=False, alias="CCBILL_WEBHOOK_TEST_BYPASS")
     checkout_success_url: str = Field(
         default="http://localhost:3000/billing/success",
         alias="CHECKOUT_SUCCESS_URL",
@@ -117,6 +117,8 @@ class Settings(BaseSettings):
     mailpit_port: int = Field(default=1025, alias="MAILPIT_PORT")
     # Default matches production sender; can be overridden via MAIL_FROM env var.
     mail_from: str = Field(alias="MAIL_FROM", default="noreply@zinovia.ai")
+    mail_reply_to: str = Field(alias="MAIL_REPLY_TO", default="support@zinovia.ai")
+    mail_dry_run: bool = Field(alias="MAIL_DRY_RUN", default=False)
     resend_api_key: str = Field(alias="RESEND_API_KEY", default="")
 
     # Watermark for derived image variants (footer only; originals unchanged)
@@ -186,6 +188,11 @@ class Settings(BaseSettings):
         alias="MEDIA_VIDEO_POSTER_MAX_WIDTH",
     )
 
+    # AI image generation
+    ai_provider: Literal["mock", "replicate"] = Field(
+        default="mock", alias="AI_PROVIDER"
+    )
+    replicate_api_token: str = Field(default="", alias="REPLICATE_API_TOKEN")
     # AI image: temporary MVP gate for non-admin to apply to landing.hero
     allow_brand_asset_write: bool = Field(
         default=False,
@@ -194,7 +201,7 @@ class Settings(BaseSettings):
     enable_likes: bool = Field(default=False, alias="ENABLE_LIKES")
     enable_comments: bool = Field(default=False, alias="ENABLE_COMMENTS")
     enable_notifications: bool = Field(default=False, alias="ENABLE_NOTIFICATIONS")
-    enable_vault: bool = Field(default=False, alias="ENABLE_VAULT")
+    enable_vault: bool = Field(default=True, alias="ENABLE_VAULT")
     enable_scheduled_posts: bool = Field(default=False, alias="ENABLE_SCHEDULED_POSTS")
     enable_promotions: bool = Field(default=False, alias="ENABLE_PROMOTIONS")
     enable_dm_broadcast: bool = Field(default=False, alias="ENABLE_DM_BROADCAST")
@@ -206,6 +213,10 @@ class Settings(BaseSettings):
     # Allow mock KYC provider in production (temporary; disable once real provider integrated).
     enable_mock_kyc: bool = Field(default=False, alias="ENABLE_MOCK_KYC")
     default_currency: str = Field(default="eur", alias="DEFAULT_CURRENCY")
+
+    # E2E testing: enable test-only endpoints (MUST be off in production)
+    e2e_enable: bool = Field(default=False, alias="E2E_ENABLE")
+    e2e_secret: str = Field(default="", alias="E2E_SECRET")
 
     # Observability
     sentry_dsn: str = Field(default="", alias="SENTRY_DSN")
@@ -259,27 +270,26 @@ class Settings(BaseSettings):
             raise ValueError(
                 f"MAIL_PROVIDER={self.mail_provider} is not allowed in production. Use 'resend'."
             )
-        # Production safety: webhook test bypass must be off
-        if self.is_production and self.stripe_webhook_test_bypass:
+        # Production safety: MAIL_FROM must use @zinovia.ai domain
+        if self.is_production and not self.mail_from.endswith("@zinovia.ai"):
             raise ValueError(
-                "STRIPE_WEBHOOK_TEST_BYPASS must be false in production."
+                f"MAIL_FROM must use @zinovia.ai domain in production, got: {self.mail_from}"
+            )
+        # Production safety: E2E endpoints must be off
+        if self.is_production and self.e2e_enable:
+            raise ValueError(
+                "E2E_ENABLE must be false in production."
+            )
+        # Production safety: webhook test bypass must be off
+        if self.is_production and self.ccbill_webhook_test_bypass:
+            raise ValueError(
+                "CCBILL_WEBHOOK_TEST_BYPASS must be false in production."
             )
         # Production safety: cookie must be secure
         if self.is_production and not self.cookie_secure:
             raise ValueError(
                 "COOKIE_SECURE must be true in production."
             )
-        # Stripe key environment enforcement
-        key = (self.stripe_secret_key or "").strip()
-        if key and key != STRIPE_KEY_PLACEHOLDER:
-            if self.is_production and not key.startswith("sk_live_"):
-                raise ValueError(
-                    "Production requires a live Stripe key (sk_live_*)."
-                )
-            if not self.is_production and key.startswith("sk_live_"):
-                raise ValueError(
-                    "Non-production environments must not use a live Stripe key (sk_live_*)."
-                )
         return self
 
     @property

@@ -30,26 +30,12 @@ def _enable_ppvm(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MIN_PPV_CENTS", "100")
     monkeypatch.setenv("MAX_PPV_CENTS", "20000")
     monkeypatch.setenv("PPV_INTENT_RATE_LIMIT_PER_MIN", "10")
-    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_123")
+    # Configure CCBill for tests
+    monkeypatch.setenv("CCBILL_ACCOUNT_NUMBER", "900000")
+    monkeypatch.setenv("CCBILL_SUB_ACCOUNT", "0000")
+    monkeypatch.setenv("CCBILL_FLEX_FORM_ID", "test-form")
+    monkeypatch.setenv("CCBILL_SALT", "test-salt")
     get_settings.cache_clear()
-
-
-@pytest.fixture(autouse=True)
-def _mock_stripe(monkeypatch: pytest.MonkeyPatch) -> None:
-    class _PI:
-        @staticmethod
-        def create(**kwargs):
-            return type(
-                "PI",
-                (),
-                {
-                    "id": f"pi_{uuid.uuid4().hex[:10]}",
-                    "client_secret": f"cs_{uuid.uuid4().hex}",
-                    "metadata": kwargs.get("metadata", {}),
-                },
-            )()
-
-    monkeypatch.setattr("app.modules.ppv.service.stripe.PaymentIntent", _PI)
 
 
 async def _create_locked_media_message(
@@ -248,6 +234,7 @@ async def test_unique_purchase_prevents_double_unlock(
     )
     assert first.status_code == 200
     assert first.json()["status"] == "REQUIRES_PAYMENT"
+    assert first.json()["checkout_url"] is not None
 
     purchase_id = first.json()["purchase_id"]
     purchase = (await db_session.execute(select(PpvPurchase).where(PpvPurchase.id == UUID(purchase_id)))).scalar_one()
@@ -276,7 +263,7 @@ async def test_webhook_idempotent_and_refund_transition(
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("STRIPE_WEBHOOK_TEST_BYPASS", "true")
+    monkeypatch.setenv("CCBILL_WEBHOOK_TEST_BYPASS", "true")
     get_settings.cache_clear()
     _creator_token, fan_token, _conversation_id, _media_id, message_media_id = await _create_locked_media_message(
         async_client, db_session
@@ -288,45 +275,42 @@ async def test_webhook_idempotent_and_refund_transition(
     purchase_id = created.json()["purchase_id"]
     purchase = (await db_session.execute(select(PpvPurchase).where(PpvPurchase.id == UUID(purchase_id)))).scalar_one()
     purchase_uuid = purchase.id
-    pi_id = purchase.stripe_payment_intent_id
 
+    transaction_id = f"txn_{uuid.uuid4().hex[:12]}"
     event = {
-        "id": f"evt_{uuid.uuid4().hex}",
-        "type": "payment_intent.succeeded",
-        "data": {
-            "object": {
-                "id": pi_id,
-                "amount": purchase.amount_cents,
-                "currency": purchase.currency,
-                "latest_charge": f"ch_{uuid.uuid4().hex[:12]}",
-                "metadata": {
-                    "type": "PPV_MESSAGE_UNLOCK",
-                    "purchase_id": str(purchase.id),
-                    "creator_id": str(purchase.creator_id),
-                },
-            }
-        },
+        "eventType": "NewSaleSuccess",
+        "transactionId": transaction_id,
+        "subscriptionId": "",
+        "zv_payment_type": "PPV_MESSAGE_UNLOCK",
+        "zv_fan_user_id": str(purchase.purchaser_id),
+        "zv_creator_user_id": str(purchase.creator_id),
+        "zv_purchase_id": str(purchase.id),
+        "zv_message_media_id": str(message_media_id),
+        "billedInitialPrice": "5.00",
+        "billedCurrencyCode": "978",
     }
-    first = await async_client.post("/billing/webhooks/stripe", json=event, headers={"Stripe-Signature": "bypass"})
+    first = await async_client.post("/billing/webhooks/ccbill", json=event)
     assert first.status_code == 200
-    second = await async_client.post("/billing/webhooks/stripe", json=event, headers={"Stripe-Signature": "bypass"})
+    second = await async_client.post("/billing/webhooks/ccbill", json=event)
     assert second.status_code == 200
     assert second.json()["status"] == "duplicate_ignored"
 
     db_session.expire_all()
     refreshed = (await db_session.execute(select(PpvPurchase).where(PpvPurchase.id == purchase_uuid))).scalar_one()
     assert refreshed.status == "SUCCEEDED"
-    assert refreshed.stripe_charge_id is not None
+    assert refreshed.ccbill_transaction_id == transaction_id
 
+    # Refund webhook
     refund_event = {
-        "id": f"evt_{uuid.uuid4().hex}",
-        "type": "charge.refunded",
-        "data": {"object": {"id": refreshed.stripe_charge_id}},
+        "eventType": "Refund",
+        "transactionId": transaction_id,
+        "subscriptionId": "",
+        "amount": "5.00",
+        "billedCurrencyCode": "978",
     }
     refunded = await async_client.post(
-        "/billing/webhooks/stripe",
+        "/billing/webhooks/ccbill",
         json=refund_event,
-        headers={"Stripe-Signature": "bypass"},
     )
     assert refunded.status_code == 200
     db_session.expire_all()
@@ -340,7 +324,7 @@ async def test_webhook_payment_failed_transitions_to_canceled(
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("STRIPE_WEBHOOK_TEST_BYPASS", "true")
+    monkeypatch.setenv("CCBILL_WEBHOOK_TEST_BYPASS", "true")
     get_settings.cache_clear()
     _creator_token, fan_token, _conversation_id, _media_id, message_media_id = await _create_locked_media_message(
         async_client, db_session
@@ -352,22 +336,14 @@ async def test_webhook_payment_failed_transitions_to_canceled(
     purchase_id = created.json()["purchase_id"]
     purchase = (await db_session.execute(select(PpvPurchase).where(PpvPurchase.id == UUID(purchase_id)))).scalar_one()
     event = {
-        "id": f"evt_{uuid.uuid4().hex}",
-        "type": "payment_intent.payment_failed",
-        "data": {
-            "object": {
-                "id": purchase.stripe_payment_intent_id,
-                "metadata": {
-                    "type": "PPV_MESSAGE_UNLOCK",
-                    "purchase_id": str(purchase.id),
-                },
-            }
-        },
+        "eventType": "NewSaleFailure",
+        "transactionId": f"txn_{uuid.uuid4().hex[:12]}",
+        "zv_payment_type": "PPV_MESSAGE_UNLOCK",
+        "zv_purchase_id": str(purchase.id),
     }
     failed = await async_client.post(
-        "/billing/webhooks/stripe",
+        "/billing/webhooks/ccbill",
         json=event,
-        headers={"Stripe-Signature": "bypass"},
     )
     assert failed.status_code == 200
     db_session.expire_all()
@@ -428,4 +404,3 @@ async def test_locked_media_download_url_access_control(
         headers={"Authorization": f"Bearer {fan_token}"},
     )
     assert fan_allowed.status_code == 200
-

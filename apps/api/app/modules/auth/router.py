@@ -218,6 +218,9 @@ async def verify_email(
             auto_commit=False,
         )
         # Auto-login: set session cookie so user doesn't have to sign in again
+        from datetime import UTC, datetime as _dt
+        user.last_login_at = _dt.now(UTC)
+        user.last_login_ip = client_ip
         token = create_token_for_user(user)
         response.set_cookie("access_token", token, **_cookie_settings())  # type: ignore[arg-type]
         csrf_token = _secrets.token_urlsafe(32)

@@ -20,7 +20,7 @@ export function SubscribeInviteVideo() {
           aria-hidden
         />
 
-        <div className="relative aspect-[16/10] w-full overflow-hidden rounded-3xl bg-[rgb(14,14,18)]">
+        <div className="relative aspect-[16/10] w-full overflow-hidden rounded-3xl bg-background">
           <Image
             src="/assets/hero_abstract.jpg"
             alt="Abstract gradient"

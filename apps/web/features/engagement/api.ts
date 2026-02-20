@@ -64,7 +64,7 @@ export async function listComments(postId: string, cursor?: string): Promise<Com
 export async function createComment(postId: string, body: string): Promise<CommentOut> {
   return apiFetch(`/posts/${postId}/comments`, {
     method: "POST",
-    body: JSON.stringify({ body }),
+    body: { body },
   });
 }
 

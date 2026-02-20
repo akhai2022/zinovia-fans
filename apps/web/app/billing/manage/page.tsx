@@ -21,7 +21,7 @@ type SubscriptionItem = {
   subscription_id: string;
   creator_user_id: string;
   status: string;
-  stripe_subscription_id: string | null;
+  ccbill_subscription_id: string | null;
   current_period_end: string | null;
   cancel_at_period_end: boolean;
   cancel_at: string | null;
@@ -37,7 +37,7 @@ export default function BillingManagePage() {
   const router = useRouter();
   const [status, setStatus] = useState<BillingStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [portalLoading, setPortalLoading] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
@@ -63,17 +63,17 @@ export default function BillingManagePage() {
     fetchStatus();
   }, [fetchStatus]);
 
-  const openPortal = async () => {
-    setPortalLoading(true);
+  const cancelSubscription = async (subscriptionId: string) => {
+    setCancellingId(subscriptionId);
     try {
-      const data = await apiFetch<{ portal_url: string }>("/billing/portal", {
+      await apiFetch(`/billing/subscriptions/${subscriptionId}/cancel`, {
         method: "POST",
-        query: { return_url: window.location.href },
       });
-      window.location.href = data.portal_url;
+      await fetchStatus();
     } catch (err) {
       setError(getApiErrorMessage(err).message);
-      setPortalLoading(false);
+    } finally {
+      setCancellingId(null);
     }
   };
 
@@ -154,19 +154,18 @@ export default function BillingManagePage() {
                     )}
                   </p>
                 </div>
+                {!sub.cancel_at_period_end && (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => cancelSubscription(sub.subscription_id)}
+                    disabled={cancellingId === sub.subscription_id}
+                  >
+                    {cancellingId === sub.subscription_id ? "Cancelling..." : "Cancel"}
+                  </Button>
+                )}
               </div>
             ))}
-
-            <Button
-              className="w-full"
-              variant="secondary"
-              onClick={openPortal}
-              disabled={portalLoading}
-            >
-              {portalLoading
-                ? "Opening portal..."
-                : "Manage in Stripe Portal"}
-            </Button>
           </CardContent>
         </Card>
       )}

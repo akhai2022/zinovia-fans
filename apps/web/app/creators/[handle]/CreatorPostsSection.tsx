@@ -1,14 +1,18 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { MediaGrid } from "@/components/premium";
 import { SubscribeSheet } from "@/components/premium/SubscribeSheet";
 import { BillingService } from "@/features/billing/api";
 import { buildBillingReturnUrls } from "@/features/billing/checkoutUrls";
 import { getApiErrorMessage } from "@/lib/errors";
+import { apiFetch } from "@/lib/api/client";
 import { PostUnlockButton } from "@/features/ppv/PostUnlockButton";
 import type { PostItem, SubscriptionOffer } from "@/types/creator";
 import { DEFAULT_SUBSCRIPTION_OFFER } from "@/types/creator";
+import { uuidClient } from "@/lib/uuid";
+import "@/lib/api";
 
 interface CreatorPostsSectionProps {
   posts: PostItem[];
@@ -20,7 +24,7 @@ interface CreatorPostsSectionProps {
 
 /**
  * Client component that wraps MediaGrid with the subscribe/PPV checkout flow.
- * Subscription posts → SubscribeSheet. PPV posts → PostUnlockButton (Stripe PaymentIntent).
+ * Subscription posts → SubscribeSheet. PPV posts → PostUnlockButton (PaymentIntent).
  */
 export function CreatorPostsSection({
   posts,
@@ -29,10 +33,12 @@ export function CreatorPostsSection({
   creatorId,
   isSubscriber = false,
 }: CreatorPostsSectionProps) {
+  const router = useRouter();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [ppvPost, setPpvPost] = useState<PostItem | null>(null);
+  const idempotencyRef = useRef<string | null>(null);
 
   const offer: SubscriptionOffer = DEFAULT_SUBSCRIPTION_OFFER;
 
@@ -45,13 +51,31 @@ export function CreatorPostsSection({
   }, []);
 
   const handleSubscribe = useCallback(async () => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || checkoutLoading) return;
     setCheckoutLoading(true);
     setCheckoutError(null);
+
+    // Auth check: redirect unauthenticated users to login
+    try {
+      await apiFetch("/auth/me", { method: "GET" });
+    } catch (authErr) {
+      const parsed = getApiErrorMessage(authErr);
+      if (parsed.kind === "unauthorized") {
+        const returnTo = `/creators/${creatorHandle}`;
+        router.push(`/login?next=${encodeURIComponent(returnTo)}`);
+        return;
+      }
+    }
+
+    if (!idempotencyRef.current) {
+      idempotencyRef.current = uuidClient();
+    }
+
     try {
       const { successUrl, cancelUrl } = buildBillingReturnUrls(
         window.location.origin,
         `/creators/${creatorHandle}`,
+        { creatorId, creatorHandle },
       );
       const response = await BillingService.billingCheckoutSubscription({
         creator_id: creatorId,
@@ -61,14 +85,22 @@ export function CreatorPostsSection({
       if (!response.checkout_url) {
         setCheckoutError("Unable to start checkout. Please try again.");
         setCheckoutLoading(false);
+        idempotencyRef.current = null;
         return;
       }
       window.location.assign(response.checkout_url);
     } catch (err) {
-      setCheckoutError(getApiErrorMessage(err).message);
+      const parsed = getApiErrorMessage(err);
+      if (parsed.kind === "unauthorized") {
+        const returnTo = `/creators/${creatorHandle}`;
+        router.push(`/login?next=${encodeURIComponent(returnTo)}`);
+        return;
+      }
+      setCheckoutError(parsed.message);
       setCheckoutLoading(false);
+      idempotencyRef.current = null;
     }
-  }, [creatorId, creatorHandle]);
+  }, [creatorId, creatorHandle, checkoutLoading, router]);
 
   return (
     <>

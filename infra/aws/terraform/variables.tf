@@ -286,7 +286,7 @@ variable "enable_dm_broadcast" {
 }
 variable "enable_ppv_posts" {
   type    = bool
-  default = false
+  default = true
 }
 variable "enable_ppvm" {
   type    = bool
@@ -314,4 +314,47 @@ variable "default_currency" {
   type        = string
   default     = "eur"
   description = "Default currency for subscription pricing and PPV (ISO 4217 lowercase)"
+}
+
+# CCBill payment processor
+variable "ccbill_account_number" {
+  type        = string
+  default     = ""
+  description = "CCBill merchant account number"
+}
+
+variable "ccbill_sub_account" {
+  type        = string
+  default     = ""
+  description = "CCBill sub-account number"
+}
+
+variable "ccbill_flex_form_id" {
+  type        = string
+  default     = ""
+  description = "CCBill FlexForms form ID"
+}
+
+variable "ccbill_datalink_username" {
+  type        = string
+  default     = ""
+  description = "CCBill Datalink API username"
+}
+
+variable "ccbill_test_mode" {
+  type        = bool
+  default     = false
+  description = "Enable CCBill test mode (false for production)"
+}
+
+variable "resend_api_key" {
+  type        = string
+  sensitive   = true
+  description = "Resend API key for transactional email delivery"
+}
+
+variable "ai_provider" {
+  type        = string
+  default     = "mock"
+  description = "AI image generation provider: mock or replicate"
 }

@@ -24,6 +24,8 @@ class MediaOut(BaseModel):
 class SignedUrlResponse(BaseModel):
     upload_url: str | None = None
     download_url: str | None = None
+    blurhash: str | None = None
+    dominant_color: str | None = None
 
 
 class UploadUrlResponse(BaseModel):

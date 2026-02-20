@@ -1,4 +1,4 @@
-"""Payments models: tips, ppv_purchases, creator_payout_profile."""
+"""Payments models: tips, ppv_purchases, post_purchases."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ class Tip(TimestampMixin, Base):
     )
     amount_cents: Mapped[int] = mapped_column(Integer)
     currency: Mapped[str] = mapped_column(String(8))
-    stripe_payment_intent_id: Mapped[str] = mapped_column(String(255))
+    ccbill_transaction_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[str] = mapped_column(String(32))
 
 
@@ -55,8 +55,7 @@ class PpvPurchase(TimestampMixin, Base):
     )
     amount_cents: Mapped[int] = mapped_column(Integer)
     currency: Mapped[str] = mapped_column(String(8))
-    stripe_payment_intent_id: Mapped[str] = mapped_column(String(255))
-    stripe_charge_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    ccbill_transaction_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[str] = mapped_column(String(32))
 
     conversation: Mapped["Conversation"] = relationship(
@@ -83,30 +82,9 @@ class PostPurchase(TimestampMixin, Base):
     )
     amount_cents: Mapped[int] = mapped_column(Integer)
     currency: Mapped[str] = mapped_column(String(8))
-    stripe_payment_intent_id: Mapped[str] = mapped_column(String(255))
-    stripe_charge_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    ccbill_transaction_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[str] = mapped_column(String(32))
 
     __table_args__ = (
         UniqueConstraint("purchaser_id", "post_id", name="uq_post_purchase_purchaser_post"),
     )
-
-
-class CreatorPayoutProfile(Base):
-    __tablename__ = "creator_payout_profiles"
-
-    creator_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True
-    )
-    stripe_account_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    payouts_enabled: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default=sa.false()
-    )
-    charges_enabled: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default=sa.false()
-    )
-    requirements_due: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
-    )
-

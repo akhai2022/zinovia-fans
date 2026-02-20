@@ -40,8 +40,21 @@ export function FeedCard({
   const [commentInput, setCommentInput] = useState("");
   const [comments, setComments] = useState<Array<{ id: string; body: string; created_at: string }>>([]);
 
-  const onActionComingSoon = () => {
-    addToast("Coming soon", "default");
+  const onShare = async () => {
+    const handle = creatorInfo?.handle;
+    const url = handle
+      ? `${window.location.origin}/creators/${handle}`
+      : window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ url, title: creatorInfo?.display_name ?? "Zinovia" });
+      } catch {
+        /* user cancelled */
+      }
+    } else {
+      await navigator.clipboard.writeText(url);
+      addToast("Link copied", "success");
+    }
   };
 
   useEffect(() => {
@@ -120,14 +133,19 @@ export function FeedCard({
             <div className="aspect-video w-full bg-muted">
               {post.type === "IMAGE" && post.asset_ids?.length ? (
                 <div className="flex h-full w-full gap-px">
-                  {post.asset_ids.slice(0, 3).map((assetId) => (
-                    <PostMediaImage
-                      key={assetId}
-                      assetId={assetId}
-                      variant={locked ? "thumb" : undefined}
-                      className="min-w-0 flex-1 object-cover"
-                    />
-                  ))}
+                  {post.asset_ids.slice(0, 3).map((assetId) => {
+                    const preview = (post as any).media_previews?.[assetId];
+                    return (
+                      <PostMediaImage
+                        key={assetId}
+                        assetId={assetId}
+                        variant={locked ? "thumb" : undefined}
+                        className="min-w-0 flex-1 object-cover"
+                        initialBlurhash={preview?.blurhash}
+                        initialDominantColor={preview?.dominant_color}
+                      />
+                    );
+                  })}
                 </div>
               ) : post.type === "VIDEO" && post.asset_ids?.length ? (
                 <PostMediaVideo
@@ -144,7 +162,7 @@ export function FeedCard({
             <p className="mt-2 text-premium-small text-muted-foreground">
               {post.visibility} · {new Date(post.created_at).toLocaleDateString()}
             </p>
-            {/* Card actions — like, comment, share (coming soon) */}
+            {/* Card actions — like, comment, share */}
             <div
               className="mt-3 flex items-center gap-4 text-premium-small"
               role="group"
@@ -170,7 +188,7 @@ export function FeedCard({
               <span className="text-muted-foreground" aria-hidden>·</span>
               <button
                 type="button"
-                onClick={onActionComingSoon}
+                onClick={onShare}
                 className="text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring focus-visible:ring-offset-2 rounded cursor-pointer"
                 aria-label="Share"
               >

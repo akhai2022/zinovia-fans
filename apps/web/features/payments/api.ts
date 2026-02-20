@@ -29,7 +29,7 @@ export async function createTipIntent(
 ): Promise<TipIntentOut> {
   return apiFetch("/payments/tips/create-intent", {
     method: "POST",
-    body: JSON.stringify(body),
+    body,
   });
 }
 
@@ -38,6 +38,6 @@ export async function createPpvIntent(
 ): Promise<PpvIntentOut> {
   return apiFetch("/payments/ppv/create-intent", {
     method: "POST",
-    body: JSON.stringify(body),
+    body,
   });
 }

@@ -151,12 +151,3 @@ output "apex_cloudfront_domain" {
   description = "CloudFront distribution domain for apex (zinovia.ai and www.zinovia.ai)."
 }
 
-output "ses_domain_identity_arn" {
-  value       = var.enable_route53 ? aws_ses_domain_identity.main[0].arn : null
-  description = "SES domain identity ARN for zinovia.ai."
-}
-
-output "ses_dkim_tokens" {
-  value       = var.enable_route53 ? aws_ses_domain_dkim.main[0].dkim_tokens : []
-  description = "SES DKIM tokens (for verification/debug)."
-}
