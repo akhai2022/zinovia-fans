@@ -18,13 +18,19 @@ jobs:
         run: |
           docker compose --env-file .env -f infra/compose/docker-compose.yml build api worker
 
-      - name: Start backend stack
+      - name: Start infrastructure
         run: |
-          # Start only backend services (not web — it needs npm install which CI skips).
-          # Compose handles dependency ordering: postgres/redis/minio start first.
+          # Start infra services and wait for healthchecks
           docker compose --env-file .env -f infra/compose/docker-compose.yml up -d \
-            postgres redis minio mailpit minio-init api worker \
-            --wait --wait-timeout 180
+            postgres redis minio mailpit \
+            --wait --wait-timeout 120
+          # minio-init is one-shot (exits after bucket creation) — don't --wait on it
+          docker compose --env-file .env -f infra/compose/docker-compose.yml run --rm minio-init
+
+      - name: Start API and worker
+        run: |
+          docker compose --env-file .env -f infra/compose/docker-compose.yml up -d api worker \
+            --wait --wait-timeout 120
 
       - name: Show logs on failure
         if: failure()
