@@ -10,7 +10,7 @@ import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class PpvService {
     /**
-     * Create Intent (Message Media)
+     * Create Intent
      * @param messageMediaId
      * @returns PpvCreateIntentOut Successful Response
      * @throws ApiError
@@ -30,7 +30,7 @@ export class PpvService {
         });
     }
     /**
-     * Status (Message Media)
+     * Status
      * @param messageMediaId
      * @returns PpvMessageMediaStatusOut Successful Response
      * @throws ApiError
@@ -50,12 +50,12 @@ export class PpvService {
         });
     }
     /**
-     * Create Intent (Post PPV)
+     * Create Post Intent
      * @param postId
      * @returns PpvCreateIntentOut Successful Response
      * @throws ApiError
      */
-    public static createPostIntent(
+    public static ppvPostCreateIntent(
         postId: string,
     ): CancelablePromise<PpvCreateIntentOut> {
         return __request(OpenAPI, {
@@ -70,12 +70,12 @@ export class PpvService {
         });
     }
     /**
-     * Status (Post PPV)
+     * Post Status
      * @param postId
      * @returns PpvPostStatusOut Successful Response
      * @throws ApiError
      */
-    public static getPostStatus(
+    public static ppvPostStatus(
         postId: string,
     ): CancelablePromise<PpvPostStatusOut> {
         return __request(OpenAPI, {

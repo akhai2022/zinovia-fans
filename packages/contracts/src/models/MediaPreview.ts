@@ -2,10 +2,11 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type SignedUrlResponse = {
+/**
+ * Compact placeholder data for an asset (blurhash + dominant color).
+ */
+export type MediaPreview = {
     blurhash?: (string | null);
     dominant_color?: (string | null);
-    download_url?: (string | null);
-    upload_url?: (string | null);
 };
 

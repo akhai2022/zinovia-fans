@@ -2,11 +2,11 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type PpvCreateIntentOut = {
-    amount_cents: number;
-    checkout_url?: (string | null);
-    currency: string;
-    purchase_id?: (string | null);
+export type AdminUserSubscriberOut = {
+    created_at: string;
+    fan_display_name: string;
+    fan_email: string;
+    fan_user_id: string;
     status: string;
 };
 

@@ -2,8 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type PpvIntentOut = {
-    checkout_url: string;
-    purchase_id: string;
+export type ContactFormResponse = {
+    message?: string;
+    ok?: boolean;
 };
 

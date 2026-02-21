@@ -33,8 +33,8 @@ export class CreatorService {
         });
     }
     /**
-     * Stripe Connect setup link
-     * Generates Account Link for onboarding. Returns 'not_configured' if Stripe Connect is not enabled.
+     * Payout setup link
+     * Returns payout setup link. Currently not configured — placeholder for future integration.
      * @returns PayoutSetupLinkOut Successful Response
      * @throws ApiError
      */

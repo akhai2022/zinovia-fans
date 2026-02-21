@@ -2,8 +2,10 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type PpvIntentOut = {
-    checkout_url: string;
-    purchase_id: string;
+export type AttachmentMeta = {
+    content_type: string;
+    filename: string;
+    id: string;
+    size: number;
 };
 

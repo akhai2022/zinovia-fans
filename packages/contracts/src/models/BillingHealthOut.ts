@@ -4,9 +4,8 @@
 /* eslint-disable */
 export type BillingHealthOut = {
     checkout_defaults_configured: boolean;
-    stripe_configured: boolean;
-    stripe_mode: string;
+    configured: boolean;
+    payment_provider?: string;
     webhook_configured: boolean;
-    webhook_previous_configured: boolean;
 };
 

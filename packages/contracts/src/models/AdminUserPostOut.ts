@@ -2,15 +2,15 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-/**
- * Update post body (partial).
- */
-export type PostUpdate = {
+export type AdminUserPostOut = {
     caption?: (string | null);
-    /**
-     * Required when visibility=PPV.
-     */
+    created_at: string;
+    currency?: (string | null);
+    id: string;
+    nsfw: boolean;
     price_cents?: (number | null);
-    visibility?: (string | null);
+    status: string;
+    type: string;
+    visibility: string;
 };
 

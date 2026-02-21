@@ -17,6 +17,7 @@ export type CreatorProfilePublic = {
     handle: string;
     is_following?: boolean;
     is_online?: boolean;
+    is_subscriber?: boolean;
     nsfw: boolean;
     onboarding_state?: (string | null);
     phone?: (string | null);

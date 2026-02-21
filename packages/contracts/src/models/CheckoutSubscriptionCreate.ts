@@ -3,7 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Start subscription checkout for a creator. Provide creator_id or creator_handle. success_url/cancel_url optional (from env).
+ * Start subscription checkout for a creator. Provide creator_id or creator_handle.
  */
 export type CheckoutSubscriptionCreate = {
     cancel_url?: (string | null);

@@ -6,6 +6,12 @@ import type { AdminCreatorAction } from '../models/AdminCreatorAction';
 import type { AdminCreatorPage } from '../models/AdminCreatorPage';
 import type { AdminPostAction } from '../models/AdminPostAction';
 import type { AdminPostPage } from '../models/AdminPostPage';
+import type { AdminTransactionPage } from '../models/AdminTransactionPage';
+import type { AdminUserAction } from '../models/AdminUserAction';
+import type { AdminUserDetailOut } from '../models/AdminUserDetailOut';
+import type { AdminUserPage } from '../models/AdminUserPage';
+import type { AdminUserPostPage } from '../models/AdminUserPostPage';
+import type { AdminUserSubscriberPage } from '../models/AdminUserSubscriberPage';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -146,6 +152,161 @@ export class AdminService {
             url: '/admin/tokens',
             query: {
                 'email': email,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * List Transactions
+     * @param page
+     * @param pageSize
+     * @param type
+     * @returns AdminTransactionPage Successful Response
+     * @throws ApiError
+     */
+    public static adminListTransactions(
+        page: number = 1,
+        pageSize: number = 20,
+        type?: (string | null),
+    ): CancelablePromise<AdminTransactionPage> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/admin/transactions',
+            query: {
+                'page': page,
+                'page_size': pageSize,
+                'type': type,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * List Users
+     * @param page
+     * @param pageSize
+     * @param search
+     * @param role
+     * @returns AdminUserPage Successful Response
+     * @throws ApiError
+     */
+    public static adminListUsers(
+        page: number = 1,
+        pageSize: number = 20,
+        search?: (string | null),
+        role?: (string | null),
+    ): CancelablePromise<AdminUserPage> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/admin/users',
+            query: {
+                'page': page,
+                'page_size': pageSize,
+                'search': search,
+                'role': role,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Get User
+     * @param userId
+     * @returns AdminUserDetailOut Successful Response
+     * @throws ApiError
+     */
+    public static adminGetUser(
+        userId: string,
+    ): CancelablePromise<AdminUserDetailOut> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/admin/users/{user_id}',
+            path: {
+                'user_id': userId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Action User
+     * @param userId
+     * @param requestBody
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static adminActionUser(
+        userId: string,
+        requestBody: AdminUserAction,
+    ): CancelablePromise<Record<string, any>> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/admin/users/{user_id}/action',
+            path: {
+                'user_id': userId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * List User Posts
+     * @param userId
+     * @param page
+     * @param pageSize
+     * @returns AdminUserPostPage Successful Response
+     * @throws ApiError
+     */
+    public static adminListUserPosts(
+        userId: string,
+        page: number = 1,
+        pageSize: number = 20,
+    ): CancelablePromise<AdminUserPostPage> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/admin/users/{user_id}/posts',
+            path: {
+                'user_id': userId,
+            },
+            query: {
+                'page': page,
+                'page_size': pageSize,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * List User Subscribers
+     * @param userId
+     * @param page
+     * @param pageSize
+     * @returns AdminUserSubscriberPage Successful Response
+     * @throws ApiError
+     */
+    public static adminListUserSubscribers(
+        userId: string,
+        page: number = 1,
+        pageSize: number = 20,
+    ): CancelablePromise<AdminUserSubscriberPage> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/admin/users/{user_id}/subscribers',
+            path: {
+                'user_id': userId,
+            },
+            query: {
+                'page': page,
+                'page_size': pageSize,
             },
             errors: {
                 422: `Validation Error`,

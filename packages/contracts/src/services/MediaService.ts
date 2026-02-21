@@ -78,6 +78,27 @@ export class MediaService {
         });
     }
     /**
+     * Delete a media file
+     * Permanently deletes a media file and its S3 objects. Fails if the file is used in a post, profile, or collection.
+     * @param mediaId
+     * @returns void
+     * @throws ApiError
+     */
+    public static mediaDelete(
+        mediaId: string,
+    ): CancelablePromise<void> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/media/{media_id}',
+            path: {
+                'media_id': mediaId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
      * Create Download Url
      * @param mediaId
      * @param variant

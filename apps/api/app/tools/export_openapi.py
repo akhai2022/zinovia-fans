@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 import json
+import logging
+import os
 import sys
 from pathlib import Path
+
+# Suppress all logging to avoid polluting stdout when using --stdout
+logging.disable(logging.CRITICAL)
+os.environ.setdefault("LOG_LEVEL", "CRITICAL")
 
 from fastapi.openapi.utils import get_openapi
 

@@ -10,7 +10,7 @@ import { request as __request } from '../core/request';
 export class KycService {
     /**
      * Kyc Complete
-     * Complete KYC verification after user submits documents.
+     * Complete KYC verification. Called by /kyc/verify page after user submits documents.
      * @returns any Successful Response
      * @throws ApiError
      */

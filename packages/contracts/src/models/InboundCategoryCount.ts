@@ -2,8 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type PpvIntentOut = {
-    checkout_url: string;
-    purchase_id: string;
+export type InboundCategoryCount = {
+    category: string;
+    total: number;
+    unread: number;
 };
 

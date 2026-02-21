@@ -2,8 +2,10 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { ChangePasswordRequest } from '../models/ChangePasswordRequest';
 import type { CreatorRegisterRequest } from '../models/CreatorRegisterRequest';
 import type { CreatorRegisterResponse } from '../models/CreatorRegisterResponse';
+import type { ForgotPasswordRequest } from '../models/ForgotPasswordRequest';
 import type { ResendVerificationEmailRequest } from '../models/ResendVerificationEmailRequest';
 import type { ResetPasswordRequest } from '../models/ResetPasswordRequest';
 import type { TokenResponse } from '../models/TokenResponse';
@@ -15,6 +17,26 @@ import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class AuthService {
+    /**
+     * Change password (authenticated)
+     * Requires current password. New password must be at least 10 characters.
+     * @param requestBody
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static authChangePassword(
+        requestBody: ChangePasswordRequest,
+    ): CancelablePromise<Record<string, any>> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/auth/change-password',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
     /**
      * [DEV ONLY] Get verification/reset tokens for a user
      * Returns the latest email verification and password reset tokens for a given email. Only available in local/staging environments. Disabled in production.
@@ -44,7 +66,7 @@ export class AuthService {
      * @throws ApiError
      */
     public static authForgotPassword(
-        requestBody: UserLogin,
+        requestBody: ForgotPasswordRequest,
     ): CancelablePromise<Record<string, any>> {
         return __request(OpenAPI, {
             method: 'POST',
@@ -177,12 +199,12 @@ export class AuthService {
     /**
      * Signup
      * @param requestBody
-     * @returns UserOut Successful Response
+     * @returns any Successful Response
      * @throws ApiError
      */
     public static authSignup(
         requestBody: UserCreate,
-    ): CancelablePromise<UserOut> {
+    ): CancelablePromise<Record<string, any>> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/auth/signup',

@@ -8,6 +8,29 @@ import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class WebhooksService {
     /**
+     * Ccbill Webhook Alias
+     * @returns WebhookAck Successful Response
+     * @throws ApiError
+     */
+    public static webhooksCcbillAlias(): CancelablePromise<WebhookAck> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/webhooks/ccbill',
+        });
+    }
+    /**
+     * Resend Inbound Webhook
+     * Resend webhook receiver for email.received events.
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static resendInboundWebhookWebhooksInboundPost(): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/webhooks/inbound',
+        });
+    }
+    /**
      * Kyc Webhook
      * @returns any Successful Response
      * @throws ApiError
@@ -16,26 +39,6 @@ export class WebhooksService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/webhooks/kyc',
-        });
-    }
-    /**
-     * Stripe Webhook Alias
-     * @param stripeSignature
-     * @returns WebhookAck Successful Response
-     * @throws ApiError
-     */
-    public static webhooksStripeAlias(
-        stripeSignature?: (string | null),
-    ): CancelablePromise<WebhookAck> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/webhooks/stripe',
-            headers: {
-                'Stripe-Signature': stripeSignature,
-            },
-            errors: {
-                422: `Validation Error`,
-            },
         });
     }
 }

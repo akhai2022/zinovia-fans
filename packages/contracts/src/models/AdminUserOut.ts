@@ -2,18 +2,24 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { ProfileOut } from './ProfileOut';
-export type UserOut = {
+export type AdminUserOut = {
+    bio?: (string | null);
     country?: (string | null);
     created_at: string;
+    discoverable?: boolean;
+    display_name: string;
     email: string;
-    id: string;
+    featured?: boolean;
+    handle?: (string | null);
     is_active: boolean;
+    last_activity_at?: (string | null);
     last_login_at?: (string | null);
+    last_login_ip?: (string | null);
     onboarding_state?: (string | null);
     phone?: (string | null);
-    profile: (ProfileOut | null);
     role: string;
-    updated_at: string;
+    signup_ip?: (string | null);
+    user_id: string;
+    verified?: boolean;
 };
 

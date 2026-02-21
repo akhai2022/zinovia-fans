@@ -9,6 +9,7 @@ import type { CheckoutSubscriptionCreate } from '../models/CheckoutSubscriptionC
 import type { CheckoutSubscriptionOut } from '../models/CheckoutSubscriptionOut';
 import type { CreatorPlanOut } from '../models/CreatorPlanOut';
 import type { CreatorPlanUpdate } from '../models/CreatorPlanUpdate';
+import type { PurchaseHistoryOut } from '../models/PurchaseHistoryOut';
 import type { WebhookAck } from '../models/WebhookAck';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
@@ -16,7 +17,7 @@ import { request as __request } from '../core/request';
 export class BillingService {
     /**
      * Checkout Subscription
-     * Start Stripe Checkout for subscribing to a creator. Returns URL to redirect the fan. 501 if Stripe not configured.
+     * Start CCBill checkout for subscribing to a creator. Returns URL to redirect the fan.
      * @param requestBody
      * @returns CheckoutSubscriptionOut Successful Response
      * @throws ApiError
@@ -46,8 +47,7 @@ export class BillingService {
         });
     }
     /**
-     * Get creator subscription plan
-     * Returns the authenticated creator's current subscription plan and pricing bounds.
+     * Get Plan
      * @returns CreatorPlanOut Successful Response
      * @throws ApiError
      */
@@ -58,8 +58,7 @@ export class BillingService {
         });
     }
     /**
-     * Update subscription price
-     * Set a new monthly subscription price. Creates a new Stripe Price; existing subscribers keep their current rate until renewal.
+     * Update Plan
      * @param requestBody
      * @returns CreatorPlanOut Successful Response
      * @throws ApiError
@@ -78,20 +77,20 @@ export class BillingService {
         });
     }
     /**
-     * Create Stripe Customer Portal session
-     * Returns a URL to the Stripe Customer Portal for managing subscriptions.
-     * @param returnUrl
-     * @returns any Successful Response
+     * List Purchases
+     * List all purchases (PPV posts, PPV messages, tips) for the current fan.
+     * @param limit
+     * @returns PurchaseHistoryOut Successful Response
      * @throws ApiError
      */
-    public static billingPortal(
-        returnUrl?: (string | null),
-    ): CancelablePromise<Record<string, any>> {
+    public static billingPurchases(
+        limit: number = 50,
+    ): CancelablePromise<PurchaseHistoryOut> {
         return __request(OpenAPI, {
-            method: 'POST',
-            url: '/billing/portal',
+            method: 'GET',
+            url: '/billing/purchases',
             query: {
-                'return_url': returnUrl,
+                'limit': limit,
             },
             errors: {
                 422: `Validation Error`,
@@ -120,7 +119,7 @@ export class BillingService {
     }
     /**
      * Cancel Subscription Endpoint
-     * Cancel a subscription at period end. Fan retains access until current_period_end.
+     * Cancel a subscription at period end.
      * @param subscriptionId
      * @returns CancelSubscriptionOut Successful Response
      * @throws ApiError
@@ -140,24 +139,15 @@ export class BillingService {
         });
     }
     /**
-     * Stripe Webhook
-     * Stripe webhook: signature verified, idempotent by event id. Store event then process; set processed_at.
-     * @param stripeSignature
+     * Ccbill Webhook
+     * CCBill webhook: verify digest, idempotent by event id.
      * @returns WebhookAck Successful Response
      * @throws ApiError
      */
-    public static billingWebhooksStripe(
-        stripeSignature?: (string | null),
-    ): CancelablePromise<WebhookAck> {
+    public static billingWebhooksCcbill(): CancelablePromise<WebhookAck> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/billing/webhooks/stripe',
-            headers: {
-                'Stripe-Signature': stripeSignature,
-            },
-            errors: {
-                422: `Validation Error`,
-            },
+            url: '/billing/webhooks/ccbill',
         });
     }
 }

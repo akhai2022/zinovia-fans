@@ -3,7 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export type TipIntentOut = {
-    client_secret: string;
+    checkout_url: string;
     tip_id: string;
 };
 
