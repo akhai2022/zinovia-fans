@@ -13,6 +13,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.errors import AppError
 from app.core.settings import get_settings
+from app.modules.auth.constants import ADMIN_ROLE, SUPER_ADMIN_ROLE
 from app.modules.creators.constants import CREATOR_ROLE
 from app.modules.creators.service import get_creator_by_handle_any
 from app.modules.messaging.constants import (
@@ -40,13 +41,13 @@ async def get_or_create_conversation(
     """Get or create conversation. Fan initiates with creator_handle/creator_id; creator with fan_id."""
     if creator_handle:
         user, profile, _, _ = await get_creator_by_handle_any(
-            session, creator_handle, discoverable_only=False
+            session, creator_handle
         )
         creator_id = user.id
     if not creator_id:
         raise AppError(status_code=400, detail="creator_handle_or_creator_id_required")
 
-    if current_user_role in (CREATOR_ROLE, "admin"):
+    if current_user_role in (CREATOR_ROLE, ADMIN_ROLE, SUPER_ADMIN_ROLE):
         if not fan_id:
             raise AppError(status_code=400, detail="fan_id_required_when_creator_initiates")
         creator_user_id = current_user_id
@@ -204,7 +205,7 @@ async def create_message(
     if not conv:
         raise AppError(status_code=404, detail="conversation_not_found")
 
-    sender_role = SENDER_ROLE_CREATOR if user_role in (CREATOR_ROLE, "admin") else SENDER_ROLE_FAN
+    sender_role = SENDER_ROLE_CREATOR if user_role in (CREATOR_ROLE, ADMIN_ROLE, SUPER_ADMIN_ROLE) else SENDER_ROLE_FAN
 
     if type == MESSAGE_TYPE_TEXT:
         if not text or not text.strip():

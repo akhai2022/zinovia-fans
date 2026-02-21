@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
+from app.modules.auth.constants import ADMIN_ROLE, SUPER_ADMIN_ROLE
 from app.modules.auth.models import Profile, User
 from app.modules.creators.constants import (
     CREATOR_ROLE,
@@ -96,6 +97,9 @@ async def get_posts_count(session: AsyncSession, creator_user_id: UUID) -> int:
     return result.scalar_one() or 0
 
 
+_KYC_APPROVED_STATES = {"KYC_APPROVED", "COMPLETED"}
+
+
 def _discoverable_where() -> tuple:
     """Base conditions for discoverable creators (role, handle set, discoverable)."""
     return (
@@ -111,7 +115,7 @@ async def get_discoverable_creators_page(
     page: int = 1,
     page_size: int = DEFAULT_PAGE_SIZE,
     q: str | None = None,
-) -> tuple[list[tuple[UUID, str, str, UUID | None, int, int]], int]:
+) -> tuple[list[tuple[UUID, str, str | None, UUID | None, int, int, bool, bool]], int]:
     """
     Paginated discoverable creators with followers_count and posts_count.
     Optional search: q filters by handle or display_name (ILIKE).
@@ -222,12 +226,16 @@ async def get_creator_by_handle_any(
 
 
 async def update_creator_profile(
-    session: AsyncSession, user_id: UUID, payload: dict
+    session: AsyncSession, user_id: UUID, payload: dict, *, current_user: User | None = None,
 ) -> Profile:
     result = await session.execute(select(Profile).where(Profile.user_id == user_id))
     profile = result.scalar_one_or_none()
     if not profile:
         raise AppError(status_code=404, detail="profile_not_found")
+    # Block setting discoverable=True without KYC approval
+    if payload.get("discoverable") is True and current_user:
+        if current_user.role not in (ADMIN_ROLE, SUPER_ADMIN_ROLE) and current_user.onboarding_state not in _KYC_APPROVED_STATES:
+            raise AppError(status_code=403, detail="kyc_required_for_discoverable")
     if "handle" in payload and payload["handle"] is not None:
         validate_handle(payload["handle"])
         profile.handle = payload["handle"].strip()

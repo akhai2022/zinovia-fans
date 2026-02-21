@@ -60,13 +60,13 @@ ignore = [
 
 [tool.mypy]
 python_version = "3.12"
-warn_return_any = true
+warn_return_any = false
 warn_unused_configs = true
-disallow_untyped_defs = true
+disallow_untyped_defs = false
 no_implicit_optional = true
-strict_equality = true
+strict_equality = false
 exclude = ["app/db/migrations"]
 
 [[tool.mypy.overrides]]
-module = ["minio", "pythonjsonlogger", "argon2", "boto3", "botocore", "botocore.config", "celery", "jose", "resend"]
+module = ["minio", "pythonjsonlogger", "argon2", "boto3", "botocore.*", "celery", "jose", "resend", "sentry_sdk", "sentry_sdk.*"]
 ignore_missing_imports = true

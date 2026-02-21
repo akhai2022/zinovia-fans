@@ -73,7 +73,7 @@ async def feed(
     )
     items = []
     for post, user, profile, is_locked, locked_reason in items_tuples:
-        data = _post_to_out_locked(post, locked_reason) if is_locked else _post_to_out(post)
+        data = _post_to_out_locked(post, locked_reason or "subscription") if is_locked else _post_to_out(post)
         items.append(
             PostWithCreator(
                 **data,

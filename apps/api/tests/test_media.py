@@ -105,7 +105,7 @@ def test_validate_media_upload_accepts_image() -> None:
 def test_validate_media_upload_rejects_non_mp4_video() -> None:
     with pytest.raises(AppError) as exc_info:
         validate_media_upload("video/webm", 1000)
-    assert exc_info.value.detail["code"] == "unsupported_media_type"
+    assert exc_info.value.detail["code"] == "unsupported_media_type"  # type: ignore[index]
 
 
 def test_validate_media_upload_accepts_mp4_when_allowed() -> None:
@@ -116,7 +116,7 @@ def test_validate_media_upload_accepts_mp4_when_allowed() -> None:
 def test_validate_media_upload_rejects_oversize_video() -> None:
     with pytest.raises(AppError) as exc_info:
         validate_media_upload("video/mp4", 200_000_001)
-    assert exc_info.value.detail["code"] == "video_exceeds_max_size"
+    assert exc_info.value.detail["code"] == "video_exceeds_max_size"  # type: ignore[index]
 
 
 # ---------------------------------------------------------------------------

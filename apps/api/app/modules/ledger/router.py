@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import AppError
 from app.db.session import get_async_session
 from app.modules.auth.deps import require_admin
 from app.modules.ledger.schemas import LedgerEntryCreate, LedgerEntryOut
@@ -33,6 +34,8 @@ async def create_entry(
         direction=payload.direction,
         reference=payload.reference,
     )
+    if entry is None:
+        raise AppError(status_code=409, detail="duplicate_ledger_entry")
     return LedgerEntryOut(
         id=entry.id,
         account_id=entry.account_id,

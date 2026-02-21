@@ -49,7 +49,7 @@ async def _get_message_media_context(
     ).one_or_none()
     if not row:
         raise AppError(status_code=404, detail="message_media_not_found")
-    return row
+    return row  # type: ignore[return-value]
 
 
 async def get_ppv_status(

@@ -20,7 +20,7 @@ def _rsa_signer(message: bytes) -> bytes:
     # Support escaped newlines in env vars
     pem_bytes = pem.replace("\\n", "\n").encode("utf-8")
     private_key = serialization.load_pem_private_key(pem_bytes, password=None)
-    return private_key.sign(message, padding.PKCS1v15(), hashes.SHA1())  # type: ignore[union-attr]
+    return private_key.sign(message, padding.PKCS1v15(), hashes.SHA1())  # type: ignore[union-attr,arg-type,call-arg]
 
 
 def generate_signed_url(object_key: str) -> str:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -311,7 +312,7 @@ async def list_purchases(
     from app.modules.auth.models import Profile
 
     # PostPurchases
-    q_posts = (
+    q_posts: Any = (
         select(
             PostPurchase.id,
             literal_column("'PPV_POST'").label("type"),
@@ -327,7 +328,7 @@ async def list_purchases(
     )
 
     # PpvPurchases (message media)
-    q_ppv = (
+    q_ppv: Any = (
         select(
             PpvPurchase.id,
             literal_column("'PPV_MESSAGE'").label("type"),
@@ -343,7 +344,7 @@ async def list_purchases(
     )
 
     # Tips
-    q_tips = (
+    q_tips: Any = (
         select(
             Tip.id,
             literal_column("'TIP'").label("type"),

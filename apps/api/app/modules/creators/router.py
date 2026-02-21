@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
@@ -41,7 +42,7 @@ router = APIRouter()
 
 async def _get_plan_price(
     session: AsyncSession, creator_user_id: UUID
-) -> tuple[float | None, str | None]:
+) -> tuple[Decimal | None, str | None]:
     """Return (price, currency) for a creator's plan, or (None, None) if no plan exists."""
     result = await session.execute(
         select(CreatorPlan.price, CreatorPlan.currency).where(
@@ -70,7 +71,7 @@ async def list_creators(
         CreatorDiscoverItem(
             creator_id=user_id,
             handle=handle,
-            display_name=display_name,
+            display_name=display_name or "",
             avatar_media_id=avatar_media_id,
             verified=verified,
             is_online=is_online,
@@ -121,7 +122,7 @@ async def update_me(
     current_user: User = Depends(require_creator),
 ) -> CreatorProfilePublic:
     update_data = payload.model_dump(exclude_unset=True)
-    profile = await update_creator_profile(session, current_user.id, update_data)
+    profile = await update_creator_profile(session, current_user.id, update_data, current_user=current_user)
     # Refresh user to pick up phone/country changes
     await session.refresh(current_user)
     user = current_user
