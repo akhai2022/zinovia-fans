@@ -34,42 +34,14 @@ jobs:
         run: cp .env.example .env
 
       - name: Build images
-        run: |
-          docker compose --env-file .env -f infra/compose/docker-compose.yml build --parallel
+        run: docker compose --env-file .env -f infra/compose/docker-compose.yml build --parallel
 
-      - name: Start infrastructure
-        run: |
-          docker compose --env-file .env -f infra/compose/docker-compose.yml up -d postgres redis minio mailpit
-          docker compose --env-file .env -f infra/compose/docker-compose.yml up -d minio-init
-
-      - name: Wait for infra health
-        run: |
-          for svc in postgres redis minio; do
-            echo "Waiting for $svc..."
-            timeout 60 bash -c "until docker compose --env-file .env -f infra/compose/docker-compose.yml exec -T $svc true 2>/dev/null; do sleep 2; done"
-          done
-          sleep 5
-
-      - name: Start API and worker
-        run: |
-          docker compose --env-file .env -f infra/compose/docker-compose.yml up -d api worker
-
-      - name: Wait for API health
-        run: |
-          echo "Waiting for API to be healthy..."
-          for i in $(seq 1 30); do
-            if docker compose --env-file .env -f infra/compose/docker-compose.yml exec -T api curl -sf http://localhost:8000/health; then
-              echo " API is ready!"
-              break
-            fi
-            echo "  attempt $i/30..."
-            sleep 5
-          done
+      - name: Start stack
+        run: docker compose --env-file .env -f infra/compose/docker-compose.yml up -d --wait --wait-timeout 180
 
       - name: Show logs on failure
         if: failure()
-        run: |
-          docker compose --env-file .env -f infra/compose/docker-compose.yml logs --tail=100
+        run: docker compose --env-file .env -f infra/compose/docker-compose.yml logs --tail=200
 
       - name: Migrate
         run: make migrate
