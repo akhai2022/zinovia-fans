@@ -172,31 +172,47 @@ export default function EarningsPage() {
               No transactions yet.
             </p>
           ) : (
-            <div className="divide-y divide-border">
-              {last_transactions.map((tx) => (
-                <div
-                  key={tx.id}
-                  className="flex items-center justify-between py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground">
-                      {typeLabel(tx.type)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDate(tx.created_at)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-emerald-600">
-                      {formatCents(tx.net_cents, tx.currency || cur)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      gross {formatCents(tx.gross_cents, tx.currency || cur)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <>
+              <div className="overflow-x-auto rounded-lg border border-border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
+                      <th className="px-4 py-3 font-semibold">Date</th>
+                      <th className="px-4 py-3 font-semibold">Type</th>
+                      <th className="px-4 py-3 font-semibold text-right">Gross</th>
+                      <th className="px-4 py-3 font-semibold text-right">Fee</th>
+                      <th className="px-4 py-3 font-semibold text-right">Net</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {last_transactions.map((tx) => (
+                      <tr key={tx.id} className="text-foreground transition-colors hover:bg-white/[0.03]">
+                        <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
+                          {formatDate(tx.created_at)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                            {typeLabel(tx.type)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono">
+                          {formatCents(tx.gross_cents, tx.currency || cur)}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono text-muted-foreground">
+                          {formatCents(tx.fee_cents, tx.currency || cur)}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono text-emerald-400">
+                          {formatCents(tx.net_cents, tx.currency || cur)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-3 text-center text-xs text-muted-foreground">
+                Showing last {last_transactions.length} transactions (30 days)
+              </p>
+            </>
           )}
         </CardContent>
       </Card>

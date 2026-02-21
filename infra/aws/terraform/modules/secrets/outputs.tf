@@ -22,6 +22,10 @@ output "resend_api_key_arn" {
   value = aws_secretsmanager_secret.resend_api_key.arn
 }
 
+output "resend_webhook_secret_arn" {
+  value = aws_secretsmanager_secret.resend_webhook_secret.arn
+}
+
 output "replicate_api_token_arn" {
   value = aws_secretsmanager_secret.replicate_api_token.arn
 }

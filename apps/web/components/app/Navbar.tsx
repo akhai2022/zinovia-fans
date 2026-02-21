@@ -273,13 +273,13 @@ export function Navbar({
             </DropdownMenu>
           ) : (
             <div className="flex items-center gap-2">
-              <Button variant="secondary" size="sm" asChild>
+              <Button variant="ghost" size="sm" asChild>
                 <Link href="/login" className="flex items-center gap-1.5">
                   <LogIn className="h-3.5 w-3.5" />
                   {t.nav.login}
                 </Link>
               </Button>
-              <Button size="sm" asChild>
+              <Button size="sm" className="btn-cta-primary" asChild>
                 <Link href="/signup" className="flex items-center gap-1.5">
                   <UserPlus className="h-3.5 w-3.5" />
                   {t.nav.signup}
@@ -383,27 +383,25 @@ export function Navbar({
           )}
 
           {!user && (
-            <div className="grid grid-cols-2 gap-2 pt-3">
-              <Button className="btn-cta-primary" asChild>
+            <div className="flex flex-col gap-2 pt-3">
+              <Button className="btn-cta-primary w-full" asChild>
                 <Link href="/signup" onClick={() => setMobileOpen(false)} className="flex items-center justify-center gap-1.5">
-                  <UserPlus className="h-3.5 w-3.5" />
+                  <UserPlus className="h-4 w-4" />
                   {t.nav.startSubscribing}
                 </Link>
               </Button>
-              <Button variant="secondary" asChild>
+              <Button variant="outline" className="w-full" asChild>
+                <Link href="/login" onClick={() => setMobileOpen(false)} className="flex items-center justify-center gap-1.5">
+                  <LogIn className="h-4 w-4" />
+                  {t.nav.login}
+                </Link>
+              </Button>
+              <Button variant="ghost" size="sm" className="w-full" asChild>
                 <Link href="/creators" onClick={() => setMobileOpen(false)} className="flex items-center justify-center gap-1.5">
                   <Compass className="h-3.5 w-3.5" />
                   {t.nav.exploreCreators}
                 </Link>
               </Button>
-              <Link
-                href="/login"
-                onClick={() => setMobileOpen(false)}
-                className="col-span-2 flex items-center justify-center gap-1.5 rounded-brand border border-border py-2 text-center text-sm font-medium text-muted-foreground hover:text-foreground"
-              >
-                <LogIn className="h-3.5 w-3.5" />
-                {t.nav.login}
-              </Link>
             </div>
           )}
         </div>

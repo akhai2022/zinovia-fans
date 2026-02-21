@@ -1,13 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  Bell,
+  Heart,
+  MessageCircle,
+  UserPlus,
+  CreditCard,
+  Unlock,
+  Send,
+  CheckCircle,
+} from "lucide-react";
 import { listNotifications, markAllNotificationsRead, markNotificationRead, type NotificationOut } from "@/features/engagement/api";
 import { Page } from "@/components/brand/Page";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
-/** Turn a notification type + payload into a human-readable sentence. */
+const NOTIFICATION_META: Record<string, { icon: typeof Bell; color: string }> = {
+  COMMENT_ON_POST: { icon: MessageCircle, color: "text-blue-400 bg-blue-500/10" },
+  LIKE_ON_POST: { icon: Heart, color: "text-pink-400 bg-pink-500/10" },
+  NEW_FOLLOWER: { icon: UserPlus, color: "text-emerald-400 bg-emerald-500/10" },
+  NEW_SUBSCRIBER: { icon: CreditCard, color: "text-primary bg-primary/10" },
+  POST_PUBLISHED: { icon: Send, color: "text-violet-400 bg-violet-500/10" },
+  MESSAGE_RECEIVED: { icon: MessageCircle, color: "text-sky-400 bg-sky-500/10" },
+  TIP_RECEIVED: { icon: CreditCard, color: "text-amber-400 bg-amber-500/10" },
+  PPV_UNLOCKED: { icon: Unlock, color: "text-emerald-400 bg-emerald-500/10" },
+};
+
+const DEFAULT_META = { icon: Bell, color: "text-muted-foreground bg-muted" };
+
 function formatNotification(type: string, payload: Record<string, unknown>): string {
   switch (type) {
     case "COMMENT_ON_POST":
@@ -34,18 +59,44 @@ function formatNotification(type: string, payload: Record<string, unknown>): str
   }
 }
 
+function formatRelativeTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60_000);
+  if (diffMin < 1) return "Just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 export default function NotificationsPage() {
   const router = useRouter();
   const [items, setItems] = useState<NotificationOut[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = async () => {
-    setLoading(true);
+  const load = useCallback(async (cursor?: string) => {
+    const isInitial = !cursor;
+    if (isInitial) setLoading(true);
+    else setLoadingMore(true);
     setError(null);
     try {
-      const res = await listNotifications();
-      setItems(res.items);
+      const res = await listNotifications(cursor);
+      if (isInitial) {
+        setItems(res.items);
+      } else {
+        setItems((prev) => {
+          const existingIds = new Set(prev.map((n) => n.id));
+          return [...prev, ...res.items.filter((n) => !existingIds.has(n.id))];
+        });
+      }
+      setNextCursor(res.next_cursor);
     } catch (err) {
       const status = (err as { status?: number })?.status;
       if (status === 401) {
@@ -54,13 +105,14 @@ export default function NotificationsPage() {
       }
       setError("Unable to load notifications.");
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
+      else setLoadingMore(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const markRead = async (id: string) => {
     await markNotificationRead(id);
@@ -72,37 +124,115 @@ export default function NotificationsPage() {
     setItems((prev) => prev.map((n) => ({ ...n, read_at: n.read_at ?? new Date().toISOString() })));
   };
 
+  const unreadCount = items.filter((n) => !n.read_at).length;
+
   return (
-    <Page>
+    <Page className="max-w-2xl space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Notifications</h1>
-        <Button size="sm" variant="outline" onClick={markAll}>Mark all read</Button>
+        <div>
+          <h1 className="font-display text-premium-h2 font-semibold text-foreground">Notifications</h1>
+          {unreadCount > 0 && (
+            <p className="mt-1 text-sm text-muted-foreground">{unreadCount} unread</p>
+          )}
+        </div>
+        {items.length > 0 && (
+          <Button size="sm" variant="outline" onClick={markAll} className="gap-1.5">
+            <CheckCircle className="h-3.5 w-3.5" />
+            Mark all read
+          </Button>
+        )}
       </div>
-      {loading && <p className="mt-4 text-muted-foreground">Loading…</p>}
-      {error && <p className="mt-4 text-destructive">{error}</p>}
-      {!loading && !error && (
-        <ul className="mt-4 space-y-2">
-          {items.map((item) => (
-            <li key={item.id} className="rounded-brand border border-border bg-card p-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm">
-                  {formatNotification(item.type, item.payload_json as Record<string, unknown>)}
-                </p>
-                {!item.read_at && (
-                  <Button size="sm" variant="ghost" onClick={() => markRead(item.id)}>
-                    Read
-                  </Button>
-                )}
+
+      {loading && (
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="p-4">
+              <div className="flex gap-3">
+                <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
               </div>
-            </li>
+            </Card>
           ))}
-          {items.length === 0 && <p className="text-muted-foreground">No notifications yet.</p>}
-        </ul>
+        </div>
       )}
-      <Button variant="ghost" size="sm" className="mt-4" asChild>
+
+      {error && (
+        <Card className="border-destructive/20 bg-destructive/5 p-4">
+          <p className="text-sm text-destructive">{error}</p>
+        </Card>
+      )}
+
+      {!loading && !error && items.length === 0 && (
+        <Card className="py-12 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+            <Bell className="h-7 w-7 text-muted-foreground" />
+          </div>
+          <p className="font-display text-lg font-semibold text-foreground">No notifications yet</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            When someone interacts with your content, you&apos;ll see it here.
+          </p>
+        </Card>
+      )}
+
+      {!loading && items.length > 0 && (
+        <div className="space-y-2">
+          {items.map((item) => {
+            const meta = NOTIFICATION_META[item.type] || DEFAULT_META;
+            const Icon = meta.icon;
+            const isUnread = !item.read_at;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => { if (isUnread) markRead(item.id); }}
+                className={cn(
+                  "flex w-full items-start gap-3 rounded-xl border px-4 py-3 text-left transition-colors",
+                  isUnread
+                    ? "border-primary/20 bg-primary/5 hover:bg-primary/[0.07]"
+                    : "border-border bg-card hover:bg-white/[0.02]",
+                )}
+              >
+                <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full", meta.color.split(" ").slice(1).join(" "))}>
+                  <Icon className={cn("h-4.5 w-4.5", meta.color.split(" ")[0])} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className={cn("text-sm", isUnread ? "font-medium text-foreground" : "text-foreground/80")}>
+                    {formatNotification(item.type, item.payload_json as Record<string, unknown>)}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {formatRelativeTime(item.created_at)}
+                  </p>
+                </div>
+                {isUnread && (
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {nextCursor && !loadingMore && (
+        <div className="flex justify-center">
+          <Button variant="secondary" size="sm" onClick={() => load(nextCursor)}>
+            Load more
+          </Button>
+        </div>
+      )}
+      {loadingMore && (
+        <div className="flex justify-center">
+          <Button variant="secondary" size="sm" disabled>
+            Loading...
+          </Button>
+        </div>
+      )}
+
+      <Button variant="ghost" size="sm" asChild>
         <Link href="/">Back to home</Link>
       </Button>
     </Page>
   );
 }
-

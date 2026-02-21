@@ -13,8 +13,16 @@ def _redis_broker_url() -> str:
     return broker
 
 
-celery_app = Celery("zinovia_worker", broker=_redis_broker_url())
-celery_app.autodiscover_tasks(["worker.tasks"])
+celery_app = Celery(
+    "zinovia_worker",
+    broker=_redis_broker_url(),
+    include=[
+        "worker.tasks.ai",
+        "worker.tasks.media",
+        "worker.tasks.notifications",
+        "worker.tasks.posts",
+    ],
+)
 celery_app.conf.beat_schedule = {
     "posts-publish-due-every-minute": {
         "task": "posts.publish_due_scheduled",

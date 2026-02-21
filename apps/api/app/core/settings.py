@@ -120,6 +120,7 @@ class Settings(BaseSettings):
     mail_reply_to: str = Field(alias="MAIL_REPLY_TO", default="support@zinovia.ai")
     mail_dry_run: bool = Field(alias="MAIL_DRY_RUN", default=False)
     resend_api_key: str = Field(alias="RESEND_API_KEY", default="")
+    resend_webhook_secret: str = Field(alias="RESEND_WEBHOOK_SECRET", default="")
 
     # Watermark for derived image variants (footer only; originals unchanged)
     media_watermark_text: str = Field(

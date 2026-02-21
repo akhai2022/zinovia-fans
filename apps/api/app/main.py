@@ -50,6 +50,8 @@ from app.modules.onboarding.webhook_router import router as webhook_kyc_router
 from app.modules.admin.router import router as admin_router
 from app.modules.collections.router import router as collections_router
 from app.modules.contact.router import router as contact_router
+from app.modules.inbound.router import router as inbound_router
+from app.modules.inbound.router import webhook_router as inbound_webhook_router
 from app.modules.posts.router import feed_router, router as posts_router
 
 logger = logging.getLogger(__name__)
@@ -208,6 +210,8 @@ def create_app() -> FastAPI:
     app.include_router(ledger_router, prefix="/ledger", tags=["ledger"])
     app.include_router(collections_router, prefix="/collections", tags=["collections"])
     app.include_router(admin_router, prefix="/admin", tags=["admin"])
+    app.include_router(inbound_router, prefix="/admin/inbound", tags=["admin-inbound"])
+    app.include_router(inbound_webhook_router, prefix="/webhooks", tags=["webhooks"])
     app.include_router(contact_router, tags=["contact"])
 
     # E2E test-only endpoints — gated by E2E_ENABLE + E2E_SECRET, never in production

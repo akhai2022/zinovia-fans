@@ -79,3 +79,28 @@ class CreatorPlanUpdate(BaseModel):
     """Update subscription price. Price is in major currency units (e.g. 9.99)."""
 
     price: Decimal = Field(gt=0, max_digits=8, decimal_places=2)
+
+
+# ---------------------------------------------------------------------------
+# Purchase history (fan-facing)
+# ---------------------------------------------------------------------------
+
+
+class PurchaseItem(BaseModel):
+    """A single purchase (PPV post or PPV message)."""
+
+    id: UUID
+    type: str = Field(description="PPV_POST or PPV_MESSAGE or SUBSCRIPTION or TIP")
+    status: str
+    amount_cents: int
+    currency: str
+    creator_handle: str | None = None
+    creator_display_name: str | None = None
+    post_id: UUID | None = None
+    transaction_id: str | None = None
+    created_at: datetime
+
+
+class PurchaseHistoryOut(BaseModel):
+    items: list[PurchaseItem]
+    total: int

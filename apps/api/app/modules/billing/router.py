@@ -25,6 +25,8 @@ from app.modules.billing.schemas import (
     CheckoutSubscriptionOut,
     CreatorPlanOut,
     CreatorPlanUpdate,
+    PurchaseHistoryOut,
+    PurchaseItem,
     SubscriptionStatusItem,
     WebhookAck,
 )
@@ -286,3 +288,104 @@ async def update_plan(
         min_price_cents=settings.min_subscription_price_cents,
         max_price_cents=settings.max_subscription_price_cents,
     )
+
+
+# ---------------------------------------------------------------------------
+# Purchase history (fan-facing)
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/purchases",
+    response_model=PurchaseHistoryOut,
+    status_code=200,
+    operation_id="billing_purchases",
+)
+async def list_purchases(
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+    limit: int = Query(50, ge=1, le=200),
+) -> PurchaseHistoryOut:
+    """List all purchases (PPV posts, PPV messages, tips) for the current fan."""
+    from sqlalchemy import func as sa_func, union_all, literal_column, cast, String as SaString
+    from app.modules.payments.models import PostPurchase, PpvPurchase, Tip
+    from app.modules.auth.models import Profile
+
+    # PostPurchases
+    q_posts = (
+        select(
+            PostPurchase.id,
+            literal_column("'PPV_POST'").label("type"),
+            PostPurchase.status,
+            PostPurchase.amount_cents,
+            PostPurchase.currency,
+            PostPurchase.creator_id,
+            cast(PostPurchase.post_id, SaString).label("ref_id"),
+            PostPurchase.ccbill_transaction_id.label("transaction_id"),
+            PostPurchase.created_at,
+        )
+        .where(PostPurchase.purchaser_id == current_user.id)
+    )
+
+    # PpvPurchases (message media)
+    q_ppv = (
+        select(
+            PpvPurchase.id,
+            literal_column("'PPV_MESSAGE'").label("type"),
+            PpvPurchase.status,
+            PpvPurchase.amount_cents,
+            PpvPurchase.currency,
+            PpvPurchase.creator_id,
+            cast(PpvPurchase.message_media_id, SaString).label("ref_id"),
+            PpvPurchase.ccbill_transaction_id.label("transaction_id"),
+            PpvPurchase.created_at,
+        )
+        .where(PpvPurchase.purchaser_id == current_user.id)
+    )
+
+    # Tips
+    q_tips = (
+        select(
+            Tip.id,
+            literal_column("'TIP'").label("type"),
+            Tip.status,
+            Tip.amount_cents,
+            Tip.currency,
+            Tip.creator_id,
+            cast(Tip.id, SaString).label("ref_id"),
+            Tip.ccbill_transaction_id.label("transaction_id"),
+            Tip.created_at,
+        )
+        .where(Tip.tipper_id == current_user.id)
+    )
+
+    combined = union_all(q_posts, q_ppv, q_tips).subquery()
+
+    # Count
+    total = (await session.execute(select(sa_func.count()).select_from(combined))).scalar_one() or 0
+
+    # Fetch with creator info
+    rows = (
+        await session.execute(
+            select(combined, Profile.handle, Profile.display_name)
+            .outerjoin(Profile, Profile.user_id == combined.c.creator_id)
+            .order_by(combined.c.created_at.desc())
+            .limit(limit)
+        )
+    ).all()
+
+    items = []
+    for row in rows:
+        items.append(PurchaseItem(
+            id=row.id,
+            type=row.type,
+            status=row.status,
+            amount_cents=row.amount_cents,
+            currency=row.currency,
+            creator_handle=row.handle,
+            creator_display_name=row.display_name,
+            post_id=row.ref_id if row.type == "PPV_POST" else None,
+            transaction_id=row.transaction_id,
+            created_at=row.created_at,
+        ))
+
+    return PurchaseHistoryOut(items=items, total=total)

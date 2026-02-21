@@ -62,7 +62,7 @@ export function FollowButton({
   return (
     <div className="flex flex-col gap-1">
       <Button
-        variant={following ? "outline" : "default"}
+        variant="outline"
         size="sm"
         onClick={handleClick}
         disabled={loading}

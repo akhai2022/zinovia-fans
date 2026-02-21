@@ -209,18 +209,17 @@ export default async function CreatorProfilePage({
               {creator.verified && <Badge variant="verified">Verified</Badge>}
             </div>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex flex-wrap gap-2">
-              <FollowButton creatorId={creator.user_id} initialFollowing={creator.is_following ?? false} />
-              <MessageButton creatorId={creator.user_id} />
-              {creator.is_subscriber ? (
-                <Badge variant="subscriber" className="flex items-center gap-1 px-3 py-1.5 text-sm">
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                  Subscribed
-                </Badge>
-              ) : (
+          <div className="flex flex-col items-stretch gap-3 sm:items-end">
+            {/* Primary CTA: Subscribe (or Subscribed badge) */}
+            {creator.is_subscriber ? (
+              <Badge variant="subscriber" className="flex items-center justify-center gap-1.5 px-4 py-2 text-sm">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                Subscribed
+              </Badge>
+            ) : (
+              <div className="flex flex-col items-stretch gap-1 sm:items-end">
                 <SubscribeCheckoutButton
                   creatorId={creator.user_id}
                   creatorHandle={creator.handle}
@@ -228,13 +227,18 @@ export default async function CreatorProfilePage({
                   currency={creator.subscription_currency ?? undefined}
                   isSubscriber={creator.is_subscriber}
                 />
-              )}
-            </div>
-            {!creator.is_subscriber && creator.subscription_price && (
-              <p className="text-xs text-muted-foreground">
-                {parseFloat(creator.subscription_price).toFixed(2)} {(creator.subscription_currency || "EUR").toUpperCase()}/month &middot; Cancel anytime
-              </p>
+                {creator.subscription_price && (
+                  <p className="text-center text-xs text-muted-foreground sm:text-right">
+                    Cancel anytime
+                  </p>
+                )}
+              </div>
             )}
+            {/* Secondary actions: Follow + Message */}
+            <div className="flex gap-2">
+              <FollowButton creatorId={creator.user_id} initialFollowing={creator.is_following ?? false} />
+              <MessageButton creatorId={creator.user_id} />
+            </div>
           </div>
         </div>
         {creator.bio && (
@@ -243,8 +247,10 @@ export default async function CreatorProfilePage({
           </div>
         )}
         {!creator.is_subscriber && creator.subscription_price && (
-          <div className="mt-4 rounded-xl border border-border bg-muted/30 p-4">
-            <p className="text-sm font-medium text-foreground">What you get</p>
+          <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+            <p className="text-sm font-semibold text-foreground">
+              Subscribe for {parseFloat(creator.subscription_price).toFixed(2)} {(creator.subscription_currency || "EUR").toUpperCase()}/month
+            </p>
             <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
               <li className="flex items-center gap-2">
                 <svg className="h-3.5 w-3.5 shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>

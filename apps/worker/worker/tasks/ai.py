@@ -11,9 +11,9 @@ from io import BytesIO
 from PIL import Image
 from celery import shared_task
 from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.db.session import async_session_factory
+from app.core.settings import get_settings
 from app.modules.ai.models import AiImageJob
 from worker.storage_io import get_media_bucket, put_object_bytes
 
@@ -93,12 +93,24 @@ def _replicate_generate_images(
     return images
 
 
+def _make_session_factory() -> async_sessionmaker[AsyncSession]:
+    """Create a fresh async session factory per task invocation.
+
+    Avoids the 'Future attached to a different loop' error that occurs when
+    a module-level engine is reused across separate asyncio.run() calls in
+    Celery forked worker processes.
+    """
+    engine = create_async_engine(str(get_settings().database_url), pool_pre_ping=True)
+    return async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+
+
 async def _update_job_status(
+    session_factory: async_sessionmaker[AsyncSession],
     job_id: uuid.UUID,
     status: str,
     result_object_keys: list[str] | None = None,
 ) -> None:
-    async with async_session_factory() as session:
+    async with session_factory() as session:
         values: dict = {"status": status}
         if result_object_keys is not None:
             values["result_object_keys"] = result_object_keys
@@ -121,7 +133,8 @@ def generate_images(job_id: str) -> dict[str, str | list[str]]:
         return {"status": "FAILED", "error": "invalid_job_id"}
 
     async def _run() -> dict[str, str | list[str]]:
-        async with async_session_factory() as session:
+        sf = _make_session_factory()
+        async with sf() as session:
             result = await session.execute(
                 select(AiImageJob).where(AiImageJob.id == job_uuid).limit(1)
             )
@@ -130,7 +143,7 @@ def generate_images(job_id: str) -> dict[str, str | list[str]]:
             logger.warning("Job not found", extra={"job_id": job_id})
             return {"status": "FAILED", "error": "job_not_found"}
 
-        await _update_job_status(job_uuid, "GENERATING")
+        await _update_job_status(sf, job_uuid, "GENERATING")
 
         prompt = job.prompt or ""
         negative_prompt = job.negative_prompt or ""
@@ -151,7 +164,7 @@ def generate_images(job_id: str) -> dict[str, str | list[str]]:
                 )
         except Exception as e:
             logger.exception("Provider failed", extra={"job_id": job_id})
-            await _update_job_status(job_uuid, "FAILED")
+            await _update_job_status(sf, job_uuid, "FAILED")
             return {"status": "FAILED", "error": str(e)[:500]}
 
         bucket = get_media_bucket()
@@ -163,7 +176,7 @@ def generate_images(job_id: str) -> dict[str, str | list[str]]:
             put_object_bytes(bucket, obj_key, img_bytes, "image/png")
             result_keys.append(obj_key)
 
-        await _update_job_status(job_uuid, "READY", result_object_keys=result_keys)
+        await _update_job_status(sf, job_uuid, "READY", result_object_keys=result_keys)
         logger.info("AI images ready", extra={"job_id": job_id, "count": len(result_keys)})
         return {"status": "READY", "result_object_keys": result_keys}
 

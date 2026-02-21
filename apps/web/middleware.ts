@@ -17,6 +17,7 @@ function isSupported(v: string): v is Locale {
  */
 const PROTECTED_PREFIXES = [
   "/me",
+  "/feed",
   "/messages",
   "/admin",
   "/billing",
@@ -27,6 +28,7 @@ const PROTECTED_PREFIXES = [
   "/creator/post",
   "/creator/vault",
   "/creator/collections",
+  "/creator/earnings",
 ];
 
 function isProtectedRoute(pathname: string): boolean {
@@ -83,7 +85,7 @@ function detectLocale(req: NextRequest): Locale {
 }
 
 /** Known sub-paths under /creator that are NOT public profile handles. */
-const CREATOR_RESERVED = new Set(["post", "vault", "collections"]);
+const CREATOR_RESERVED = new Set(["post", "vault", "collections", "earnings"]);
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

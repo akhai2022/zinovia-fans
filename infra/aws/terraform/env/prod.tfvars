@@ -34,7 +34,7 @@ enable_acm   = true
 enable_route53 = true
 enable_custom_domain = true
 dns_delegated = true
-enable_cloudfront = false  # Set true after AWS account verification; media works via presigned S3
+enable_cloudfront = false  # Blocked: AWS account not verified for CloudFront. Run: aws support create-case
 web_use_apex = true
 enable_apex_cloudfront = false  # apex reserved for Next.js when web_use_apex
 
@@ -51,7 +51,7 @@ media_versioning     = true
 enable_likes           = true
 enable_comments        = true
 enable_notifications   = true
-enable_vault           = false
+enable_vault           = true
 enable_scheduled_posts = false
 enable_promotions      = false
 enable_dm_broadcast    = false

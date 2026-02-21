@@ -7,6 +7,24 @@ resource "aws_cloudfront_origin_access_control" "s3" {
   signing_protocol                  = "sigv4"
 }
 
+# RSA key pair for CloudFront signed URLs
+resource "tls_private_key" "cloudfront" {
+  algorithm = "RSA"
+  rsa_bits  = 2048
+}
+
+resource "aws_cloudfront_public_key" "media" {
+  name        = "${var.name_prefix}-media-pk"
+  comment     = "Public key for media signed URLs"
+  encoded_key = tls_private_key.cloudfront.public_key_pem
+}
+
+resource "aws_cloudfront_key_group" "media" {
+  name    = "${var.name_prefix}-media-kg"
+  comment = "Key group for media signed URLs"
+  items   = [aws_cloudfront_public_key.media.id]
+}
+
 resource "aws_cloudfront_distribution" "media" {
   enabled             = true
   is_ipv6_enabled     = true
@@ -15,7 +33,7 @@ resource "aws_cloudfront_distribution" "media" {
   price_class         = "PriceClass_100"
 
   origin {
-    domain_name              = "${var.s3_bucket_id}.s3.${data.aws_caller_identity.current.account_id}.amazonaws.com"
+    domain_name              = var.s3_bucket_regional_domain_name
     origin_id                = "S3-${var.s3_bucket_id}"
     origin_access_control_id = aws_cloudfront_origin_access_control.s3.id
   }
@@ -28,6 +46,7 @@ resource "aws_cloudfront_distribution" "media" {
     viewer_protocol_policy   = "redirect-to-https"
     cache_policy_id          = aws_cloudfront_cache_policy.media.id
     origin_request_policy_id = aws_cloudfront_origin_request_policy.range.id
+    trusted_key_groups       = [aws_cloudfront_key_group.media.id]
   }
 
   restrictions {
@@ -58,8 +77,6 @@ resource "aws_cloudfront_distribution" "media" {
 
   tags = { Name = "${var.name_prefix}-media-cdn" }
 }
-
-data "aws_caller_identity" "current" {}
 
 # Cache policy: cache by URL, forward Range
 resource "aws_cloudfront_cache_policy" "media" {

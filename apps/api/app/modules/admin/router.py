@@ -20,12 +20,28 @@ from app.modules.admin.schemas import (
     AdminPostAction,
     AdminPostOut,
     AdminPostPage,
+    AdminTransactionOut,
+    AdminTransactionPage,
+    AdminUserAction,
+    AdminUserDetailOut,
+    AdminUserOut,
+    AdminUserPage,
+    AdminUserPostOut,
+    AdminUserPostPage,
+    AdminUserSubscriberOut,
+    AdminUserSubscriberPage,
 )
 from app.modules.admin.service import (
     admin_action_creator,
     admin_action_post,
+    admin_action_user,
+    get_user_detail_admin,
     list_creators_admin,
     list_posts_admin,
+    list_transactions_admin,
+    list_user_posts_admin,
+    list_user_subscribers_admin,
+    list_users_admin,
 )
 
 router = APIRouter()
@@ -95,6 +111,130 @@ async def action_post(
     _admin: User = Depends(require_admin),
 ) -> dict:
     return await admin_action_post(session, post_id, payload.action, payload.reason)
+
+
+@router.get("/transactions", response_model=AdminTransactionPage, operation_id="admin_list_transactions")
+async def list_transactions(
+    session: AsyncSession = Depends(get_async_session),
+    _admin: User = Depends(require_admin),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    type: str | None = Query(None, alias="type"),
+) -> AdminTransactionPage:
+    items, total = await list_transactions_admin(
+        session,
+        page=page,
+        page_size=page_size,
+        type_filter=type,
+    )
+    return AdminTransactionPage(
+        items=[AdminTransactionOut(**item) for item in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Users (all roles) — list, detail, actions, posts, subscribers
+# ---------------------------------------------------------------------------
+
+
+@router.get("/users", response_model=AdminUserPage, operation_id="admin_list_users")
+async def list_users(
+    session: AsyncSession = Depends(get_async_session),
+    _admin: User = Depends(require_admin),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    search: str | None = Query(None),
+    role: str | None = Query(None),
+) -> AdminUserPage:
+    items, total = await list_users_admin(
+        session,
+        page=page,
+        page_size=page_size,
+        search=search,
+        role_filter=role,
+    )
+    return AdminUserPage(
+        items=[AdminUserOut(**item) for item in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.get(
+    "/users/{user_id}",
+    response_model=AdminUserDetailOut,
+    operation_id="admin_get_user",
+)
+async def get_user(
+    user_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    _admin: User = Depends(require_admin),
+) -> AdminUserDetailOut:
+    data = await get_user_detail_admin(session, user_id)
+    return AdminUserDetailOut(**data)
+
+
+@router.post(
+    "/users/{user_id}/action",
+    operation_id="admin_action_user",
+)
+async def action_user(
+    user_id: UUID,
+    payload: AdminUserAction,
+    session: AsyncSession = Depends(get_async_session),
+    _admin: User = Depends(require_admin),
+) -> dict:
+    return await admin_action_user(session, user_id, payload.action, payload.reason)
+
+
+@router.get(
+    "/users/{user_id}/posts",
+    response_model=AdminUserPostPage,
+    operation_id="admin_list_user_posts",
+)
+async def list_user_posts(
+    user_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    _admin: User = Depends(require_admin),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+) -> AdminUserPostPage:
+    items, total = await list_user_posts_admin(
+        session, user_id, page=page, page_size=page_size,
+    )
+    return AdminUserPostPage(
+        items=[AdminUserPostOut(**item) for item in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.get(
+    "/users/{user_id}/subscribers",
+    response_model=AdminUserSubscriberPage,
+    operation_id="admin_list_user_subscribers",
+)
+async def list_user_subscribers(
+    user_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    _admin: User = Depends(require_admin),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+) -> AdminUserSubscriberPage:
+    items, total = await list_user_subscribers_admin(
+        session, user_id, page=page, page_size=page_size,
+    )
+    return AdminUserSubscriberPage(
+        items=[AdminUserSubscriberOut(**item) for item in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 # ---------------------------------------------------------------------------

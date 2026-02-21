@@ -13,6 +13,11 @@ variable "s3_bucket_arn" {
   description = "S3 bucket ARN (for OAC)"
 }
 
+variable "s3_bucket_regional_domain_name" {
+  type        = string
+  description = "S3 bucket regional domain name (e.g. bucket.s3.us-east-1.amazonaws.com)"
+}
+
 variable "domain_aliases" {
   type        = list(string)
   default     = []

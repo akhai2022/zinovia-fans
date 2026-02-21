@@ -424,17 +424,32 @@ module "acm_apex" {
 # CloudFront media CDN (when enable_cloudfront; default domain when no ACM, custom when enable_acm)
 # -----------------------------------------------------------------------------
 module "cloudfront_media" {
-  count               = var.enable_cloudfront ? 1 : 0
-  source              = "./modules/cloudfront_media"
-  name_prefix         = local.name_prefix
-  s3_bucket_id        = module.s3_media.bucket_id
-  s3_bucket_arn       = module.s3_media.bucket_arn
-  domain_aliases      = var.enable_custom_domain ? [local.media_domain] : []
-  acm_certificate_arn = var.enable_acm ? module.acm_cloudfront[0].certificate_arn : null
-  environment         = var.environment
-  logs_bucket_domain  = aws_s3_bucket.logs.bucket_regional_domain_name
-  logs_prefix         = "cloudfront/media"
-  web_acl_id          = length(aws_wafv2_web_acl.cloudfront) > 0 ? aws_wafv2_web_acl.cloudfront[0].id : null
+  count                          = var.enable_cloudfront ? 1 : 0
+  source                         = "./modules/cloudfront_media"
+  name_prefix                    = local.name_prefix
+  s3_bucket_id                   = module.s3_media.bucket_id
+  s3_bucket_arn                  = module.s3_media.bucket_arn
+  s3_bucket_regional_domain_name = module.s3_media.bucket_domain_name
+  domain_aliases                 = var.enable_custom_domain ? [local.media_domain] : []
+  acm_certificate_arn            = var.enable_acm ? module.acm_cloudfront[0].certificate_arn : null
+  environment                    = var.environment
+  logs_bucket_domain             = aws_s3_bucket.logs.bucket_regional_domain_name
+  logs_prefix                    = "cloudfront/media"
+  web_acl_id                     = length(aws_wafv2_web_acl.cloudfront) > 0 ? aws_wafv2_web_acl.cloudfront[0].id : null
+}
+
+# Store CloudFront private key in Secrets Manager for ECS task injection
+resource "aws_secretsmanager_secret" "cloudfront_private_key" {
+  count                   = var.enable_cloudfront ? 1 : 0
+  name                    = "${local.name_prefix}-cloudfront-pk"
+  recovery_window_in_days = 7
+  tags                    = { Name = "${local.name_prefix}-cloudfront-pk" }
+}
+
+resource "aws_secretsmanager_secret_version" "cloudfront_private_key" {
+  count         = var.enable_cloudfront ? 1 : 0
+  secret_id     = aws_secretsmanager_secret.cloudfront_private_key[0].id
+  secret_string = module.cloudfront_media[0].private_key_pem
 }
 
 # -----------------------------------------------------------------------------
@@ -974,6 +989,7 @@ resource "aws_iam_role_policy" "ecs_task_secrets" {
         module.secrets.ccbill_salt_arn,
         module.secrets.ccbill_datalink_password_arn,
         module.secrets.resend_api_key_arn,
+        module.secrets.resend_webhook_secret_arn,
         module.secrets.replicate_api_token_arn
       ]
     }]
@@ -989,15 +1005,19 @@ resource "aws_iam_role_policy" "ecs_execution_secrets" {
     Statement = [{
       Effect = "Allow"
       Action = ["secretsmanager:GetSecretValue"]
-      Resource = [
-        aws_secretsmanager_secret.database_url.arn,
-        module.secrets.jwt_secret_arn,
-        module.secrets.csrf_secret_arn,
-        module.secrets.ccbill_salt_arn,
-        module.secrets.ccbill_datalink_password_arn,
-        module.secrets.resend_api_key_arn,
-        module.secrets.replicate_api_token_arn
-      ]
+      Resource = concat(
+        [
+          aws_secretsmanager_secret.database_url.arn,
+          module.secrets.jwt_secret_arn,
+          module.secrets.csrf_secret_arn,
+          module.secrets.ccbill_salt_arn,
+          module.secrets.ccbill_datalink_password_arn,
+          module.secrets.resend_api_key_arn,
+          module.secrets.resend_webhook_secret_arn,
+          module.secrets.replicate_api_token_arn
+        ],
+        var.enable_cloudfront ? [aws_secretsmanager_secret.cloudfront_private_key[0].arn] : []
+      )
     }]
   })
 }
@@ -1044,7 +1064,6 @@ resource "aws_ecs_task_definition" "api" {
         { name = "MEDIA_URL_TTL_SECONDS", value = "3600" },
         { name = "RATE_LIMIT_MAX", value = "60" },
         { name = "RATE_LIMIT_WINDOW_SECONDS", value = "60" },
-        { name = "CDN_BASE_URL", value = var.enable_cloudfront ? "https://${local.media_domain}" : "" },
         { name = "ENABLE_LIKES", value = tostring(var.enable_likes) },
         { name = "ENABLE_COMMENTS", value = tostring(var.enable_comments) },
         { name = "ENABLE_NOTIFICATIONS", value = tostring(var.enable_notifications) },
@@ -1070,16 +1089,28 @@ resource "aws_ecs_task_definition" "api" {
       local.web_base_url != "" ? [
         { name = "APP_BASE_URL", value = local.web_base_url },
         { name = "PUBLIC_WEB_BASE_URL", value = local.web_base_url }
+      ] : [],
+      var.enable_cloudfront ? [
+        { name = "CDN_BASE_URL", value = "https://${local.media_domain}" },
+        { name = "CLOUDFRONT_DOMAIN", value = local.media_domain },
+        { name = "CLOUDFRONT_KEY_PAIR_ID", value = module.cloudfront_media[0].key_pair_id },
+        { name = "CLOUDFRONT_URL_TTL_SECONDS", value = "600" }
       ] : []
     )
-    secrets = [
-      { name = "DATABASE_URL", valueFrom = aws_secretsmanager_secret.database_url.arn },
-      { name = "JWT_SECRET", valueFrom = module.secrets.jwt_secret_arn },
-      { name = "CSRF_SECRET", valueFrom = module.secrets.csrf_secret_arn },
-      { name = "CCBILL_SALT", valueFrom = module.secrets.ccbill_salt_arn },
-      { name = "CCBILL_DATALINK_PASSWORD", valueFrom = module.secrets.ccbill_datalink_password_arn },
-      { name = "RESEND_API_KEY", valueFrom = module.secrets.resend_api_key_arn }
-    ]
+    secrets = concat(
+      [
+        { name = "DATABASE_URL", valueFrom = aws_secretsmanager_secret.database_url.arn },
+        { name = "JWT_SECRET", valueFrom = module.secrets.jwt_secret_arn },
+        { name = "CSRF_SECRET", valueFrom = module.secrets.csrf_secret_arn },
+        { name = "CCBILL_SALT", valueFrom = module.secrets.ccbill_salt_arn },
+        { name = "CCBILL_DATALINK_PASSWORD", valueFrom = module.secrets.ccbill_datalink_password_arn },
+        { name = "RESEND_API_KEY", valueFrom = module.secrets.resend_api_key_arn },
+        { name = "RESEND_WEBHOOK_SECRET", valueFrom = module.secrets.resend_webhook_secret_arn }
+      ],
+      var.enable_cloudfront ? [
+        { name = "CLOUDFRONT_PRIVATE_KEY_PEM", valueFrom = aws_secretsmanager_secret.cloudfront_private_key[0].arn }
+      ] : []
+    )
     healthCheck = {
       command     = ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
       interval    = 30

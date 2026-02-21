@@ -82,6 +82,20 @@ resource "aws_secretsmanager_secret_version" "resend_api_key" {
   }
 }
 
+resource "aws_secretsmanager_secret" "resend_webhook_secret" {
+  name                    = "${var.name_prefix}-resend-webhook-secret"
+  recovery_window_in_days = 7
+  tags                    = { Name = "${var.name_prefix}-resend-webhook-secret" }
+}
+
+resource "aws_secretsmanager_secret_version" "resend_webhook_secret" {
+  secret_id     = aws_secretsmanager_secret.resend_webhook_secret.id
+  secret_string = "CHANGE-ME-set-in-console"
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
+}
+
 resource "aws_secretsmanager_secret" "replicate_api_token" {
   name                    = "${var.name_prefix}-replicate-api-token"
   recovery_window_in_days = 7
