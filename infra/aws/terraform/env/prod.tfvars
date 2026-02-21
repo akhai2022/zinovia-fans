@@ -11,7 +11,7 @@ nat_gateway_count = 1
 
 # RDS
 db_instance_class        = "db.t3.small"
-db_multi_az              = false
+db_multi_az              = true
 db_deletion_protection   = true
 db_backup_retention_days = 14
 
@@ -63,6 +63,14 @@ enable_ppvm            = true
 enable_moderation      = true
 enable_analytics       = true
 enable_mock_kyc        = true
+
+# AI & Advanced features
+enable_mobile_nav_polish = true
+enable_smart_previews    = true
+enable_promo_generator   = true
+enable_translations      = true
+enable_ai_safety         = true
+enable_ai_tools          = true
 
 # Currency
 default_currency = "eur"
