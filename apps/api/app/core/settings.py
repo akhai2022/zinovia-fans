@@ -47,7 +47,7 @@ class Settings(BaseSettings):
         alias="COOKIE_SAMESITE",
     )
     cookie_domain: str | None = Field(default=None, alias="COOKIE_DOMAIN")
-    csrf_secret: str = Field(alias="CSRF_SECRET")
+    csrf_secret: str = Field(default="", alias="CSRF_SECRET")
 
     # CORS: comma-separated origins (localhost:3000 for local dev; include 127.0.0.1 if used)
     cors_origins: str = Field(
