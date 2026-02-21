@@ -28,6 +28,7 @@ infra/gcp/terraform/*.auto.tfvars
 infra/aws/terraform/.terraform/
 infra/aws/terraform/*.tfstate
 infra/aws/terraform/*.tfstate.*
+infra/aws/terraform/tfplan
 
 # Downloaded binaries (AWS CLI, Terraform, etc.)
 awscliv2.zip
