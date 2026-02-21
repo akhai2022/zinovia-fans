@@ -18,7 +18,7 @@ const VISIBILITY_LABELS: Record<string, string> = {
 };
 
 export default function CollectionsListPage() {
-  const { authorized } = useRequireRole(["creator", "admin"]);
+  const { authorized } = useRequireRole(["creator", "admin", "super_admin"]);
   const { addToast } = useToast();
   const [collections, setCollections] = useState<CollectionOut[]>([]);
   const [loading, setLoading] = useState(true);

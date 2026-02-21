@@ -189,6 +189,61 @@ export const de: Dictionary = {
     beforeContactDescription: "Viele Fragen werden bereits in unserem Hilfecenter beantwortet. Schauen Sie dort zuerst nach für eine schnelle Lösung.",
     responseTime: "Antwortzeit",
   },
+  aiFeatures: {
+    badge: "KI f\u00fcr Creator",
+    heading: "KI-Tools, die dir helfen, mehr zu verdienen",
+    subheading:
+      "Leichte, datenschutzorientierte KI, die auf unseren Servern l\u00e4uft. Keine kostenpflichtigen APIs, keine GPU erforderlich\u00a0\u2014 nur smarte Automatisierung, die dir Zeit spart und das Engagement steigert.",
+    safetyScanTitle: "KI-Sicherheitsscan",
+    safetyScanDesc:
+      "Automatische Inhaltserkennung mit NSFW-Erkennung und Altersrisikowarnungen. Menschliche \u00dcberpr\u00fcfung f\u00fcr Grenzf\u00e4lle.",
+    smartCaptionsTitle: "Intelligente Bildunterschriften",
+    smartCaptionsDesc:
+      "Drei KI-generierte Bildunterschrift-Stile pro Bild\u00a0\u2014 kurz, mittel und werblich\u00a0\u2014 in Sekunden fertig.",
+    autoTagsTitle: "Auto-Tags & intelligente Suche",
+    autoTagsDesc:
+      "KI-gest\u00fctzte Tags und semantische Suche, damit Fans deine Inhalte schneller entdecken.",
+    smartPreviewsTitle: "Intelligente Vorschauen",
+    smartPreviewsDesc:
+      "Aufmerksamkeitsbasierte Vorschaubilder, unscharfe Teaser f\u00fcr PPV und Vorschauen mit Wasserzeichen\u00a0\u2014 automatisch erstellt.",
+    promoCopyTitle: "Werbetextgenerator",
+    promoCopyDesc:
+      "Werbetitel, CTAs und Hashtags in drei Stilen mit einem Klick. Kein Texter n\u00f6tig.",
+    autoTranslateTitle: "Automatische \u00dcbersetzung",
+    autoTranslateDesc:
+      "Erreiche globale Fans mit automatischer Bildunterschrift-\u00dcbersetzung ins Franz\u00f6sische und Spanische. Weitere Sprachen folgen bald.",
+  },
+  aiHowItWorks: {
+    heading: "Hochladen, automatisieren, verdienen",
+    subheading: "Drei Schritte vom Upload zum Umsatz\u00a0\u2014 die KI erledigt den Rest.",
+    step1Title: "Hochladen",
+    step1Desc:
+      "Lade deine Fotos und Videos hoch. Die KI-Verarbeitung startet sofort\u00a0\u2014 Sicherheitspr\u00fcfungen, Bildunterschriften, Tags und Vorschaubilder laufen im Hintergrund.",
+    step2Title: "KI unterst\u00fctzt",
+    step2Desc:
+      "\u00dcberpr\u00fcfe generierte Bildunterschriften, Werbetexte und \u00dcbersetzungen. Aktiviere Wasserzeichen, w\u00e4hle den besten Zuschnitt und optimiere vor der Ver\u00f6ffentlichung.",
+    step3Title: "Ver\u00f6ffentlichen & verdienen",
+    step3Desc:
+      "Dr\u00fccke auf Ver\u00f6ffentlichen und erreiche Fans weltweit. KI-generierte Tags und \u00dcbersetzungen helfen neuen Zielgruppen, deine Inhalte zu entdecken.",
+  },
+  aiTrust: {
+    privacyTitle: "Datenschutz zuerst",
+    privacyDesc:
+      "Die gesamte KI l\u00e4uft auf unseren Servern. Dein Content verl\u00e4sst niemals unsere Infrastruktur.",
+    noThirdPartyTitle: "Keine KI-APIs von Drittanbietern",
+    noThirdPartyDesc:
+      "Wir verwenden Open-Source-Modelle\u00a0\u2014 keine Daten werden an OpenAI, Google oder andere externe Dienste gesendet.",
+    auditTitle: "Auditprotokolle & menschliche \u00dcberpr\u00fcfung",
+    auditDesc:
+      "Jede KI-Entscheidung wird protokolliert. Markierte Inhalte werden von echten Menschen gepr\u00fcft, bevor Ma\u00dfnahmen ergriffen werden.",
+  },
+  aiCta: {
+    heading: "Bereit, die KI f\u00fcr dich arbeiten zu lassen?",
+    description:
+      "Schlie\u00dfe dich Tausenden von Creatorn an, die Zinovias KI-Tools nutzen, um Zeit zu sparen, ein globales Publikum zu erreichen und mehr mit jedem Beitrag zu verdienen.",
+    ctaStart: "Jetzt erstellen",
+    ctaDemo: "KI-Demo ansehen",
+  },
   footer: {
     privacy: "Datenschutz",
     terms: "AGB",

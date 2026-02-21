@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Page } from "@/components/brand/Page";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { Spinner } from "@/components/ui/spinner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
@@ -36,6 +38,20 @@ type AdminUser = {
   last_login_at: string | null;
   last_activity_at: string | null;
   created_at: string;
+  // Device info
+  user_agent: string | null;
+  device_type: string | null;
+  os_name: string | null;
+  browser_name: string | null;
+  screen_width: number | null;
+  screen_height: number | null;
+  timezone: string | null;
+  language: string | null;
+  camera_available: boolean | null;
+  microphone_available: boolean | null;
+  connection_type: string | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 type AdminUserDetail = AdminUser & {
@@ -153,6 +169,7 @@ const ROLE_COLORS: Record<string, string> = {
   creator: "bg-purple-500/15 text-purple-400",
   fan: "bg-blue-500/15 text-blue-400",
   admin: "bg-amber-500/15 text-amber-400",
+  super_admin: "bg-rose-500/15 text-rose-400",
   deleted: "bg-red-500/15 text-red-400",
 };
 
@@ -206,8 +223,9 @@ const ROLE_FILTERS = [
 
 export default function AdminPage() {
   const router = useRouter();
-  const { authorized } = useRequireRole("admin");
-  const [tab, setTab] = useState<"users" | "posts" | "transactions" | "inbox">("users");
+  const { authorized, user: adminUser } = useRequireRole(["admin", "super_admin"]);
+  const isSuperAdmin = adminUser?.role === "super_admin";
+  const [tab, setTab] = useState<"users" | "posts" | "transactions" | "inbox" | "moderation">("users");
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -231,6 +249,21 @@ export default function AdminPage() {
   const [userSubsTotal, setUserSubsTotal] = useState(0);
   const [userSubsPage, setUserSubsPage] = useState(1);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [hardDeleteConfirm, setHardDeleteConfirm] = useState<string | null>(null);
+  const [showCreateUser, setShowCreateUser] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newDisplayName, setNewDisplayName] = useState("");
+  const [newRole, setNewRole] = useState<"admin" | "fan" | "creator">("admin");
+  const [createLoading, setCreateLoading] = useState(false);
+
+  // Notification form
+  const [showNotifyForm, setShowNotifyForm] = useState<"broadcast" | "user" | null>(null);
+  const [notifyTitle, setNotifyTitle] = useState("");
+  const [notifyMessage, setNotifyMessage] = useState("");
+  const [notifyRole, setNotifyRole] = useState<"fan" | "creator" | "all">("all");
+  const [notifySendEmail, setNotifySendEmail] = useState(false);
+  const [notifyLoading, setNotifyLoading] = useState(false);
 
   /* ---- Posts state ---- */
   const [posts, setPosts] = useState<AdminPost[]>([]);
@@ -251,6 +284,24 @@ export default function AdminPage() {
   const [selectedEmail, setSelectedEmail] = useState<InboundEmailDetail | null>(null);
   const [emailLoading, setEmailLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+
+  /* ---- Moderation state ---- */
+  type ModerationItem = {
+    scan_id: string;
+    media_asset_id: string;
+    nsfw_score: number;
+    nsfw_label: string;
+    age_range_prediction: string;
+    underage_likelihood_proxy: number;
+    risk_level: string;
+    decision: string;
+    created_at: string;
+    owner_user_id: string | null;
+  };
+  const [modItems, setModItems] = useState<ModerationItem[]>([]);
+  const [modTotal, setModTotal] = useState(0);
+  const [modPage, setModPage] = useState(1);
+  const [modLoading, setModLoading] = useState(false);
 
   /* ---- Debounced search ---- */
   useEffect(() => {
@@ -398,6 +449,39 @@ export default function AdminPage() {
     [inboxCategory, handleApiError],
   );
 
+  const fetchModeration = useCallback(async (page = modPage) => {
+    setModLoading(true);
+    try {
+      const data = await apiFetch<{ items: ModerationItem[]; total: number }>(
+        `/ai-safety/admin/pending-reviews?page=${page}&page_size=20`,
+        { method: "GET" },
+      );
+      setModItems(data.items);
+      setModTotal(data.total);
+      setModPage(page);
+    } catch (err) {
+      // AI safety may not be enabled — silently ignore
+    } finally {
+      setModLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modPage]);
+
+  const handleModReview = async (scanId: string, decision: "APPROVED" | "REJECTED") => {
+    setActionLoading(scanId);
+    try {
+      await apiFetch(`/ai-safety/admin/review/${scanId}`, {
+        method: "POST",
+        body: JSON.stringify({ decision }),
+      });
+      fetchModeration(modPage);
+    } catch (err) {
+      handleApiError(err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const fetchInboxStats = useCallback(async () => {
     try {
       const data = await apiFetch<InboundStats>("/admin/inbound/emails/stats", { method: "GET" });
@@ -438,11 +522,12 @@ export default function AdminPage() {
     if (tab === "users") fetchUsers();
     else if (tab === "posts") fetchPosts();
     else if (tab === "transactions") fetchTransactions();
+    else if (tab === "moderation") fetchModeration();
     else {
       fetchInbox();
       fetchInboxStats();
     }
-  }, [tab, fetchUsers, fetchPosts, fetchTransactions, fetchInbox, fetchInboxStats]);
+  }, [tab, fetchUsers, fetchPosts, fetchTransactions, fetchInbox, fetchInboxStats, fetchModeration]);
 
   // Reload users when search/role changes
   useEffect(() => {
@@ -458,13 +543,16 @@ export default function AdminPage() {
         method: "POST",
         body: { action, reason },
       });
-      fetchUsers(usersPage);
-      // If viewing this user's detail, refresh it
-      if (selectedUser?.user_id === userId) {
+      if (action === "hard_delete") {
+        // User is gone — close detail and refresh list
+        setSelectedUser(null);
+      } else if (selectedUser?.user_id === userId) {
         const data = await apiFetch<AdminUserDetail>(`/admin/users/${userId}`, { method: "GET" });
         setSelectedUser(data);
       }
+      fetchUsers(usersPage);
       setDeleteConfirm(null);
+      setHardDeleteConfirm(null);
     } catch (err) {
       handleApiError(err);
     } finally {
@@ -487,6 +575,65 @@ export default function AdminPage() {
     }
   };
 
+  /* ---- Send notification handler ---- */
+  const handleSendNotification = async (targetUserId?: string) => {
+    if (!notifyTitle || !notifyMessage) return;
+    setNotifyLoading(true);
+    setError(null);
+    try {
+      const body: Record<string, unknown> = {
+        title: notifyTitle,
+        message: notifyMessage,
+        send_email: notifySendEmail,
+      };
+      if (targetUserId) {
+        body.target_user_id = targetUserId;
+      } else {
+        body.target_role = notifyRole;
+      }
+      const result = await apiFetch<{ sent_count: number; email_count: number }>(
+        "/admin/notifications/send",
+        { method: "POST", body },
+      );
+      alert(`Sent ${result.sent_count} notification(s)${result.email_count > 0 ? ` + ${result.email_count} email(s)` : ""}.`);
+      setShowNotifyForm(null);
+      setNotifyTitle("");
+      setNotifyMessage("");
+      setNotifySendEmail(false);
+    } catch (err) {
+      handleApiError(err);
+    } finally {
+      setNotifyLoading(false);
+    }
+  };
+
+  /* ---- Create user handler ---- */
+  const handleCreateUser = async () => {
+    setCreateLoading(true);
+    setError(null);
+    try {
+      await apiFetch("/admin/create-user", {
+        method: "POST",
+        body: {
+          email: newEmail,
+          password: newPassword,
+          display_name: newDisplayName,
+          role: newRole,
+        },
+      });
+      setShowCreateUser(false);
+      setNewEmail("");
+      setNewPassword("");
+      setNewDisplayName("");
+      setNewRole("admin");
+      fetchUsers(1);
+    } catch (err) {
+      handleApiError(err);
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
   /* ---- Loading guard ---- */
   if (!authorized) {
     return (
@@ -503,9 +650,14 @@ export default function AdminPage() {
   /* ================================================================ */
   return (
     <Page className="max-w-6xl space-y-6">
-      <h1 className="font-display text-premium-h2 font-semibold text-foreground">
-        Admin Dashboard
-      </h1>
+      <div>
+        <h1 className="font-display text-premium-h2 font-semibold text-foreground">
+          Admin Dashboard
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Manage users, content, transactions, and support inbox.
+        </p>
+      </div>
 
       {error && (
         <Card className="border-destructive/20 bg-destructive/5 p-4">
@@ -515,7 +667,7 @@ export default function AdminPage() {
 
       {/* Tab selector */}
       <div className="flex gap-2 rounded-xl border border-border bg-muted/50 p-1">
-        {(["users", "posts", "transactions", "inbox"] as const).map((t) => (
+        {(["users", "posts", "transactions", "inbox", "moderation"] as const).map((t) => (
           <button
             key={t}
             type="button"
@@ -524,21 +676,31 @@ export default function AdminPage() {
               setSelectedUser(null);
               setSelectedEmail(null);
             }}
-            className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               tab === t
                 ? "bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            {t === "users" && `Users (${usersTotal})`}
-            {t === "posts" && `Posts (${postsTotal})`}
-            {t === "transactions" && `Transactions (${txTotal})`}
+            {t === "users" && <><Icon name="group" className="icon-base" /> Users ({usersTotal})</>}
+            {t === "posts" && <><Icon name="article" className="icon-base" /> Posts ({postsTotal})</>}
+            {t === "transactions" && <><Icon name="payments" className="icon-base" /> Transactions ({txTotal})</>}
             {t === "inbox" && (
               <>
-                Inbox
+                <Icon name="inbox" className="icon-base" /> Inbox
                 {inboxStats && inboxStats.total_unread > 0 && (
                   <span className="ml-1.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">
                     {inboxStats.total_unread}
+                  </span>
+                )}
+              </>
+            )}
+            {t === "moderation" && (
+              <>
+                <Icon name="shield" className="icon-base" /> Moderation
+                {modTotal > 0 && (
+                  <span className="ml-1.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-white">
+                    {modTotal}
                   </span>
                 )}
               </>
@@ -577,7 +739,151 @@ export default function AdminPage() {
                   </button>
                 ))}
               </div>
+              {isSuperAdmin && (
+                <div className="ml-auto flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+                    onClick={() => setShowNotifyForm((v) => v === "broadcast" ? null : "broadcast")}
+                  >
+                    {showNotifyForm === "broadcast" ? <><Icon name="close" className="icon-sm" /> Cancel</> : <><Icon name="campaign" className="icon-sm" /> Broadcast</>}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setShowCreateUser((v) => !v)}
+                  >
+                    {showCreateUser ? <><Icon name="close" className="icon-sm" /> Cancel</> : <><Icon name="person_add" className="icon-sm" /> Create User</>}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="bg-red-700 hover:bg-red-800"
+                    disabled={actionLoading === "bulk-delete"}
+                    onClick={async () => {
+                      const keepInput = prompt(
+                        "This will PERMANENTLY DELETE all users except the emails listed below and your super_admin account.\n\nEnter emails to keep (comma-separated):",
+                        "strella@zinovia.ai"
+                      );
+                      if (keepInput === null) return;
+                      if (!confirm(`CONFIRM: Delete ALL users except super_admin and [${keepInput}]?\n\nThis cannot be undone!`)) return;
+                      setActionLoading("bulk-delete");
+                      try {
+                        const keep = keepInput.split(",").map((e) => e.trim()).filter(Boolean);
+                        const result = await apiFetch<{ deleted_count: number }>("/admin/bulk-delete-users", {
+                          method: "POST",
+                          body: { keep_emails: keep },
+                        });
+                        alert(`Deleted ${result.deleted_count} users.`);
+                        fetchUsers(1);
+                      } catch (err) {
+                        handleApiError(err);
+                      } finally {
+                        setActionLoading(null);
+                      }
+                    }}
+                  >
+                    {actionLoading === "bulk-delete" ? <><Spinner className="icon-sm" /> Deleting...</> : <><Icon name="delete_sweep" className="icon-sm" /> Cleanup All Users</>}
+                  </Button>
+                </div>
+              )}
             </div>
+
+            {/* Create User form (super_admin only) */}
+            {showCreateUser && (
+              <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Create New User</h3>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Input
+                    placeholder="Email"
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                  />
+                  <Input
+                    placeholder="Password (min 10 chars)"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                  <Input
+                    placeholder="Display Name"
+                    value={newDisplayName}
+                    onChange={(e) => setNewDisplayName(e.target.value)}
+                  />
+                  <select
+                    value={newRole}
+                    onChange={(e) => setNewRole(e.target.value as "admin" | "fan" | "creator")}
+                    className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                  >
+                    <option value="admin">Admin</option>
+                    <option value="fan">Fan</option>
+                    <option value="creator">Creator</option>
+                  </select>
+                </div>
+                <Button
+                  size="sm"
+                  disabled={createLoading || !newEmail || !newPassword || !newDisplayName || newPassword.length < 10}
+                  onClick={handleCreateUser}
+                >
+                  {createLoading ? "Creating..." : "Create User"}
+                </Button>
+              </div>
+            )}
+
+            {/* Broadcast Notification form */}
+            {showNotifyForm === "broadcast" && (
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Broadcast Notification</h3>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Input
+                    placeholder="Title"
+                    value={notifyTitle}
+                    onChange={(e) => setNotifyTitle(e.target.value)}
+                  />
+                  <select
+                    value={notifyRole}
+                    onChange={(e) => setNotifyRole(e.target.value as "fan" | "creator" | "all")}
+                    className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                  >
+                    <option value="all">All Users</option>
+                    <option value="fan">Fans Only</option>
+                    <option value="creator">Creators Only</option>
+                  </select>
+                </div>
+                <textarea
+                  placeholder="Message body..."
+                  value={notifyMessage}
+                  onChange={(e) => setNotifyMessage(e.target.value)}
+                  rows={3}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground resize-none"
+                />
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      checked={notifySendEmail}
+                      onChange={(e) => setNotifySendEmail(e.target.checked)}
+                      className="rounded"
+                    />
+                    Also send email
+                  </label>
+                  <div className="ml-auto flex gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => setShowNotifyForm(null)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={notifyLoading || !notifyTitle || !notifyMessage}
+                      onClick={() => handleSendNotification()}
+                    >
+                      {notifyLoading ? "Sending..." : "Send Broadcast"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Table */}
             {users.length === 0 ? (
@@ -634,15 +940,17 @@ export default function AdminPage() {
                           })}
                         </td>
                         <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                          {/* Never show actions for own account or super_admin users */}
+                          {u.user_id !== adminUser?.id && u.role !== "super_admin" && (
                           <div className="flex justify-end gap-1.5">
-                            {u.role !== "deleted" && u.is_active && (
+                            {u.role !== "deleted" && u.is_active && u.role !== "admin" && (
                               <Button
                                 size="sm"
                                 variant="secondary"
                                 disabled={actionLoading === `${u.user_id}-suspend`}
                                 onClick={() => userAction(u.user_id, "suspend")}
                               >
-                                Suspend
+                                <Icon name="pause_circle" className="icon-sm" /> Suspend
                               </Button>
                             )}
                             {u.role !== "deleted" && !u.is_active && (
@@ -652,10 +960,10 @@ export default function AdminPage() {
                                 disabled={actionLoading === `${u.user_id}-activate`}
                                 onClick={() => userAction(u.user_id, "activate")}
                               >
-                                Activate
+                                <Icon name="play_circle" className="icon-sm" /> Activate
                               </Button>
                             )}
-                            {u.role !== "deleted" && u.role !== "admin" && (
+                            {u.role !== "deleted" && u.role !== "admin" && u.role !== "super_admin" && (
                               <>
                                 {deleteConfirm === u.user_id ? (
                                   <div className="flex gap-1">
@@ -665,14 +973,14 @@ export default function AdminPage() {
                                       disabled={actionLoading === `${u.user_id}-delete`}
                                       onClick={() => userAction(u.user_id, "delete")}
                                     >
-                                      Confirm
+                                      <Icon name="delete_forever" className="icon-sm" /> Confirm
                                     </Button>
                                     <Button
                                       size="sm"
                                       variant="secondary"
                                       onClick={() => setDeleteConfirm(null)}
                                     >
-                                      Cancel
+                                      <Icon name="close" className="icon-sm" /> Cancel
                                     </Button>
                                   </div>
                                 ) : (
@@ -681,12 +989,46 @@ export default function AdminPage() {
                                     variant="destructive"
                                     onClick={() => setDeleteConfirm(u.user_id)}
                                   >
-                                    Delete
+                                    <Icon name="delete" className="icon-sm" /> Delete
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                            {u.role !== "admin" && u.role !== "super_admin" && (
+                              <>
+                                {hardDeleteConfirm === u.user_id ? (
+                                  <div className="flex gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      className="bg-red-700 hover:bg-red-800"
+                                      disabled={actionLoading === `${u.user_id}-hard_delete`}
+                                      onClick={() => userAction(u.user_id, "hard_delete", "Admin hard delete")}
+                                    >
+                                      <Icon name="delete_forever" className="icon-sm" /> Permanently delete?
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="secondary"
+                                      onClick={() => setHardDeleteConfirm(null)}
+                                    >
+                                      <Icon name="close" className="icon-sm" /> Cancel
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                    onClick={() => setHardDeleteConfirm(u.user_id)}
+                                  >
+                                    <Icon name="delete_sweep" className="icon-sm" /> Hard Delete
                                   </Button>
                                 )}
                               </>
                             )}
                           </div>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -714,9 +1056,9 @@ export default function AdminPage() {
             <button
               type="button"
               onClick={() => setSelectedUser(null)}
-              className="text-xs text-primary hover:underline"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
             >
-              &larr; Back to users
+              <Icon name="arrow_back" className="icon-xs" /> Back to users
             </button>
 
             {userDetailLoading ? (
@@ -763,7 +1105,7 @@ export default function AdminPage() {
                         disabled={actionLoading === `${selectedUser.user_id}-approve`}
                         onClick={() => userAction(selectedUser.user_id, "approve")}
                       >
-                        Approve
+                        <Icon name="check_circle" className="icon-sm" /> Approve
                       </Button>
                     )}
                     {selectedUser.role === "creator" && selectedUser.discoverable && (
@@ -773,7 +1115,7 @@ export default function AdminPage() {
                         disabled={actionLoading === `${selectedUser.user_id}-reject`}
                         onClick={() => userAction(selectedUser.user_id, "reject")}
                       >
-                        Hide
+                        <Icon name="visibility_off" className="icon-sm" /> Hide
                       </Button>
                     )}
                     {selectedUser.role === "creator" && !selectedUser.featured && (
@@ -783,7 +1125,7 @@ export default function AdminPage() {
                         disabled={actionLoading === `${selectedUser.user_id}-feature`}
                         onClick={() => userAction(selectedUser.user_id, "feature")}
                       >
-                        Feature
+                        <Icon name="star" className="icon-sm" /> Feature
                       </Button>
                     )}
                     {selectedUser.role === "creator" && selectedUser.featured && (
@@ -793,65 +1135,163 @@ export default function AdminPage() {
                         disabled={actionLoading === `${selectedUser.user_id}-unfeature`}
                         onClick={() => userAction(selectedUser.user_id, "unfeature")}
                       >
-                        Unfeature
+                        <Icon name="star" filled className="icon-sm" /> Unfeature
                       </Button>
                     )}
-                    {selectedUser.role !== "deleted" && selectedUser.is_active && (
+                    {selectedUser.user_id !== adminUser?.id && selectedUser.role !== "super_admin" && selectedUser.role !== "deleted" && selectedUser.is_active && (
                       <Button
                         size="sm"
                         variant="secondary"
                         disabled={actionLoading === `${selectedUser.user_id}-suspend`}
                         onClick={() => userAction(selectedUser.user_id, "suspend")}
                       >
-                        Suspend
+                        <Icon name="pause_circle" className="icon-sm" /> Suspend
                       </Button>
                     )}
-                    {selectedUser.role !== "deleted" && !selectedUser.is_active && (
+                    {selectedUser.user_id !== adminUser?.id && selectedUser.role !== "deleted" && !selectedUser.is_active && (
                       <Button
                         size="sm"
                         variant="secondary"
                         disabled={actionLoading === `${selectedUser.user_id}-activate`}
                         onClick={() => userAction(selectedUser.user_id, "activate")}
                       >
-                        Activate
+                        <Icon name="play_circle" className="icon-sm" /> Activate
                       </Button>
                     )}
-                    {selectedUser.role !== "deleted" && selectedUser.role !== "admin" && (
+                    {/* Promote/Demote — super_admin only */}
+                    {isSuperAdmin && selectedUser.role !== "admin" && selectedUser.role !== "super_admin" && selectedUser.role !== "deleted" && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+                        disabled={actionLoading === `${selectedUser.user_id}-promote_admin`}
+                        onClick={() => {
+                          if (confirm(`Promote ${selectedUser.display_name} to admin?`)) {
+                            userAction(selectedUser.user_id, "promote_admin");
+                          }
+                        }}
+                      >
+                        <Icon name="admin_panel_settings" className="icon-sm" /> Promote to Admin
+                      </Button>
+                    )}
+                    {isSuperAdmin && selectedUser.role === "admin" && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={actionLoading === `${selectedUser.user_id}-demote_admin`}
+                        onClick={() => {
+                          if (confirm(`Demote ${selectedUser.display_name} from admin to fan?`)) {
+                            userAction(selectedUser.user_id, "demote_admin");
+                          }
+                        }}
+                      >
+                        <Icon name="person_remove" className="icon-sm" /> Demote Admin
+                      </Button>
+                    )}
+                    {selectedUser.user_id !== adminUser?.id && selectedUser.role !== "deleted" && selectedUser.role !== "admin" && selectedUser.role !== "super_admin" && (
                       <Button
                         size="sm"
                         variant="destructive"
                         disabled={actionLoading === `${selectedUser.user_id}-delete`}
                         onClick={() => {
-                          if (confirm("Are you sure you want to delete this user? This action is irreversible.")) {
+                          if (confirm("Are you sure you want to soft-delete this user?")) {
                             userAction(selectedUser.user_id, "delete");
                           }
                         }}
                       >
-                        Delete
+                        <Icon name="delete" className="icon-sm" /> Delete
                       </Button>
                     )}
+                    {selectedUser.user_id !== adminUser?.id && selectedUser.role !== "super_admin" && (isSuperAdmin || selectedUser.role !== "admin") && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="bg-red-700 hover:bg-red-800"
+                        disabled={actionLoading === `${selectedUser.user_id}-hard_delete`}
+                        onClick={() => {
+                          if (
+                            confirm(
+                              `PERMANENT DELETE: This will remove "${selectedUser.display_name}" (${selectedUser.email}) and ALL their data (posts, messages, media, subscriptions). This cannot be undone.\n\nAre you absolutely sure?`
+                            )
+                          ) {
+                            userAction(selectedUser.user_id, "hard_delete", "Admin permanent delete");
+                          }
+                        }}
+                      >
+                        <Icon name="delete_sweep" className="icon-sm" /> Hard Delete
+                      </Button>
+                    )}
+                    {/* Notify user */}
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+                      onClick={() => setShowNotifyForm((v) => v === "user" ? null : "user")}
+                    >
+                      {showNotifyForm === "user" ? <><Icon name="close" className="icon-sm" /> Cancel</> : <><Icon name="notifications" className="icon-sm" /> Notify</>}
+                    </Button>
                   </div>
                 </div>
 
+                {/* Notify single user form */}
+                {showNotifyForm === "user" && (
+                  <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3">
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Send Notification to {selectedUser.display_name}
+                    </h3>
+                    <Input
+                      placeholder="Title"
+                      value={notifyTitle}
+                      onChange={(e) => setNotifyTitle(e.target.value)}
+                    />
+                    <textarea
+                      placeholder="Message body..."
+                      value={notifyMessage}
+                      onChange={(e) => setNotifyMessage(e.target.value)}
+                      rows={3}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground resize-none"
+                    />
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <input
+                          type="checkbox"
+                          checked={notifySendEmail}
+                          onChange={(e) => setNotifySendEmail(e.target.checked)}
+                          className="rounded"
+                        />
+                        Also send email
+                      </label>
+                      <Button
+                        size="sm"
+                        className="ml-auto"
+                        disabled={notifyLoading || !notifyTitle || !notifyMessage}
+                        onClick={() => handleSendNotification(selectedUser.user_id)}
+                      >
+                        {notifyLoading ? "Sending..." : "Send"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Stats grid */}
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                  <div className="rounded-lg border border-border p-3">
-                    <p className="text-xs text-muted-foreground">Posts</p>
-                    <p className="text-xl font-semibold text-foreground">{selectedUser.post_count}</p>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div className="rounded-xl border border-border bg-muted/30 p-4">
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Posts</p>
+                    <p className="mt-1 text-2xl font-bold text-foreground">{selectedUser.post_count}</p>
                   </div>
-                  <div className="rounded-lg border border-border p-3">
-                    <p className="text-xs text-muted-foreground">Subscribers</p>
-                    <p className="text-xl font-semibold text-foreground">{selectedUser.subscriber_count}</p>
+                  <div className="rounded-xl border border-border bg-muted/30 p-4">
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Subscribers</p>
+                    <p className="mt-1 text-2xl font-bold text-foreground">{selectedUser.subscriber_count}</p>
                   </div>
-                  <div className="rounded-lg border border-border p-3">
-                    <p className="text-xs text-muted-foreground">Total Earned</p>
-                    <p className="text-xl font-semibold text-emerald-400">
+                  <div className="rounded-xl border border-border bg-muted/30 p-4">
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Total Earned</p>
+                    <p className="mt-1 text-2xl font-bold text-emerald-400">
                       {formatCents(selectedUser.total_earned_cents, "USD")}
                     </p>
                   </div>
-                  <div className="rounded-lg border border-border p-3">
-                    <p className="text-xs text-muted-foreground">Last Active</p>
-                    <p className="text-sm font-medium text-foreground">
+                  <div className="rounded-xl border border-border bg-muted/30 p-4">
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Last Active</p>
+                    <p className="mt-1 text-sm font-semibold text-foreground">
                       {selectedUser.last_activity_at
                         ? new Date(selectedUser.last_activity_at).toLocaleDateString("en-US", {
                             month: "short",
@@ -865,7 +1305,9 @@ export default function AdminPage() {
                 </div>
 
                 {/* Info grid */}
-                <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                <div className="rounded-xl border border-border bg-muted/20 p-4">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">User Details</h3>
+                <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
                   <div>
                     <span className="text-muted-foreground">Phone:</span>{" "}
                     <span className="text-foreground">{selectedUser.phone || "\u2014"}</span>
@@ -893,6 +1335,71 @@ export default function AdminPage() {
                     </span>
                   </div>
                 </div>
+                </div>
+
+                {/* Device info grid */}
+                {(selectedUser.device_type || selectedUser.browser_name || selectedUser.timezone) && (
+                  <div className="rounded-xl border border-border bg-muted/20 p-4">
+                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Device Info</h3>
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Device:</span>{" "}
+                        <span className="text-foreground">{selectedUser.device_type || "\u2014"}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">OS:</span>{" "}
+                        <span className="text-foreground">{selectedUser.os_name || "\u2014"}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Browser:</span>{" "}
+                        <span className="text-foreground">{selectedUser.browser_name || "\u2014"}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Screen:</span>{" "}
+                        <span className="text-foreground">
+                          {selectedUser.screen_width && selectedUser.screen_height
+                            ? `${selectedUser.screen_width}×${selectedUser.screen_height}`
+                            : "\u2014"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Timezone:</span>{" "}
+                        <span className="text-foreground">{selectedUser.timezone || "\u2014"}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Language:</span>{" "}
+                        <span className="text-foreground">{selectedUser.language || "\u2014"}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Connection:</span>{" "}
+                        <span className="text-foreground">{selectedUser.connection_type || "\u2014"}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Camera:</span>{" "}
+                        <span className="text-foreground">
+                          {selectedUser.camera_available === null ? "\u2014" : selectedUser.camera_available ? "Yes" : "No"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Microphone:</span>{" "}
+                        <span className="text-foreground">
+                          {selectedUser.microphone_available === null ? "\u2014" : selectedUser.microphone_available ? "Yes" : "No"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">GPS:</span>{" "}
+                        <span className="text-foreground">
+                          {selectedUser.latitude != null && selectedUser.longitude != null
+                            ? `${selectedUser.latitude.toFixed(4)}, ${selectedUser.longitude.toFixed(4)}`
+                            : "\u2014"}
+                        </span>
+                      </div>
+                    </div>
+                    {selectedUser.user_agent && (
+                      <p className="mt-3 text-[11px] text-muted-foreground break-all">{selectedUser.user_agent}</p>
+                    )}
+                  </div>
+                )}
 
                 {/* Sub-tabs: Posts | Subscribers */}
                 {selectedUser.role === "creator" && (
@@ -1075,7 +1582,7 @@ export default function AdminPage() {
                       disabled={actionLoading === `${p.id}-remove`}
                       onClick={() => postAction(p.id, "remove")}
                     >
-                      Remove
+                      <Icon name="block" className="icon-sm" /> Remove
                     </Button>
                   ) : (
                     <Button
@@ -1084,7 +1591,7 @@ export default function AdminPage() {
                       disabled={actionLoading === `${p.id}-restore`}
                       onClick={() => postAction(p.id, "restore")}
                     >
-                      Restore
+                      <Icon name="restore" className="icon-sm" /> Restore
                     </Button>
                   )}
                 </div>
@@ -1210,7 +1717,7 @@ export default function AdminPage() {
               disabled={syncing}
               className="ml-auto"
             >
-              {syncing ? "Syncing..." : "Sync from Resend"}
+              {syncing ? <><Spinner className="icon-sm" /> Syncing...</> : <><Icon name="sync" className="icon-sm" /> Sync from Resend</>}
             </Button>
           </div>
 
@@ -1221,9 +1728,9 @@ export default function AdminPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedEmail(null)}
-                  className="mb-2 text-xs text-primary hover:underline"
+                  className="mb-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
                 >
-                  &larr; Back to inbox
+                  <Icon name="arrow_back" className="icon-xs" /> Back to inbox
                 </button>
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
@@ -1370,6 +1877,95 @@ export default function AdminPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* MODERATION TAB                                                */}
+      {/* ============================================================ */}
+      {tab === "moderation" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Content Moderation — Pending Reviews</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Items flagged by AI safety (proxy signals — requires human review before enforcement)
+            </p>
+          </CardHeader>
+          <CardContent>
+            {modLoading ? (
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <Skeleton key={i} className="h-20 w-full" />
+                ))}
+              </div>
+            ) : modItems.length === 0 ? (
+              <p className="py-8 text-center text-muted-foreground">No items pending review</p>
+            ) : (
+              <div className="space-y-3">
+                {modItems.map((item) => (
+                  <div
+                    key={item.scan_id}
+                    className="flex items-center justify-between rounded-lg border border-border p-4"
+                  >
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`rounded px-2 py-0.5 text-xs font-semibold ${
+                            item.risk_level === "HIGH"
+                              ? "bg-destructive/20 text-destructive"
+                              : "bg-amber-500/20 text-amber-600"
+                          }`}
+                        >
+                          {item.risk_level}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {item.decision}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+                        <span>
+                          NSFW: <strong className="text-foreground">{(item.nsfw_score * 100).toFixed(1)}%</strong>{" "}
+                          ({item.nsfw_label})
+                        </span>
+                        <span>
+                          Age range: <strong className="text-foreground">{item.age_range_prediction}</strong>
+                        </span>
+                        <span>
+                          Underage proxy: <strong className="text-foreground">{(item.underage_likelihood_proxy * 100).toFixed(1)}%</strong>
+                        </span>
+                        <span>Asset: {item.media_asset_id.slice(0, 8)}...</span>
+                        <span>{new Date(item.created_at).toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={actionLoading === item.scan_id}
+                        onClick={() => handleModReview(item.scan_id, "APPROVED")}
+                      >
+                        <Icon name="check_circle" className="icon-sm" /> Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={actionLoading === item.scan_id}
+                        onClick={() => handleModReview(item.scan_id, "REJECTED")}
+                      >
+                        <Icon name="cancel" className="icon-sm" /> Reject
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                <Pagination
+                  page={modPage}
+                  pageSize={20}
+                  total={modTotal}
+                  onPageChange={(pg) => fetchModeration(pg)}
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
     </Page>
   );

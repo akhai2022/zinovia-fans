@@ -188,6 +188,61 @@ export const it: Dictionary = {
     beforeContactDescription: "Molte domande trovano gi\u00e0 risposta nel nostro Centro assistenza. Controlla l\u00ec per una risoluzione pi\u00f9 rapida.",
     responseTime: "Tempo di risposta",
   },
+  aiFeatures: {
+    badge: "IA per i Creatori",
+    heading: "Strumenti IA che ti aiutano a guadagnare di pi\u00f9",
+    subheading:
+      "IA leggera e orientata alla privacy, eseguita sui nostri server. Nessuna API a pagamento, nessuna GPU richiesta \u2014 solo automazione intelligente che ti fa risparmiare tempo e aumenta il coinvolgimento.",
+    safetyScanTitle: "Scansione di sicurezza IA",
+    safetyScanDesc:
+      "Verifica automatica dei contenuti con rilevamento NSFW e avvisi di rischio et\u00e0. Revisione umana per i casi dubbi.",
+    smartCaptionsTitle: "Didascalie intelligenti",
+    smartCaptionsDesc:
+      "Tre stili di didascalia generati dall\u2019IA per immagine \u2014 breve, media e promozionale \u2014 pronti in pochi secondi.",
+    autoTagsTitle: "Tag automatici e ricerca intelligente",
+    autoTagsDesc:
+      "Tagging e ricerca semantica basati sull\u2019IA per far scoprire i tuoi contenuti ai fan pi\u00f9 velocemente.",
+    smartPreviewsTitle: "Anteprime intelligenti",
+    smartPreviewsDesc:
+      "Miniature basate sull\u2019attenzione, anteprime sfocate per PPV e anteprime con filigrana \u2014 generate automaticamente.",
+    promoCopyTitle: "Generatore di testi promozionali",
+    promoCopyDesc:
+      "Titoli promozionali, CTA e hashtag in tre stili di tono con un clic. Nessun copywriter necessario.",
+    autoTranslateTitle: "Traduzione automatica",
+    autoTranslateDesc:
+      "Raggiungi fan in tutto il mondo con la traduzione automatica delle didascalie in francese e spagnolo. Altre lingue in arrivo.",
+  },
+  aiHowItWorks: {
+    heading: "Carica, automatizza, guadagna",
+    subheading: "Tre passaggi dal caricamento al guadagno \u2014 l\u2019IA si occupa del resto.",
+    step1Title: "Carica",
+    step1Desc:
+      "Carica le tue foto e i tuoi video. L\u2019elaborazione IA inizia immediatamente \u2014 controlli di sicurezza, didascalie, tag e miniature vengono eseguiti in background.",
+    step2Title: "L\u2019IA assiste",
+    step2Desc:
+      "Rivedi le didascalie generate, il testo promozionale e le traduzioni. Attiva le filigrane, scegli il ritaglio migliore e perfeziona prima di pubblicare.",
+    step3Title: "Pubblica e guadagna",
+    step3Desc:
+      "Premi pubblica e raggiungi fan in tutto il mondo. Tag e traduzioni generati dall\u2019IA aiutano nuovi pubblici a scoprire i tuoi contenuti.",
+  },
+  aiTrust: {
+    privacyTitle: "Privacy al primo posto",
+    privacyDesc:
+      "Tutta l\u2019IA funziona sui nostri server. I tuoi contenuti non lasciano mai la nostra infrastruttura.",
+    noThirdPartyTitle: "Nessuna API IA di terze parti",
+    noThirdPartyDesc:
+      "Utilizziamo modelli open source \u2014 nessun dato inviato a OpenAI, Google o qualsiasi servizio esterno.",
+    auditTitle: "Log di audit e revisione umana",
+    auditDesc:
+      "Ogni decisione IA viene registrata. I contenuti segnalati vengono esaminati da persone reali prima di qualsiasi azione.",
+  },
+  aiCta: {
+    heading: "Pronto a far lavorare l\u2019IA per te?",
+    description:
+      "Unisciti a migliaia di creatori che utilizzano gli strumenti IA di Zinovia per risparmiare tempo, raggiungere un pubblico globale e guadagnare di pi\u00f9 da ogni post.",
+    ctaStart: "Inizia a creare",
+    ctaDemo: "Vedi demo IA",
+  },
   footer: {
     privacy: "Privacy",
     terms: "Termini",

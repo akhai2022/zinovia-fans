@@ -213,7 +213,7 @@ def _post_to_out(post: Post) -> dict:
 
 
 def _post_to_out_locked(post: Post, locked_reason: str) -> dict:
-    """Teaser payload for inaccessible posts: no caption, no asset IDs."""
+    """Teaser payload for inaccessible posts: no caption, but includes asset IDs for teaser variant previews."""
     return {
         "id": post.id,
         "creator_user_id": post.creator_user_id,
@@ -223,7 +223,8 @@ def _post_to_out_locked(post: Post, locked_reason: str) -> dict:
         "nsfw": post.nsfw,
         "created_at": post.created_at,
         "updated_at": post.updated_at,
-        "asset_ids": [],
+        "asset_ids": [pm.media_asset_id for pm in sorted(post.media, key=lambda m: m.position)],
+        "media_previews": _extract_media_previews(post),
         "publish_at": post.publish_at,
         "status": post.status,
         "is_locked": True,

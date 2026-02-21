@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { UserOut } from "@zinovia/contracts";
 import { useApiFetch } from "@/lib/hooks/useApiFetch";
 
-type Role = "creator" | "admin" | "fan";
+type Role = "creator" | "admin" | "super_admin" | "fan";
 
 const KYC_DONE_STATES = new Set(["KYC_APPROVED", "COMPLETED"]);
 

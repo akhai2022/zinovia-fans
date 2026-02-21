@@ -4,22 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRequireRole } from "@/lib/hooks/useRequireRole";
-import {
-  ImagePlus,
-  Video,
-  FolderOpen,
-  Globe,
-  Users,
-  Crown,
-  Lock,
-  Eye,
-  Calendar,
-  ShieldAlert,
-  X,
-  Loader2,
-  FileText,
-  ArrowLeft,
-} from "lucide-react";
+import { Icon } from "@/components/ui/icon";
+import { Spinner } from "@/components/ui/spinner";
 import { PostsService, type PostCreate } from "@/features/posts/api";
 import { ImageUploadField } from "@/features/media/ImageUploadField";
 import { VideoUploadField } from "@/features/media/VideoUploadField";
@@ -34,6 +20,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { listVaultMedia, type MediaMineItem } from "@/features/engagement/api";
+import { CaptionSuggestions } from "@/features/posts/components/CaptionSuggestions";
+import { PromoSuggestions } from "@/features/posts/components/PromoSuggestions";
+import { TranslatePanel } from "@/features/posts/components/TranslatePanel";
 import "@/lib/api";
 
 export interface UploadedImage {
@@ -42,14 +31,14 @@ export interface UploadedImage {
 }
 
 const VISIBILITY_OPTIONS = [
-  { value: "PUBLIC" as const, label: "Public", description: "Visible to everyone", icon: Globe },
-  { value: "FOLLOWERS" as const, label: "Followers", description: "Only your followers", icon: Users },
-  { value: "SUBSCRIBERS" as const, label: "Subscribers", description: "Paid subscribers only", icon: Crown },
-  { value: "PPV" as const, label: "Pay-per-view", description: "Fans pay to unlock", icon: Lock },
+  { value: "PUBLIC" as const, label: "Public", description: "Visible to everyone", icon: "public" },
+  { value: "FOLLOWERS" as const, label: "Followers", description: "Only your followers", icon: "group" },
+  { value: "SUBSCRIBERS" as const, label: "Subscribers", description: "Paid subscribers only", icon: "workspace_premium" },
+  { value: "PPV" as const, label: "Pay-per-view", description: "Fans pay to unlock", icon: "lock" },
 ];
 
 export default function NewPostPage() {
-  const { authorized } = useRequireRole(["creator", "admin"]);
+  const { authorized } = useRequireRole(["creator", "admin", "super_admin"]);
   const router = useRouter();
   const { addToast } = useToast();
   const [caption, setCaption] = useState("");
@@ -154,7 +143,7 @@ export default function NewPostPage() {
       <div className="flex items-center gap-3 mb-6">
         <Button variant="ghost" size="sm" asChild>
           <Link href="/feed">
-            <ArrowLeft className="mr-1 h-4 w-4" />
+            <Icon name="arrow_back" className="mr-1 icon-base" />
             Back
           </Link>
         </Button>
@@ -187,9 +176,28 @@ export default function NewPostPage() {
                 placeholder="What's on your mind? Share something with your fans..."
                 className="resize-none"
               />
+              {uploadedImages.length > 0 && (
+                <CaptionSuggestions
+                  mediaAssetId={uploadedImages[0]?.assetId ?? null}
+                  onSelect={(text) => setCaption(text)}
+                />
+              )}
             </div>
           </CardContent>
         </Card>
+
+        {/* AI Promo Suggestions — available after post is created */}
+        {hasMedia && (
+          <PromoSuggestions
+            postId={null}
+            onInsertCaption={(text) => setCaption(text)}
+          />
+        )}
+
+        {/* AI Translation — available after post is created */}
+        {caption.length > 0 && (
+          <TranslatePanel postId={null} caption={caption} />
+        )}
 
         {/* Media */}
         <Card>
@@ -208,19 +216,19 @@ export default function NewPostPage() {
                 <TabsList className="w-full justify-start gap-1">
                   <TabsTrigger value="images">
                     <span className="flex items-center gap-1.5">
-                      <ImagePlus className="h-3.5 w-3.5" />
+                      <Icon name="add_photo_alternate" className="icon-sm" />
                       Images
                     </span>
                   </TabsTrigger>
                   <TabsTrigger value="video">
                     <span className="flex items-center gap-1.5">
-                      <Video className="h-3.5 w-3.5" />
+                      <Icon name="videocam" className="icon-sm" />
                       Video
                     </span>
                   </TabsTrigger>
                   <TabsTrigger value="vault">
                     <span className="flex items-center gap-1.5">
-                      <FolderOpen className="h-3.5 w-3.5" />
+                      <Icon name="folder_open" className="icon-sm" />
                       Vault
                     </span>
                   </TabsTrigger>
@@ -244,7 +252,7 @@ export default function NewPostPage() {
                               />
                             ) : (
                               <div className="flex h-full w-full items-center justify-center">
-                                <ImagePlus className="h-6 w-6 text-muted-foreground" />
+                                <Icon name="add_photo_alternate" className="icon-lg text-muted-foreground" />
                               </div>
                             )}
                             <button
@@ -253,7 +261,7 @@ export default function NewPostPage() {
                               className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-white opacity-0 transition-opacity group-hover:opacity-100"
                               aria-label={`Remove image ${index + 1}`}
                             >
-                              <X className="h-3.5 w-3.5" />
+                              <Icon name="close" className="icon-sm" />
                             </button>
                             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/40 to-transparent p-1 opacity-0 transition-opacity group-hover:opacity-100">
                               <span className="text-[10px] text-white font-medium">
@@ -289,7 +297,7 @@ export default function NewPostPage() {
                     {videoAssetId ? (
                       <div className="flex items-center gap-3 rounded-brand border border-border bg-surface-alt p-4">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                          <Video className="h-5 w-5 text-primary" />
+                          <Icon name="videocam" className="icon-md text-primary" />
                         </div>
                         <div className="flex-1">
                           <p className="text-sm font-medium text-foreground">
@@ -305,7 +313,7 @@ export default function NewPostPage() {
                           size="sm"
                           onClick={removeVideo}
                         >
-                          <X className="mr-1 h-3.5 w-3.5" />
+                          <Icon name="close" className="mr-1 icon-sm" />
                           Remove
                         </Button>
                       </div>
@@ -328,7 +336,7 @@ export default function NewPostPage() {
                   <div className="space-y-3">
                     {vaultItems.length === 0 && (
                       <div className="flex flex-col items-center justify-center rounded-brand border border-dashed border-border py-8">
-                        <FolderOpen className="h-8 w-8 text-muted-foreground mb-2" />
+                        <Icon name="folder_open" className="icon-xl text-muted-foreground mb-2" />
                         <p className="text-sm text-muted-foreground mb-3">
                           Browse your media vault to reuse existing uploads.
                         </p>
@@ -341,7 +349,7 @@ export default function NewPostPage() {
                         >
                           {vaultLoading ? (
                             <>
-                              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                              <Spinner className="mr-1.5 icon-sm" />
                               Loading...
                             </>
                           ) : (
@@ -366,7 +374,7 @@ export default function NewPostPage() {
                             disabled={vaultLoading}
                           >
                             {vaultLoading ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              <Spinner className="icon-sm" />
                             ) : (
                               "Refresh"
                             )}
@@ -387,7 +395,7 @@ export default function NewPostPage() {
                                 }`}
                               >
                                 <div className="flex h-full w-full flex-col items-center justify-center bg-surface-alt p-2">
-                                  <FileText className="h-5 w-5 text-muted-foreground mb-1" />
+                                  <Icon name="description" className="icon-md text-muted-foreground mb-1" />
                                   <span className="text-[10px] text-muted-foreground truncate w-full text-center">
                                     {item.id.slice(0, 8)}
                                   </span>
@@ -449,7 +457,6 @@ export default function NewPostPage() {
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {VISIBILITY_OPTIONS.map((opt) => {
                     const active = visibility === opt.value;
-                    const Icon = opt.icon;
                     return (
                       <button
                         key={opt.value}
@@ -461,7 +468,7 @@ export default function NewPostPage() {
                             : "border-border bg-surface-alt text-muted-foreground hover:border-muted-foreground hover:text-foreground"
                         }`}
                       >
-                        <Icon className={`h-4.5 w-4.5 ${active ? "text-primary" : ""}`} />
+                        <Icon name={opt.icon} className={`icon-md ${active ? "text-primary" : ""}`} />
                         <span className="text-xs font-medium">{opt.label}</span>
                       </button>
                     );
@@ -500,7 +507,7 @@ export default function NewPostPage() {
               {/* NSFW toggle */}
               <div className="flex items-center justify-between rounded-brand border border-border p-4">
                 <div className="flex items-center gap-3">
-                  <ShieldAlert className="h-4.5 w-4.5 text-muted-foreground" />
+                  <Icon name="gpp_maybe" className="icon-md text-muted-foreground" />
                   <div>
                     <Label htmlFor="nsfw" className="text-sm font-medium cursor-pointer">
                       NSFW content
@@ -517,7 +524,7 @@ export default function NewPostPage() {
               <div className="rounded-brand border border-border p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Calendar className="h-4.5 w-4.5 text-muted-foreground" />
+                    <Icon name="calendar_today" className="icon-md text-muted-foreground" />
                     <div>
                       <Label htmlFor="schedule" className="text-sm font-medium cursor-pointer">
                         Schedule post
@@ -547,7 +554,7 @@ export default function NewPostPage() {
           <Card variant="glass">
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <Eye className="mt-0.5 h-4 w-4 text-muted-foreground shrink-0" />
+                <Icon name="visibility" className="mt-0.5 icon-base text-muted-foreground shrink-0" />
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium text-muted-foreground mb-1">
                     Post preview
@@ -596,7 +603,7 @@ export default function NewPostPage() {
           <Button type="submit" disabled={status === "loading"} className="min-w-[140px]">
             {status === "loading" ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Spinner className="mr-2 icon-base" />
                 Creating...
               </>
             ) : scheduleEnabled && publishAt ? (

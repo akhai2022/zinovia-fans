@@ -40,7 +40,7 @@ function typeLabel(t: string): string {
 }
 
 export default function EarningsPage() {
-  const { authorized } = useRequireRole(["creator", "admin"]);
+  const { authorized } = useRequireRole(["creator", "admin", "super_admin"]);
   const [data, setData] = useState<CreatorEarningsOut | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -120,7 +120,7 @@ class AdminUserPage(BaseModel):
 class AdminUserAction(BaseModel):
     action: str = Field(
         ...,
-        pattern="^(approve|reject|feature|unfeature|suspend|activate|verify|unverify|delete)$",
+        pattern="^(approve|reject|feature|unfeature|suspend|activate|verify|unverify|delete|hard_delete|promote_admin|demote_admin)$",
     )
     reason: str | None = None
 

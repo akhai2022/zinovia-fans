@@ -21,11 +21,11 @@
     "e2e:regression": "playwright test 26-pom-regression"
   },
   "dependencies": {
+    "@material-symbols/font-400": "^0.40.2",
     "@zinovia/contracts": "0.1.0",
     "blurhash": "^2.0.5",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
-    "lucide-react": "^0.574.0",
     "next": "^14.2.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

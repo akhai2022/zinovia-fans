@@ -6,8 +6,8 @@
 # -----------------------------------------------------------------------------
 variable "enable_waf" {
   type        = bool
-  default     = true
-  description = "Enable WAF Web ACL for ALB and CloudFront"
+  default     = false
+  description = "Enable WAF Web ACL for ALB and CloudFront. Auto-enabled when enable_ha = true."
 }
 
 variable "waf_rule_action" {
@@ -22,7 +22,7 @@ locals {
 
 # Regional WAF for ALB
 resource "aws_wafv2_web_acl" "alb" {
-  count       = var.enable_waf && var.enable_alb ? 1 : 0
+  count       = local.ha_enable_waf && var.enable_alb ? 1 : 0
   name        = "${local.name_prefix}-alb-waf"
   description = "WAF for ALB api and web"
   scope       = "REGIONAL"
@@ -86,14 +86,14 @@ resource "aws_wafv2_web_acl" "alb" {
 }
 
 resource "aws_wafv2_web_acl_association" "alb" {
-  count        = var.enable_waf && var.enable_alb ? 1 : 0
+  count        = local.ha_enable_waf && var.enable_alb ? 1 : 0
   resource_arn = aws_lb.main[0].arn
   web_acl_arn  = aws_wafv2_web_acl.alb[0].arn
 }
 
 # CloudFront WAF (must be in us-east-1, CLOUDFRONT scope)
 resource "aws_wafv2_web_acl" "cloudfront" {
-  count       = var.enable_waf && var.enable_cloudfront ? 1 : 0
+  count       = local.ha_enable_waf && var.enable_cloudfront ? 1 : 0
   provider    = aws.us_east_1
   name        = "${local.name_prefix}-cf-media-waf"
   description = "WAF for CloudFront media distribution"

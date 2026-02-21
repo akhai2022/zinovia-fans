@@ -189,6 +189,61 @@ export const pl: Dictionary = {
     beforeContactDescription: "Wiele pyta\u0144 ma ju\u017c odpowied\u017a w naszym Centrum pomocy. Sprawd\u017a tam najpierw, aby uzyska\u0107 szybk\u0105 odpowied\u017a.",
     responseTime: "Czas odpowiedzi",
   },
+  aiFeatures: {
+    badge: "AI dla Tw\u00f3rc\u00f3w",
+    heading: "Narz\u0119dzia AI, kt\u00f3re pomagaj\u0105 zarabia\u0107 wi\u0119cej",
+    subheading:
+      "Lekka, ukierunkowana na prywatno\u015b\u0107 AI dzia\u0142aj\u0105ca na naszych serwerach. Bez p\u0142atnych API, bez GPU \u2014 tylko inteligentna automatyzacja, kt\u00f3ra oszcz\u0119dza czas i zwi\u0119ksza zaanga\u017cowanie.",
+    safetyScanTitle: "Skan bezpiecze\u0144stwa AI",
+    safetyScanDesc:
+      "Automatyczna weryfikacja tre\u015bci z wykrywaniem NSFW i alertami ryzyka wiekowego. Ludzka weryfikacja w przypadkach granicznych.",
+    smartCaptionsTitle: "Inteligentne podpisy",
+    smartCaptionsDesc:
+      "Trzy style podpis\u00f3w generowanych przez AI na obraz \u2014 kr\u00f3tki, \u015bredni i promocyjny \u2014 gotowe w kilka sekund.",
+    autoTagsTitle: "Automatyczne tagi i inteligentne wyszukiwanie",
+    autoTagsDesc:
+      "Tagowanie i wyszukiwanie semantyczne wspierane przez AI, dzi\u0119ki czemu fani szybciej odkrywaj\u0105 Twoje tre\u015bci.",
+    smartPreviewsTitle: "Inteligentne podgl\u0105dy",
+    smartPreviewsDesc:
+      "Miniatury oparte na uwadze, rozmyte podgl\u0105dy dla PPV i podgl\u0105dy ze znakiem wodnym \u2014 generowane automatycznie.",
+    promoCopyTitle: "Generator tekst\u00f3w promocyjnych",
+    promoCopyDesc:
+      "Tytu\u0142y promocyjne, CTA i hashtagi w trzech stylach tonu jednym klikni\u0119ciem. Bez potrzeby copywritera.",
+    autoTranslateTitle: "Automatyczne t\u0142umaczenie",
+    autoTranslateDesc:
+      "Dotrzyj do fan\u00f3w na ca\u0142ym \u015bwiecie dzi\u0119ki automatycznemu t\u0142umaczeniu podpis\u00f3w na francuski i hiszpa\u0144ski. Wi\u0119cej j\u0119zyk\u00f3w wkr\u00f3tce.",
+  },
+  aiHowItWorks: {
+    heading: "Prze\u015blij, zautomatyzuj, zarabiaj",
+    subheading: "Trzy kroki od przes\u0142ania do przychodu \u2014 AI zajmie si\u0119 reszt\u0105.",
+    step1Title: "Prze\u015blij",
+    step1Desc:
+      "Prze\u015blij swoje zdj\u0119cia i filmy. Przetwarzanie AI rozpoczyna si\u0119 natychmiast \u2014 kontrole bezpiecze\u0144stwa, podpisy, tagi i miniatury dzia\u0142aj\u0105 w tle.",
+    step2Title: "AI pomaga",
+    step2Desc:
+      "Przejrzyj wygenerowane podpisy, teksty promocyjne i t\u0142umaczenia. W\u0142\u0105cz znaki wodne, wybierz najlepsze kadrowanie i dostosuj przed publikacj\u0105.",
+    step3Title: "Publikuj i zarabiaj",
+    step3Desc:
+      "Kliknij publikuj i docieraj do fan\u00f3w na ca\u0142ym \u015bwiecie. Tagi i t\u0142umaczenia wygenerowane przez AI pomagaj\u0105 nowym odbiorcom odkry\u0107 Twoje tre\u015bci.",
+  },
+  aiTrust: {
+    privacyTitle: "Prywatno\u015b\u0107 przede wszystkim",
+    privacyDesc:
+      "Ca\u0142a AI dzia\u0142a na naszych serwerach. Twoje tre\u015bci nigdy nie opuszczaj\u0105 naszej infrastruktury.",
+    noThirdPartyTitle: "Brak zewn\u0119trznych API AI",
+    noThirdPartyDesc:
+      "Korzystamy z modeli open source \u2014 \u017cadne dane nie s\u0105 wysy\u0142ane do OpenAI, Google ani \u017cadnego innego zewn\u0119trznego serwisu.",
+    auditTitle: "Dzienniki audytu i ludzka weryfikacja",
+    auditDesc:
+      "Ka\u017cda decyzja AI jest rejestrowana. Oznaczone tre\u015bci s\u0105 przegl\u0105dane przez prawdziwych ludzi przed podj\u0119ciem dzia\u0142a\u0144.",
+  },
+  aiCta: {
+    heading: "Gotowy, aby AI pracowa\u0142a dla Ciebie?",
+    description:
+      "Do\u0142\u0105cz do tysi\u0119cy tw\u00f3rc\u00f3w, kt\u00f3rzy korzystaj\u0105 z narz\u0119dzi AI Zinovia, aby oszcz\u0119dza\u0107 czas, dociera\u0107 do globalnych odbiorc\u00f3w i zarabia\u0107 wi\u0119cej z ka\u017cdego wpisu.",
+    ctaStart: "Zacznij tworzy\u0107",
+    ctaDemo: "Zobacz demo AI",
+  },
   footer: {
     privacy: "Prywatno\u015b\u0107",
     terms: "Regulamin",

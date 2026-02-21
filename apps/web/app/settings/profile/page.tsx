@@ -55,7 +55,7 @@ const PROFILE_ERROR_MESSAGES: Record<string, string> = {
 };
 
 export default function SettingsProfilePage() {
-  const { authorized } = useRequireRole(["creator", "admin"]);
+  const { authorized } = useRequireRole(["creator", "admin", "super_admin"]);
   const router = useRouter();
   const { addToast } = useToast();
   const [handle, setHandle] = useState("");

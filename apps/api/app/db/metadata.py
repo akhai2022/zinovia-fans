@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from app.db.base import Base
 from app.modules.ai import models as ai_models
+from app.modules.ai_safety import models as ai_safety_models
+from app.modules.ai_tools import models as ai_tools_models
+from app.modules.ai_tools import translation_models as ai_tools_translation_models
 from app.modules.audit import models as audit_models
 from app.modules.auth import models as auth_models
 from app.modules.billing import models as billing_models
@@ -17,6 +20,9 @@ from app.modules.posts import models as posts_models
 __all__ = [
     "Base",
     "ai_models",
+    "ai_safety_models",
+    "ai_tools_models",
+    "ai_tools_translation_models",
     "audit_models",
     "auth_models",
     "billing_models",

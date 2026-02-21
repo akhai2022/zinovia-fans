@@ -1,22 +1,26 @@
-import * as React from "react";
 import { cn } from "@/lib/utils";
 
 export function Icon({
-  children,
+  name,
   className,
-  size = 20,
+  filled = false,
+  "aria-hidden": ariaHidden = true,
 }: {
-  children: React.ReactNode;
+  name: string;
   className?: string;
-  size?: number;
+  filled?: boolean;
+  "aria-hidden"?: boolean;
 }) {
   return (
     <span
-      className={cn("inline-flex shrink-0 items-center justify-center", className)}
-      style={{ width: size, height: size }}
-      aria-hidden
+      className={cn(
+        "material-symbols-outlined inline-flex items-center justify-center leading-none select-none",
+        filled && "material-symbols-filled",
+        className,
+      )}
+      aria-hidden={ariaHidden}
     >
-      {children}
+      {name}
     </span>
   );
 }

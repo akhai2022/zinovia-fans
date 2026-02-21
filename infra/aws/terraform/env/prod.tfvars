@@ -2,17 +2,20 @@ environment  = "prod"
 aws_region   = "us-east-1"
 project_name = "zinovia-fans"
 
+# HA toggle: set true for production launch (2 NATs, Multi-AZ RDS, ECS min 2, WAF)
+enable_ha = false  # Pre-launch: saves ~$58/mo. Flip to true before launch.
+
 vpc_cidr          = "10.0.0.0/16"
 use_existing_vpc  = false
-nat_gateway_count = 2
+nat_gateway_count = 1
 
-# Prod: larger RDS, Multi-AZ, deletion protection
+# RDS
 db_instance_class        = "db.t3.small"
-db_multi_az              = true
+db_multi_az              = false
 db_deletion_protection   = true
 db_backup_retention_days = 14
 
-# ECS prod sizing
+# ECS sizing
 api_cpu          = 512
 api_memory_mb    = 1024
 web_cpu          = 512
@@ -20,30 +23,29 @@ web_memory_mb    = 1024
 worker_cpu       = 1024
 worker_memory_mb = 2048
 
-# Autoscaling: prod min 2, max 10
-api_scaling_min    = 2
+# Autoscaling
+api_scaling_min    = 1
 api_scaling_max    = 10
-web_scaling_min    = 2
+web_scaling_min    = 1
 web_scaling_max    = 10
 worker_scaling_min = 1
 worker_scaling_max = 5
 
-# Prod: enable ALB + ACM; frontend at zinovia.ai and www.zinovia.ai
+# Networking
 enable_alb   = true
 enable_acm   = true
 enable_route53 = true
 enable_custom_domain = true
 dns_delegated = true
-enable_cloudfront = false  # Blocked: AWS account not verified for CloudFront. Run: aws support create-case
+enable_cloudfront = false  # Blocked: AWS account not verified for CloudFront
 web_use_apex = true
-enable_apex_cloudfront = false  # apex reserved for Next.js when web_use_apex
+enable_apex_cloudfront = false
 
-# HTTPS listener: requires zinovia.ai delegated to Route53 and ACM cert validated.
+# HTTPS
 force_http_forwarding = false
-
-# Block until ACM DNS validation completes so HTTPS listener can attach the cert.
 wait_for_certificate_validation = true
 
+# Media
 media_lifecycle_days = 0
 media_versioning     = true
 
@@ -66,5 +68,3 @@ default_currency = "eur"
 
 # AI
 ai_provider = "replicate"
-
-# route53_zone_id = "Z0123456789ABCDEF"

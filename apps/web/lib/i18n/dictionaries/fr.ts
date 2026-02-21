@@ -189,8 +189,63 @@ export const fr: Dictionary = {
     beforeContactDescription: "De nombreuses questions trouvent déjà une réponse dans notre Centre d'aide. Consultez-le d'abord pour une résolution rapide.",
     responseTime: "Délai de réponse",
   },
+  aiFeatures: {
+    badge: "IA pour les cr\u00e9ateurs",
+    heading: "Des outils IA qui vous aident \u00e0 gagner plus",
+    subheading:
+      "IA l\u00e9g\u00e8re et respectueuse de la vie priv\u00e9e, ex\u00e9cut\u00e9e sur nos serveurs. Pas d\u2019API payantes, pas de GPU \u2014 juste une automatisation intelligente qui vous fait gagner du temps et augmente l\u2019engagement.",
+    safetyScanTitle: "Scan de s\u00e9curit\u00e9 IA",
+    safetyScanDesc:
+      "V\u00e9rification automatique du contenu avec d\u00e9tection NSFW et alertes de risque d\u2019\u00e2ge. R\u00e9vision humaine pour les cas limites.",
+    smartCaptionsTitle: "L\u00e9gendes intelligentes",
+    smartCaptionsDesc:
+      "Trois styles de l\u00e9gendes g\u00e9n\u00e9r\u00e9es par IA par image \u2014 courte, moyenne et promotionnelle \u2014 pr\u00eates en quelques secondes.",
+    autoTagsTitle: "Tags auto & recherche intelligente",
+    autoTagsDesc:
+      "Tagging et recherche s\u00e9mantique aliment\u00e9s par l\u2019IA pour que les fans d\u00e9couvrent votre contenu plus rapidement.",
+    smartPreviewsTitle: "Aper\u00e7us intelligents",
+    smartPreviewsDesc:
+      "Miniatures bas\u00e9es sur l\u2019attention, aper\u00e7us flout\u00e9s pour le PPV et pr\u00e9visualisations avec filigrane \u2014 g\u00e9n\u00e9r\u00e9s automatiquement.",
+    promoCopyTitle: "G\u00e9n\u00e9rateur de texte promotionnel",
+    promoCopyDesc:
+      "Titres, CTA et hashtags promotionnels en trois styles de ton, en un clic. Pas besoin de r\u00e9dacteur.",
+    autoTranslateTitle: "Traduction automatique",
+    autoTranslateDesc:
+      "Touchez des fans du monde entier gr\u00e2ce \u00e0 la traduction automatique des l\u00e9gendes en fran\u00e7ais et en espagnol. D\u2019autres langues arrivent bient\u00f4t.",
+  },
+  aiHowItWorks: {
+    heading: "T\u00e9l\u00e9chargez, automatisez, gagnez",
+    subheading: "Trois \u00e9tapes du t\u00e9l\u00e9chargement aux revenus \u2014 l\u2019IA s\u2019occupe du reste.",
+    step1Title: "T\u00e9l\u00e9chargez",
+    step1Desc:
+      "D\u00e9posez vos photos et vid\u00e9os. Le traitement IA d\u00e9marre imm\u00e9diatement \u2014 v\u00e9rifications de s\u00e9curit\u00e9, l\u00e9gendes, tags et miniatures s\u2019ex\u00e9cutent en arri\u00e8re-plan.",
+    step2Title: "L\u2019IA assiste",
+    step2Desc:
+      "V\u00e9rifiez les l\u00e9gendes g\u00e9n\u00e9r\u00e9es, le texte promotionnel et les traductions. Activez les filigranes, choisissez le meilleur recadrage et peaufinez avant de publier.",
+    step3Title: "Publiez et gagnez",
+    step3Desc:
+      "Publiez et touchez des fans partout dans le monde. Les tags et traductions g\u00e9n\u00e9r\u00e9s par l\u2019IA aident de nouvelles audiences \u00e0 d\u00e9couvrir votre contenu.",
+  },
+  aiTrust: {
+    privacyTitle: "Confidentialit\u00e9 d\u2019abord",
+    privacyDesc:
+      "Toute l\u2019IA fonctionne sur nos serveurs. Votre contenu ne quitte jamais notre infrastructure.",
+    noThirdPartyTitle: "Aucune API IA tierce",
+    noThirdPartyDesc:
+      "Nous utilisons des mod\u00e8les open source \u2014 aucune donn\u00e9e envoy\u00e9e \u00e0 OpenAI, Google ou tout autre service externe.",
+    auditTitle: "Journaux d\u2019audit et r\u00e9vision humaine",
+    auditDesc:
+      "Chaque d\u00e9cision IA est enregistr\u00e9e. Le contenu signal\u00e9 est examin\u00e9 par de vraies personnes avant toute action.",
+  },
+  aiCta: {
+    heading: "Pr\u00eat \u00e0 laisser l\u2019IA travailler pour vous\u00a0?",
+    description:
+      "Rejoignez des milliers de cr\u00e9ateurs qui utilisent les outils IA de Zinovia pour gagner du temps, toucher un public mondial et gagner plus \u00e0 chaque publication.",
+    ctaStart: "Commencer \u00e0 cr\u00e9er",
+    ctaDemo: "Voir la d\u00e9mo IA",
+  },
   footer: {
-    privacy: "Confidentialité",
+    privacy: "Confidentialit\u00e9",
     terms: "Conditions",
     contact: "Contact",
     help: "Aide",

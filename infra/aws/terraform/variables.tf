@@ -114,14 +114,14 @@ variable "web_memory_mb" {
 
 variable "worker_cpu" {
   type        = number
-  default     = 512
-  description = "Worker task CPU units (ffmpeg needs more)"
+  default     = 2048
+  description = "Worker task CPU units (2 vCPU for AI safety model inference + ffmpeg)"
 }
 
 variable "worker_memory_mb" {
   type        = number
-  default     = 1024
-  description = "Worker task memory MB"
+  default     = 8192
+  description = "Worker task memory MB (8 GB for AI safety models: NSFW, age, BLIP, sentence-transformers)"
 }
 
 # ECS autoscaling (min/max tasks per service)
@@ -242,6 +242,12 @@ variable "web_use_apex" {
 }
 
 # Apex + www: CloudFront for zinovia.ai and www.zinovia.ai (ACM in us-east-1 with both names). Requires enable_route53, enable_acm, enable_cloudfront. Mutually exclusive with web_use_apex.
+variable "enable_ha" {
+  type        = bool
+  default     = false
+  description = "High Availability mode. When true: 2 NAT gateways, RDS Multi-AZ, ECS min 2 tasks, WAF enabled. When false: single NAT, single-AZ RDS, ECS min 1 — saves ~$58/mo."
+}
+
 variable "enable_apex_cloudfront" {
   type        = bool
   default     = false
@@ -308,6 +314,30 @@ variable "enable_mock_kyc" {
   type        = bool
   default     = false
   description = "Allow mock KYC provider in production (temporary until real KYC vendor integrated)"
+}
+
+variable "enable_smart_previews" {
+  type        = bool
+  default     = false
+  description = "Enable aspect-ratio crop variants (1:1, 4:5, 16:9) for uploaded images"
+}
+
+variable "enable_promo_generator" {
+  type        = bool
+  default     = false
+  description = "Enable template-based promotional copy generator for posts"
+}
+
+variable "enable_translations" {
+  type        = bool
+  default     = false
+  description = "Enable CPU-only caption translation (FR, ES) via argostranslate"
+}
+
+variable "enable_ai_safety" {
+  type        = bool
+  default     = true
+  description = "Enable self-hosted AI safety scanning (NSFW + age-range proxy, captioning, semantic search)"
 }
 
 variable "default_currency" {

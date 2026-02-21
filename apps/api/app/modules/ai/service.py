@@ -12,7 +12,7 @@ from app.core.errors import AppError
 from app.core.settings import get_settings
 from app.modules.ai.models import AiImageJob, BrandAsset
 from app.modules.ai.prompt_builder import build_prompt
-from app.modules.auth.constants import ADMIN_ROLE
+from app.modules.auth.constants import ADMIN_ROLE, SUPER_ADMIN_ROLE
 from app.modules.auth.models import Profile, User
 from app.modules.auth.rate_limit import check_rate_limit_custom
 from app.modules.creators.constants import CREATOR_ROLE
@@ -140,7 +140,7 @@ async def apply_ai_image(
         return ("landing.hero", object_key, public_url)
 
     if apply_to in ("creator.avatar", "creator.banner"):
-        if user.role not in (CREATOR_ROLE, "admin"):
+        if user.role not in (CREATOR_ROLE, ADMIN_ROLE, SUPER_ADMIN_ROLE):
             raise AppError(status_code=403, detail="creator_role_required")
         profile_result = await session.execute(
             select(Profile).where(Profile.user_id == user.id)

@@ -40,8 +40,12 @@ export function SubscribeInviteVideo() {
             {["/assets/creator_fitness.jpg", "/assets/creator_fashion.jpg", "/assets/creator_art.jpg"].map((src, i) => (
               <div
                 key={src}
-                className="relative h-32 w-24 overflow-hidden rounded-xl border border-white/10 shadow-lg sm:h-44 sm:w-32 md:h-56 md:w-40"
-                style={{ transform: `rotate(${(i - 1) * 5}deg) translateY(${i === 1 ? -12 : 8}px)` }}
+                className="float-gentle relative h-32 w-24 overflow-hidden rounded-xl border border-white/10 shadow-lg sm:h-44 sm:w-32 md:h-56 md:w-40"
+                style={{
+                  "--float-rotate": `${(i - 1) * 5}deg`,
+                  "--float-duration": `${5 + i}s`,
+                  animationDelay: `${i * 2}s`,
+                } as React.CSSProperties}
               >
                 <Image
                   src={src}

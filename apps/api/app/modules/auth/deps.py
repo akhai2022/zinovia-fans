@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.errors import AppError
 from app.db.session import async_session_factory, get_async_session
-from app.modules.auth.constants import ADMIN_ROLE
+from app.modules.auth.constants import ADMIN_ROLE, SUPER_ADMIN_ROLE
 from app.modules.auth.models import User
 from app.modules.auth.security import decode_access_token
 
@@ -100,6 +100,6 @@ async def get_optional_user(
 
 
 def require_admin(user: User = Depends(get_current_user)) -> User:
-    if user.role != ADMIN_ROLE:
+    if user.role not in (ADMIN_ROLE, SUPER_ADMIN_ROLE):
         raise AppError(status_code=403, detail="insufficient_role")
     return user

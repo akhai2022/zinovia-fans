@@ -13,17 +13,21 @@ from app.modules.billing.service import is_active_subscriber
 from app.modules.creators.models import Follow
 from app.modules.media.models import MediaDerivedAsset, MediaObject
 from app.modules.media.storage import StorageClient, get_storage_client
+from app.modules.payments.models import PostPurchase
 from app.modules.posts.models import Post, PostMedia
 from app.modules.posts.service import _can_see_post
-from app.modules.posts.constants import POST_STATUS_PUBLISHED, VISIBILITY_PUBLIC
+from app.modules.posts.constants import POST_STATUS_PUBLISHED, VISIBILITY_PPV, VISIBILITY_PUBLIC
 
 CONTENT_TYPE_VIDEO_MP4 = "video/mp4"
 
-VALID_DOWNLOAD_VARIANTS = frozenset({"thumb", "grid", "full", "poster", "teaser"})
+VALID_DOWNLOAD_VARIANTS = frozenset({
+    "thumb", "grid", "full", "poster", "teaser", "wm_preview",
+    "crop_1x1", "crop_4x5", "crop_16x9",
+})
 
 # Variants that must not fall back to original (e.g. poster for video: no poster => no URL)
-VARIANT_NO_FALLBACK = frozenset({"poster", "teaser"})
-TEASER_VARIANTS = frozenset({"thumb", "grid", "teaser"})
+VARIANT_NO_FALLBACK = frozenset({"poster", "teaser", "wm_preview"})
+TEASER_VARIANTS = frozenset({"thumb", "grid", "teaser", "wm_preview"})
 
 
 def validate_media_upload(content_type: str, size_bytes: int) -> None:
@@ -131,6 +135,20 @@ async def can_user_access_media(
         .where(PostMedia.media_asset_id == media_id)
     )
     posts = list(posts_result.scalars().unique().all())
+
+    # Query PPV purchases once for all PPV posts
+    ppv_post_ids = [p.id for p in posts if p.visibility == VISIBILITY_PPV]
+    ppv_unlocked: set[UUID] = set()
+    if ppv_post_ids:
+        ppv_result = await session.execute(
+            select(PostPurchase.post_id).where(
+                PostPurchase.purchaser_id == user_id,
+                PostPurchase.post_id.in_(ppv_post_ids),
+                PostPurchase.status == "SUCCEEDED",
+            )
+        )
+        ppv_unlocked = {row[0] for row in ppv_result.all()}
+
     for post in posts:
         is_follower_result = await session.execute(
             select(Follow.id).where(
@@ -146,6 +164,7 @@ async def can_user_access_media(
             viewer_user_id=user_id,
             is_follower=is_follower,
             is_subscriber=is_subscriber,
+            ppv_unlocked_post_ids=ppv_unlocked,
         ):
             return True
         # Locked teaser behavior: allow only non-full variants for inaccessible posts.
@@ -159,6 +178,61 @@ async def can_user_access_media(
                 return True
     # Fall back to anonymous access (profile avatars/banners, public posts)
     return await can_anonymous_access_media(session, media_id, variant=variant)
+
+
+async def is_fully_entitled(
+    session: AsyncSession,
+    media_id: UUID,
+    user_id: UUID,
+) -> bool:
+    """True if user owns media or can fully see a post that uses it (not just teaser access)."""
+    result = await session.execute(select(MediaObject).where(MediaObject.id == media_id))
+    media = result.scalar_one_or_none()
+    if not media:
+        return False
+    if media.owner_user_id == user_id:
+        return True
+
+    posts_result = await session.execute(
+        select(Post)
+        .join(PostMedia, PostMedia.post_id == Post.id)
+        .where(PostMedia.media_asset_id == media_id)
+    )
+    posts = list(posts_result.scalars().unique().all())
+    if not posts:
+        return False
+
+    ppv_post_ids = [p.id for p in posts if p.visibility == VISIBILITY_PPV]
+    ppv_unlocked: set[UUID] = set()
+    if ppv_post_ids:
+        ppv_result = await session.execute(
+            select(PostPurchase.post_id).where(
+                PostPurchase.purchaser_id == user_id,
+                PostPurchase.post_id.in_(ppv_post_ids),
+                PostPurchase.status == "SUCCEEDED",
+            )
+        )
+        ppv_unlocked = {row[0] for row in ppv_result.all()}
+
+    for post in posts:
+        is_follower_result = await session.execute(
+            select(Follow.id).where(
+                Follow.fan_user_id == user_id,
+                Follow.creator_user_id == post.creator_user_id,
+            ).limit(1)
+        )
+        is_follower = is_follower_result.scalar_one_or_none() is not None
+        is_subscriber = await is_active_subscriber(session, user_id, post.creator_user_id)
+        if await _can_see_post(
+            session,
+            post,
+            viewer_user_id=user_id,
+            is_follower=is_follower,
+            is_subscriber=is_subscriber,
+            ppv_unlocked_post_ids=ppv_unlocked,
+        ):
+            return True
+    return False
 
 
 async def create_media_object(

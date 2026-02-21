@@ -3,16 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  Bell,
-  Heart,
-  MessageCircle,
-  UserPlus,
-  CreditCard,
-  Unlock,
-  Send,
-  CheckCircle,
-} from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { listNotifications, markAllNotificationsRead, markNotificationRead, type NotificationOut } from "@/features/engagement/api";
 import { Page } from "@/components/brand/Page";
 import { Card } from "@/components/ui/card";
@@ -20,18 +11,19 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-const NOTIFICATION_META: Record<string, { icon: typeof Bell; color: string }> = {
-  COMMENT_ON_POST: { icon: MessageCircle, color: "text-blue-400 bg-blue-500/10" },
-  LIKE_ON_POST: { icon: Heart, color: "text-pink-400 bg-pink-500/10" },
-  NEW_FOLLOWER: { icon: UserPlus, color: "text-emerald-400 bg-emerald-500/10" },
-  NEW_SUBSCRIBER: { icon: CreditCard, color: "text-primary bg-primary/10" },
-  POST_PUBLISHED: { icon: Send, color: "text-violet-400 bg-violet-500/10" },
-  MESSAGE_RECEIVED: { icon: MessageCircle, color: "text-sky-400 bg-sky-500/10" },
-  TIP_RECEIVED: { icon: CreditCard, color: "text-amber-400 bg-amber-500/10" },
-  PPV_UNLOCKED: { icon: Unlock, color: "text-emerald-400 bg-emerald-500/10" },
+const NOTIFICATION_META: Record<string, { icon: string; color: string }> = {
+  COMMENT_ON_POST: { icon: "chat_bubble", color: "text-blue-400 bg-blue-500/10" },
+  LIKE_ON_POST: { icon: "favorite", color: "text-pink-400 bg-pink-500/10" },
+  NEW_FOLLOWER: { icon: "person_add", color: "text-emerald-400 bg-emerald-500/10" },
+  NEW_SUBSCRIBER: { icon: "credit_card", color: "text-primary bg-primary/10" },
+  POST_PUBLISHED: { icon: "send", color: "text-violet-400 bg-violet-500/10" },
+  MESSAGE_RECEIVED: { icon: "chat_bubble", color: "text-sky-400 bg-sky-500/10" },
+  TIP_RECEIVED: { icon: "credit_card", color: "text-amber-400 bg-amber-500/10" },
+  PPV_UNLOCKED: { icon: "lock_open", color: "text-emerald-400 bg-emerald-500/10" },
+  ADMIN_MESSAGE: { icon: "campaign", color: "text-amber-400 bg-amber-500/10" },
 };
 
-const DEFAULT_META = { icon: Bell, color: "text-muted-foreground bg-muted" };
+const DEFAULT_META = { icon: "notifications", color: "text-muted-foreground bg-muted" };
 
 function formatNotification(type: string, payload: Record<string, unknown>): string {
   switch (type) {
@@ -51,6 +43,15 @@ function formatNotification(type: string, payload: Record<string, unknown>): str
       return "You received a tip.";
     case "PPV_UNLOCKED":
       return "Your content was unlocked.";
+    case "ADMIN_MESSAGE": {
+      const title = payload?.title;
+      const msg = payload?.message;
+      if (typeof title === "string" && typeof msg === "string")
+        return `${title}: ${msg}`;
+      if (typeof title === "string") return title;
+      if (typeof msg === "string") return msg;
+      return "Message from Zinovia team.";
+    }
     default: {
       const msg = payload?.message;
       if (typeof msg === "string") return msg;
@@ -137,7 +138,7 @@ export default function NotificationsPage() {
         </div>
         {items.length > 0 && (
           <Button size="sm" variant="outline" onClick={markAll} className="gap-1.5">
-            <CheckCircle className="h-3.5 w-3.5" />
+            <Icon name="check_circle" className="icon-sm" />
             Mark all read
           </Button>
         )}
@@ -168,7 +169,7 @@ export default function NotificationsPage() {
       {!loading && !error && items.length === 0 && (
         <Card className="py-12 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-            <Bell className="h-7 w-7 text-muted-foreground" />
+            <Icon name="notifications" className="icon-lg text-muted-foreground" />
           </div>
           <p className="font-display text-lg font-semibold text-foreground">No notifications yet</p>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -181,7 +182,6 @@ export default function NotificationsPage() {
         <div className="space-y-2">
           {items.map((item) => {
             const meta = NOTIFICATION_META[item.type] || DEFAULT_META;
-            const Icon = meta.icon;
             const isUnread = !item.read_at;
             return (
               <button
@@ -196,7 +196,7 @@ export default function NotificationsPage() {
                 )}
               >
                 <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full", meta.color.split(" ").slice(1).join(" "))}>
-                  <Icon className={cn("h-4.5 w-4.5", meta.color.split(" ")[0])} />
+                  <Icon name={meta.icon} className={cn("icon-md", meta.color.split(" ")[0])} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className={cn("text-sm", isUnread ? "font-medium text-foreground" : "text-foreground/80")}>

@@ -166,6 +166,38 @@ class Settings(BaseSettings):
         alias="MEDIA_WATERMARK_INCLUDE_HANDLE",
     )
 
+    # Centered watermark for wm_preview variant (non-entitled preview)
+    media_wm_preview_enabled: bool = Field(
+        default=False, alias="MEDIA_WM_PREVIEW_ENABLED"
+    )
+    media_wm_preview_text: str = Field(
+        default="zinovia-fans", alias="MEDIA_WM_PREVIEW_TEXT"
+    )
+    media_wm_preview_opacity: float = Field(
+        default=0.30, ge=0.0, le=1.0, alias="MEDIA_WM_PREVIEW_OPACITY"
+    )
+    media_wm_preview_font_size_pct: float = Field(
+        default=0.05, ge=0.01, le=0.2, alias="MEDIA_WM_PREVIEW_FONT_SIZE_PCT"
+    )
+    media_wm_preview_min_font_size: int = Field(
+        default=16, ge=8, le=72, alias="MEDIA_WM_PREVIEW_MIN_FONT_SIZE"
+    )
+    media_wm_preview_max_font_size: int = Field(
+        default=72, ge=16, le=200, alias="MEDIA_WM_PREVIEW_MAX_FONT_SIZE"
+    )
+    media_wm_preview_stroke_px: int = Field(
+        default=2, ge=0, le=8, alias="MEDIA_WM_PREVIEW_STROKE_PX"
+    )
+    media_wm_preview_bg_rect: bool = Field(
+        default=False, alias="MEDIA_WM_PREVIEW_BG_RECT"
+    )
+    media_wm_preview_include_handle: bool = Field(
+        default=False, alias="MEDIA_WM_PREVIEW_INCLUDE_HANDLE"
+    )
+    media_wm_preview_max_dim: int = Field(
+        default=600, ge=200, le=1200, alias="MEDIA_WM_PREVIEW_MAX_DIM"
+    )
+
     # Video (MVP: MP4 only, no transcoding)
     media_allow_video: bool = Field(default=True, alias="MEDIA_ALLOW_VIDEO")
     media_max_video_bytes: int = Field(
@@ -209,6 +241,19 @@ class Settings(BaseSettings):
     enable_ppv_posts: bool = Field(default=False, alias="ENABLE_PPV_POSTS")
     enable_ppvm: bool = Field(default=False, alias="ENABLE_PPVM")
     enable_moderation: bool = Field(default=False, alias="ENABLE_MODERATION")
+    enable_ai_safety: bool = Field(default=False, alias="ENABLE_AI_SAFETY")
+    ai_safety_nsfw_block_threshold: float = Field(
+        default=0.85, ge=0.0, le=1.0, alias="AI_SAFETY_NSFW_BLOCK_THRESHOLD"
+    )
+    ai_safety_minor_high_threshold: float = Field(
+        default=0.6, ge=0.0, le=1.0, alias="AI_SAFETY_MINOR_HIGH_THRESHOLD"
+    )
+    ai_safety_minor_med_threshold: float = Field(
+        default=0.3, ge=0.0, le=1.0, alias="AI_SAFETY_MINOR_MED_THRESHOLD"
+    )
+    enable_smart_previews: bool = Field(default=False, alias="ENABLE_SMART_PREVIEWS")
+    enable_promo_generator: bool = Field(default=False, alias="ENABLE_PROMO_GENERATOR")
+    enable_translations: bool = Field(default=False, alias="ENABLE_TRANSLATIONS")
     enable_analytics: bool = Field(default=False, alias="ENABLE_ANALYTICS")
     enable_mobile_nav_polish: bool = Field(default=False, alias="ENABLE_MOBILE_NAV_POLISH")
     # Allow mock KYC provider in production (temporary; disable once real provider integrated).

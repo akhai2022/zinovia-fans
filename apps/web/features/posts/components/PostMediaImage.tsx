@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { MediaService } from "@/features/media/api";
 import { blurhashToDataURL } from "@/lib/blurhash";
@@ -15,6 +15,7 @@ const WATERMARK_SRC = "/brand/zinovia-verified.svg";
 /**
  * Renders a single post media asset by fetching a signed download URL.
  * Uses in-memory cache so repeated mounts (e.g. grid + feed) don't refetch.
+ * Lazy-loads: only fetches the signed URL when the element enters the viewport.
  * Loading state: blurhash canvas placeholder (or dominant color, or muted gray).
  * Optional watermark overlay (e.g. for creator profile grid only).
  */
@@ -41,8 +42,29 @@ export function PostMediaImage({
   const [url, setUrl] = useState<string | null>(cached?.url ?? null);
   const [blurhash, setBlurhash] = useState<string | undefined>(cached?.blurhash ?? initialBlurhash);
   const [dominantColor, setDominantColor] = useState<string | undefined>(cached?.dominantColor ?? initialDominantColor);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(!!cached?.url);
+
+  // Intersection observer: only fetch signed URL when element is near viewport
+  useEffect(() => {
+    if (isVisible || cached?.url) return;
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px" } // start loading 200px before entering viewport
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isVisible, cached?.url]);
 
   useEffect(() => {
+    if (!isVisible) return;
     if (mediaCache.has(cacheKey)) {
       const c = mediaCache.get(cacheKey)!;
       setUrl(c.url);
@@ -71,7 +93,7 @@ export function PostMediaImage({
     return () => {
       cancelled = true;
     };
-  }, [assetId, cacheKey, variant]);
+  }, [assetId, cacheKey, variant, isVisible]);
 
   // Decode blurhash to a data URL for the placeholder background
   const blurhashDataUrl = useMemo(() => {
@@ -90,12 +112,12 @@ export function PostMediaImage({
       : { background: "var(--muted)" };
 
   if (!url) {
-    return <div className={className} style={placeholderStyle} aria-hidden />;
+    return <div ref={containerRef} className={className} style={placeholderStyle} aria-hidden />;
   }
 
   return (
     <div className="relative h-full w-full">
-      <img src={url} alt="" className={className} referrerPolicy="no-referrer" />
+      <img src={url} alt="" loading="lazy" decoding="async" className={className} referrerPolicy="no-referrer" />
       {watermark && (
         <div
           className="absolute bottom-1.5 right-1.5 flex items-center opacity-90"

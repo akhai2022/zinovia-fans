@@ -3,28 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  Home,
-  Rss,
-  Users,
-  Search,
-  MessageCircle,
-  PenSquare,
-  FolderOpen,
-  LayoutGrid,
-  Settings,
-  Bell,
-  User,
-  CreditCard,
-  ShieldCheck,
-  LogOut,
-  LogIn,
-  UserPlus,
-  Menu,
-  Compass,
-  Clock,
-  HelpCircle,
-} from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { type UserOut } from "@zinovia/contracts";
 import { Button } from "@/components/ui/button";
 import {
@@ -71,24 +50,24 @@ export function Navbar({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const NAV_LINKS_PUBLIC = [
-    { href: "/", label: t.nav.home, icon: Home },
-    { href: "/creators", label: t.nav.creators, icon: Users },
-    { href: "/search", label: "Search", icon: Search },
+    { href: "/", label: t.nav.home, icon: "home" },
+    { href: "/creators", label: t.nav.creators, icon: "group" },
+    { href: "/search", label: "Search", icon: "search" },
   ];
 
-  const isCreator = user?.role === "creator" || user?.role === "admin";
+  const isCreator = user?.role === "creator" || user?.role === "admin" || user?.role === "super_admin";
 
   const NAV_LINKS_AUTH = [
-    { href: "/feed", label: t.nav.feed, icon: Rss },
-    { href: "/messages", label: t.nav.messages, icon: MessageCircle },
+    { href: "/feed", label: t.nav.feed, icon: "rss_feed" },
+    { href: "/messages", label: t.nav.messages, icon: "chat_bubble" },
     ...(isCreator
       ? [
-          { href: "/creator/post/new", label: t.nav.newPost, icon: PenSquare },
-          { href: "/creator/vault", label: t.nav.vault, icon: FolderOpen },
-          { href: "/creator/collections", label: t.nav.collections, icon: LayoutGrid },
+          { href: "/creator/post/new", label: t.nav.newPost, icon: "edit_square" },
+          { href: "/creator/vault", label: t.nav.vault, icon: "folder_open" },
+          { href: "/creator/collections", label: t.nav.collections, icon: "grid_view" },
         ]
       : []),
-    { href: "/settings/profile", label: t.nav.settings, icon: Settings },
+    { href: "/settings/profile", label: t.nav.settings, icon: "settings" },
   ];
 
   useEffect(() => {
@@ -129,7 +108,7 @@ export function Navbar({
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-1 sm:flex sm:gap-1.5">
-          {NAV_LINKS_PUBLIC.map(({ href, label, icon: Icon }) => {
+          {NAV_LINKS_PUBLIC.map(({ href, label, icon }) => {
             const active = pathname === href || (href !== "/" && pathname.startsWith(href));
             return (
               <Button
@@ -140,7 +119,7 @@ export function Navbar({
                 className={cn(active && "bg-white/10 text-foreground")}
               >
                 <Link href={href} className="flex items-center gap-1.5">
-                  <Icon className="h-4 w-4" />
+                  <Icon name={icon} className="icon-base" />
                   <span>{label}</span>
                 </Link>
               </Button>
@@ -149,7 +128,7 @@ export function Navbar({
 
           {user && (
             <>
-              {NAV_LINKS_AUTH.map(({ href, label, icon: Icon }) => {
+              {NAV_LINKS_AUTH.map(({ href, label, icon }) => {
                 const active = pathname === href || pathname.startsWith(href + "/");
                 return (
                   <Button
@@ -160,7 +139,7 @@ export function Navbar({
                     className={cn(active && "bg-white/10 text-foreground")}
                   >
                     <Link href={href} className="flex items-center gap-1.5">
-                      <Icon className="h-4 w-4" />
+                      <Icon name={icon} className="icon-base" />
                       <span>{label}</span>
                     </Link>
                   </Button>
@@ -170,7 +149,7 @@ export function Navbar({
               {/* Notifications */}
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/notifications" className="relative flex items-center gap-1.5">
-                  <Bell className="h-4 w-4" />
+                  <Icon name="notifications" className="icon-base" />
                   <span>{t.nav.notifications}</span>
                   {unreadNotifications > 0 && (
                     <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">
@@ -212,9 +191,11 @@ export function Navbar({
                       "ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none",
                       user.role === "creator"
                         ? "bg-primary/15 text-primary"
-                        : user.role === "admin"
-                          ? "bg-amber-500/15 text-amber-400"
-                          : "bg-emerald-500/15 text-emerald-400"
+                        : user.role === "super_admin"
+                          ? "bg-rose-500/15 text-rose-400"
+                          : user.role === "admin"
+                            ? "bg-amber-500/15 text-amber-400"
+                            : "bg-emerald-500/15 text-emerald-400"
                     )}>
                       {user.role === "fan" ? "Fan" : user.role}
                     </span>
@@ -222,51 +203,51 @@ export function Navbar({
                   <p className="mt-0.5 text-xs text-muted-foreground truncate">{user.email}</p>
                   {user.last_login_at && (
                     <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
-                      <Clock className="h-3 w-3" />
+                      <Icon name="schedule" className="icon-xs" />
                       Last login: {formatRelativeTime(user.last_login_at)}
                     </p>
                   )}
                 </div>
                 <DropdownMenuItem asChild>
                   <Link href="/me" className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
+                    <Icon name="person" className="icon-base text-muted-foreground" />
                     {t.nav.me}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/messages" className="flex items-center gap-2">
-                    <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                    <Icon name="chat_bubble" className="icon-base text-muted-foreground" />
                     {t.nav.messages}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/settings/profile" className="flex items-center gap-2">
-                    <Settings className="h-4 w-4 text-muted-foreground" />
+                    <Icon name="settings" className="icon-base text-muted-foreground" />
                     {t.nav.settings}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/billing/manage" className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    <Icon name="credit_card" className="icon-base text-muted-foreground" />
                     {t.nav.subscriptions}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/contact" className="flex items-center gap-2">
-                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                    <Icon name="help" className="icon-base text-muted-foreground" />
                     {t.nav.support}
                   </Link>
                 </DropdownMenuItem>
-                {user?.role === "admin" && (
+                {(user?.role === "admin" || user?.role === "super_admin") && (
                   <DropdownMenuItem asChild>
                     <Link href="/admin" className="flex items-center gap-2">
-                      <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                      <Icon name="verified_user" className="icon-base text-muted-foreground" />
                       {t.nav.admin}
                     </Link>
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2">
-                  <LogOut className="h-4 w-4 text-muted-foreground" />
+                  <Icon name="logout" className="icon-base text-muted-foreground" />
                   {t.nav.logout}
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -275,13 +256,13 @@ export function Navbar({
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/login" className="flex items-center gap-1.5">
-                  <LogIn className="h-3.5 w-3.5" />
+                  <Icon name="login" className="icon-sm" />
                   {t.nav.login}
                 </Link>
               </Button>
               <Button size="sm" className="btn-cta-primary" asChild>
                 <Link href="/signup" className="flex items-center gap-1.5">
-                  <UserPlus className="h-3.5 w-3.5" />
+                  <Icon name="person_add" className="icon-sm" />
                   {t.nav.signup}
                 </Link>
               </Button>
@@ -303,7 +284,7 @@ export function Navbar({
           onClick={() => setMobileOpen(true)}
           aria-label="Open navigation menu"
         >
-          <Menu className="h-4 w-4" />
+          <Icon name="menu" className="icon-base" />
           <span className="ml-1">{t.nav.menu}</span>
         </Button>
       </div>
@@ -311,7 +292,7 @@ export function Navbar({
       {/* Mobile drawer */}
       <Drawer open={mobileOpen} onClose={() => setMobileOpen(false)} title="Navigation">
         <div className="space-y-1.5">
-          {[...NAV_LINKS_PUBLIC, ...(user ? NAV_LINKS_AUTH : [])].map(({ href, label, icon: Icon }) => {
+          {[...NAV_LINKS_PUBLIC, ...(user ? NAV_LINKS_AUTH : [])].map(({ href, label, icon }) => {
             const active = pathname === href || (href !== "/" && pathname.startsWith(href));
             return (
               <Link
@@ -323,7 +304,7 @@ export function Navbar({
                   active ? "bg-white/10 border-primary/30" : "bg-card hover:bg-white/5"
                 )}
               >
-                <Icon className="h-4 w-4 text-muted-foreground" />
+                <Icon name={icon} className="icon-base text-muted-foreground" />
                 {label}
               </Link>
             );
@@ -339,7 +320,7 @@ export function Navbar({
                   pathname === "/notifications" ? "bg-white/10 border-primary/30" : "bg-card hover:bg-white/5"
                 )}
               >
-                <Bell className="h-4 w-4 text-muted-foreground" />
+                <Icon name="notifications" className="icon-base text-muted-foreground" />
                 {t.nav.notifications}
                 {unreadNotifications > 0 && (
                   <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-white">
@@ -355,10 +336,10 @@ export function Navbar({
                   pathname === "/contact" ? "bg-white/10 border-primary/30" : "bg-card hover:bg-white/5"
                 )}
               >
-                <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                <Icon name="help" className="icon-base text-muted-foreground" />
                 {t.nav.support}
               </Link>
-              {user?.role === "admin" && (
+              {(user?.role === "admin" || user?.role === "super_admin") && (
                 <Link
                   href="/admin"
                   onClick={() => setMobileOpen(false)}
@@ -367,7 +348,7 @@ export function Navbar({
                     pathname.startsWith("/admin") ? "bg-white/10 border-primary/30" : "bg-card hover:bg-white/5"
                   )}
                 >
-                  <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                  <Icon name="verified_user" className="icon-base text-muted-foreground" />
                   {t.nav.admin}
                 </Link>
               )}
@@ -376,7 +357,7 @@ export function Navbar({
                 onClick={() => { setMobileOpen(false); handleLogout(); }}
                 className="flex w-full items-center gap-3 rounded-brand border border-border px-3 py-2.5 text-sm font-medium text-foreground transition-colors bg-card hover:bg-white/5"
               >
-                <LogOut className="h-4 w-4 text-muted-foreground" />
+                <Icon name="logout" className="icon-base text-muted-foreground" />
                 {t.nav.logout}
               </button>
             </>
@@ -386,19 +367,19 @@ export function Navbar({
             <div className="flex flex-col gap-2 pt-3">
               <Button className="btn-cta-primary w-full" asChild>
                 <Link href="/signup" onClick={() => setMobileOpen(false)} className="flex items-center justify-center gap-1.5">
-                  <UserPlus className="h-4 w-4" />
+                  <Icon name="person_add" className="icon-base" />
                   {t.nav.startSubscribing}
                 </Link>
               </Button>
               <Button variant="outline" className="w-full" asChild>
                 <Link href="/login" onClick={() => setMobileOpen(false)} className="flex items-center justify-center gap-1.5">
-                  <LogIn className="h-4 w-4" />
+                  <Icon name="login" className="icon-base" />
                   {t.nav.login}
                 </Link>
               </Button>
               <Button variant="ghost" size="sm" className="w-full" asChild>
                 <Link href="/creators" onClick={() => setMobileOpen(false)} className="flex items-center justify-center gap-1.5">
-                  <Compass className="h-3.5 w-3.5" />
+                  <Icon name="explore" className="icon-sm" />
                   {t.nav.exploreCreators}
                 </Link>
               </Button>

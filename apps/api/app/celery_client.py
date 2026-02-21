@@ -65,3 +65,26 @@ def enqueue_publish_due_posts() -> None:
     """Enqueue scheduled-post publication sweep."""
     app = _get_celery_app()
     app.send_task("posts.publish_due_scheduled")  # type: ignore[attr-defined]
+
+
+def enqueue_ai_safety_scan(asset_id: str, object_key: str, content_type: str) -> None:
+    """Enqueue AI safety scan (NSFW + age-proxy classification). Idempotent on worker side."""
+    app = _get_celery_app()
+    app.send_task(  # type: ignore[attr-defined]
+        "ai_safety.scan_image",
+        args=[asset_id, object_key, content_type],
+    )
+
+
+def enqueue_translate_caption(
+    translation_id: str,
+    source_text: str,
+    source_lang: str,
+    target_lang: str,
+) -> None:
+    """Enqueue caption translation task. Idempotent on worker side."""
+    app = _get_celery_app()
+    app.send_task(  # type: ignore[attr-defined]
+        "translation.translate_caption",
+        args=[translation_id, source_text, source_lang, target_lang],
+    )

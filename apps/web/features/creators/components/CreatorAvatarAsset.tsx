@@ -39,7 +39,7 @@ export function CreatorAvatarAsset({
       return;
     }
     let cancelled = false;
-    MediaService.mediaDownloadUrl(assetId)
+    MediaService.mediaDownloadUrl(assetId, "thumb")
       .then((res) => {
         if (!cancelled && res.download_url) {
           avatarUrlCache.set(assetId, res.download_url);

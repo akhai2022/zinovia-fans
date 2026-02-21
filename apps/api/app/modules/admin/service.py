@@ -3,10 +3,11 @@ from __future__ import annotations
 import logging
 from uuid import UUID
 
-from sqlalchemy import or_, func, select
+from sqlalchemy import delete, or_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
+from app.modules.auth.constants import ADMIN_ROLE
 from app.modules.auth.models import Profile, User
 from app.modules.billing.models import Subscription
 from app.modules.ledger.models import LedgerEvent
@@ -464,6 +465,135 @@ async def list_user_subscribers_admin(
     return items, total
 
 
+async def _hard_delete_user(session: AsyncSession, user_id: UUID) -> None:
+    """Permanently delete a user and ALL related data. Irreversible."""
+    from app.modules.ai.models import AiImageJob, BrandAsset
+    from app.modules.ai_safety.models import ImageSafetyScan
+    from app.modules.audit.models import AuditEvent
+    from app.modules.billing.models import CreatorPlan
+    from app.modules.collections.models import Collection, CollectionPost
+    from app.modules.creators.models import Follow
+    from app.modules.media.models import MediaDerivedAsset, MediaObject
+    from app.modules.messaging.models import Conversation, Message, MessageMedia
+    from app.modules.notifications.models import Notification
+    from app.modules.onboarding.models import (
+        EmailVerificationToken,
+        IdempotencyKey,
+        KycSession,
+        OnboardingAuditEvent,
+    )
+    from app.modules.payments.models import PostPurchase, PpvPurchase, Tip
+    from app.modules.posts.models import PostComment, PostLike
+
+    # Delete derived assets for media owned by this user
+    owned_media_ids = select(MediaObject.id).where(MediaObject.owner_user_id == user_id)
+    await session.execute(
+        delete(MediaDerivedAsset).where(MediaDerivedAsset.parent_asset_id.in_(owned_media_ids))
+    )
+
+    # Delete messaging data (order matters: ppv_purchases → message_media → messages → conversations)
+    user_convos = select(Conversation.id).where(
+        or_(
+            Conversation.creator_user_id == user_id,
+            Conversation.fan_user_id == user_id,
+        )
+    )
+    user_msgs = select(Message.id).where(Message.conversation_id.in_(user_convos))
+    # PpvPurchase references message_media and conversations
+    await session.execute(delete(PpvPurchase).where(
+        or_(PpvPurchase.purchaser_id == user_id, PpvPurchase.creator_id == user_id)
+    ))
+    # Tip references conversations/messages (SET NULL FKs, but delete tips owned by user)
+    await session.execute(delete(Tip).where(
+        or_(Tip.tipper_id == user_id, Tip.creator_id == user_id)
+    ))
+    # MessageMedia → Messages → Conversations
+    await session.execute(delete(MessageMedia).where(MessageMedia.message_id.in_(user_msgs)))
+    await session.execute(delete(Message).where(Message.conversation_id.in_(user_convos)))
+    await session.execute(
+        delete(Conversation).where(
+            or_(
+                Conversation.creator_user_id == user_id,
+                Conversation.fan_user_id == user_id,
+            )
+        )
+    )
+
+    # Delete collection posts for collections owned by this user
+    user_collections = select(Collection.id).where(Collection.creator_user_id == user_id)
+    await session.execute(
+        delete(CollectionPost).where(CollectionPost.collection_id.in_(user_collections))
+    )
+    await session.execute(delete(Collection).where(Collection.creator_user_id == user_id))
+
+    # Delete posts and related (purchases → likes → comments → posts)
+    user_posts = select(Post.id).where(Post.creator_user_id == user_id)
+    await session.execute(delete(PostPurchase).where(
+        or_(PostPurchase.purchaser_id == user_id, PostPurchase.creator_id == user_id)
+    ))
+    await session.execute(delete(PostLike).where(
+        or_(PostLike.post_id.in_(user_posts), PostLike.user_id == user_id)
+    ))
+    await session.execute(delete(PostComment).where(
+        or_(PostComment.post_id.in_(user_posts), PostComment.user_id == user_id)
+    ))
+    await session.execute(delete(Post).where(Post.creator_user_id == user_id))
+
+    # Billing
+    await session.execute(delete(Subscription).where(
+        or_(Subscription.fan_user_id == user_id, Subscription.creator_user_id == user_id)
+    ))
+    await session.execute(delete(CreatorPlan).where(CreatorPlan.creator_user_id == user_id))
+    await session.execute(delete(LedgerEvent).where(LedgerEvent.creator_id == user_id))
+
+    # Follows
+    await session.execute(delete(Follow).where(
+        or_(Follow.fan_user_id == user_id, Follow.creator_user_id == user_id)
+    ))
+
+    # Notifications
+    await session.execute(delete(Notification).where(Notification.user_id == user_id))
+
+    # Onboarding
+    await session.execute(delete(EmailVerificationToken).where(EmailVerificationToken.user_id == user_id))
+    await session.execute(delete(OnboardingAuditEvent).where(OnboardingAuditEvent.creator_id == user_id))
+    await session.execute(delete(IdempotencyKey).where(IdempotencyKey.creator_id == user_id))
+    await session.execute(delete(KycSession).where(KycSession.creator_id == user_id))
+
+    # AI
+    await session.execute(delete(AiImageJob).where(AiImageJob.user_id == user_id))
+
+    # SET NULL for shared references (don't delete other users' data)
+    await session.execute(
+        BrandAsset.__table__.update()
+        .where(BrandAsset.updated_by_user_id == user_id)
+        .values(updated_by_user_id=None)
+    )
+    await session.execute(
+        ImageSafetyScan.__table__.update()
+        .where(ImageSafetyScan.reviewed_by == user_id)
+        .values(reviewed_by=None)
+    )
+    await session.execute(
+        AuditEvent.__table__.update()
+        .where(AuditEvent.actor_id == user_id)
+        .values(actor_id=None)
+    )
+
+    # Media (after posts are deleted)
+    # Clear profile avatar/banner FK references before deleting media
+    await session.execute(
+        Profile.__table__.update()
+        .where(Profile.user_id == user_id)
+        .values(avatar_asset_id=None, banner_asset_id=None)
+    )
+    await session.execute(delete(MediaObject).where(MediaObject.owner_user_id == user_id))
+
+    # Profile + User
+    await session.execute(delete(Profile).where(Profile.user_id == user_id))
+    await session.execute(delete(User).where(User.id == user_id))
+
+
 async def admin_action_user(
     session: AsyncSession,
     target_user_id: UUID,
@@ -480,6 +610,12 @@ async def admin_action_user(
     if not row:
         raise AppError(status_code=404, detail="user_not_found")
     user, profile = row
+
+    if action == "hard_delete":
+        logger.info("admin_hard_delete user_id=%s reason=%s", target_user_id, reason)
+        await _hard_delete_user(session, target_user_id)
+        await session.commit()
+        return {"status": "ok", "action": action, "user_id": str(target_user_id)}
 
     if action == "delete":
         user.is_active = False
@@ -517,6 +653,12 @@ async def admin_action_user(
         if profile:
             profile.verified = False
         logger.info("admin_unverify user_id=%s reason=%s", target_user_id, reason)
+    elif action == "promote_admin":
+        user.role = ADMIN_ROLE
+        logger.info("admin_promote user_id=%s reason=%s", target_user_id, reason)
+    elif action == "demote_admin":
+        user.role = "fan"
+        logger.info("admin_demote user_id=%s reason=%s", target_user_id, reason)
     else:
         raise AppError(status_code=400, detail="invalid_action")
 

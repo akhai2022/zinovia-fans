@@ -6,6 +6,10 @@ import { FeaturedCreators } from "@/components/landing/FeaturedCreators";
 import { SubscribeInviteVideo } from "@/components/landing/SubscribeInviteVideo";
 import { SafetyPrivacy } from "@/components/landing/SafetyPrivacy";
 import { SmartMedia } from "@/components/landing/SmartMedia";
+import { AIForCreators } from "@/components/landing/AIForCreators";
+import { AIHowItWorks } from "@/components/landing/AIHowItWorks";
+import { AITrustStrip } from "@/components/landing/AITrustStrip";
+import { AIDemoCTA } from "@/components/landing/AIDemoCTA";
 import { ScrollReveal } from "@/components/landing/ScrollReveal";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { DEFAULT_LOCALE, LOCALE_COOKIE, SUPPORTED_LOCALES, type Locale } from "@/lib/i18n/config";
@@ -78,13 +82,14 @@ export default async function HomePage() {
       />
       <LandingHero />
 
-      <ScrollReveal>
+      {/* Featured Creators — heading + staggered cards */}
+      <ScrollReveal stagger staggerDelay={100}>
         <FeaturedCreators />
       </ScrollReveal>
 
       {/* Features grid */}
-      <ScrollReveal>
-        <section className="mx-auto w-full max-w-6xl section-pad px-4 sm:px-6" aria-labelledby="features-heading">
+      <section className="mx-auto w-full max-w-6xl section-pad px-4 sm:px-6" aria-labelledby="features-heading">
+        <ScrollReveal>
           <div className="text-center">
             <h2 id="features-heading" className="font-display text-premium-h2 font-bold text-foreground">
               {t.features.heading}
@@ -93,11 +98,13 @@ export default async function HomePage() {
               {t.features.subheading}
             </p>
           </div>
+        </ScrollReveal>
+        <ScrollReveal stagger staggerDelay={100}>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map(({ title, description }, i) => (
               <div
                 key={title}
-                className="card-hover-lift flex flex-col gap-4 rounded-2xl border border-white/[0.06] bg-card p-6"
+                className="sr-child card-hover-lift flex flex-col gap-4 rounded-2xl border border-white/[0.06] bg-card p-6"
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
@@ -109,16 +116,17 @@ export default async function HomePage() {
               </div>
             ))}
           </div>
-        </section>
-      </ScrollReveal>
+        </ScrollReveal>
+      </section>
 
-      <ScrollReveal>
+      {/* Subscribe Invite — scale+blur entrance */}
+      <ScrollReveal scaleFrom={0.96} blur>
         <SubscribeInviteVideo />
       </ScrollReveal>
 
       {/* How it works */}
-      <ScrollReveal>
-        <section className="mx-auto w-full max-w-6xl section-pad px-4 sm:px-6" aria-labelledby="how-heading">
+      <section className="mx-auto w-full max-w-6xl section-pad px-4 sm:px-6" aria-labelledby="how-heading">
+        <ScrollReveal>
           <div className="text-center">
             <h2 id="how-heading" className="font-display text-premium-h2 font-bold text-foreground">
               {t.howItWorks.heading}
@@ -127,37 +135,58 @@ export default async function HomePage() {
               {t.howItWorks.subheading}
             </p>
           </div>
+        </ScrollReveal>
+        <ScrollReveal stagger staggerDelay={120}>
           <div className="mt-10 grid gap-6 md:grid-cols-3">
             {HOW_IT_WORKS.map(({ step, title, description }) => (
-              <div key={step} className="relative rounded-2xl border border-white/[0.06] bg-card p-6">
+              <div key={step} className="sr-child relative rounded-2xl border border-white/[0.06] bg-card p-6">
                 <span className="text-gradient-brand text-4xl font-bold">{step}</span>
                 <h3 className="mt-3 text-base font-semibold text-foreground">{title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
               </div>
             ))}
           </div>
-        </section>
-      </ScrollReveal>
+        </ScrollReveal>
+      </section>
 
-      <ScrollReveal>
+      {/* Smart Media — staggered cards */}
+      <ScrollReveal stagger staggerDelay={100}>
         <SmartMedia t={t.smartMedia} />
       </ScrollReveal>
 
+      {/* AI for Creators — 6 feature cards */}
+      <ScrollReveal stagger staggerDelay={100}>
+        <AIForCreators t={t.aiFeatures} />
+      </ScrollReveal>
+
+      {/* AI How it works — 3-step row */}
+      <ScrollReveal stagger staggerDelay={120}>
+        <AIHowItWorks t={t.aiHowItWorks} />
+      </ScrollReveal>
+
+      {/* AI Trust strip */}
       <ScrollReveal>
+        <AITrustStrip t={t.aiTrust} />
+      </ScrollReveal>
+
+      {/* Safety & Privacy — staggered cards */}
+      <ScrollReveal stagger staggerDelay={100}>
         <SafetyPrivacy t={t.safety} />
       </ScrollReveal>
 
-      {/* FAQ */}
-      <ScrollReveal>
-        <section className="mx-auto w-full max-w-4xl section-pad px-4 sm:px-6" aria-labelledby="faq-heading">
+      {/* FAQ — smooth open animation */}
+      <section className="mx-auto w-full max-w-4xl section-pad px-4 sm:px-6" aria-labelledby="faq-heading">
+        <ScrollReveal>
           <div className="text-center">
             <h2 id="faq-heading" className="font-display text-premium-h2 font-bold text-foreground">
               {t.faq.heading}
             </h2>
           </div>
+        </ScrollReveal>
+        <ScrollReveal stagger staggerDelay={80}>
           <div className="mt-10 divide-y divide-white/[0.06]">
             {FAQ.map(({ q, a }) => (
-              <details key={q} className="group py-5">
+              <details key={q} className="sr-child group py-5">
                 <summary className="flex cursor-pointer items-center justify-between text-sm font-medium text-foreground">
                   {q}
                   <svg
@@ -170,30 +199,41 @@ export default async function HomePage() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                   </svg>
                 </summary>
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{a}</p>
+                <div className="faq-answer">
+                  <div>
+                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{a}</p>
+                  </div>
+                </div>
               </details>
             ))}
           </div>
-        </section>
+        </ScrollReveal>
+      </section>
+
+      {/* AI Demo CTA */}
+      <ScrollReveal scaleFrom={0.96} blur>
+        <AIDemoCTA t={t.aiCta} />
       </ScrollReveal>
 
       {/* Final CTA */}
-      <section className="mx-auto w-full max-w-6xl section-pad px-4 pb-24 text-center sm:px-6" aria-labelledby="cta-heading">
-        <h2 id="cta-heading" className="font-display text-premium-h2 font-bold text-foreground">
-          {t.cta.heading}
-        </h2>
-        <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-          {t.cta.description}
-        </p>
-        <div className="mt-8 flex flex-wrap justify-center gap-4">
-          <Button size="lg" className="btn-cta-primary h-12 px-8 text-base" asChild>
-            <Link href="/signup">{t.cta.ctaStart}</Link>
-          </Button>
-          <Button size="lg" variant="secondary" className="h-12 px-8 text-base" asChild>
-            <Link href="/creators">{t.cta.ctaExplore}</Link>
-          </Button>
-        </div>
-      </section>
+      <ScrollReveal>
+        <section className="mx-auto w-full max-w-6xl section-pad px-4 pb-24 text-center sm:px-6" aria-labelledby="cta-heading">
+          <h2 id="cta-heading" className="font-display text-premium-h2 font-bold text-foreground">
+            {t.cta.heading}
+          </h2>
+          <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
+            {t.cta.description}
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-4">
+            <Button size="lg" className="btn-cta-primary h-12 px-8 text-base" asChild>
+              <Link href="/signup">{t.cta.ctaStart}</Link>
+            </Button>
+            <Button size="lg" variant="secondary" className="h-12 px-8 text-base" asChild>
+              <Link href="/creators">{t.cta.ctaExplore}</Link>
+            </Button>
+          </div>
+        </section>
+      </ScrollReveal>
     </main>
   );
 }

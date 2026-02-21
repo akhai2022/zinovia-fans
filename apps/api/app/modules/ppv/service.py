@@ -204,6 +204,7 @@ async def create_ppv_post_intent(
         raise AppError(status_code=503, detail="ppv_posts_disabled")
     if not ccbill_configured():
         raise AppError(status_code=501, detail="payment_not_configured")
+    await _check_intent_rate_limit(session, purchaser_id)
 
     post = (
         await session.execute(select(Post).where(Post.id == post_id))

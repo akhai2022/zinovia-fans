@@ -12,6 +12,7 @@ import type { PostOut, PostWithCreator } from "../api";
 import { PostMediaImage } from "./PostMediaImage";
 import { PostMediaVideo } from "./PostMediaVideo";
 import { RichCaption } from "./RichCaption";
+import { Icon } from "@/components/ui/icon";
 
 type FeedCardProps = {
   post: PostOut | PostWithCreator | PostItem;
@@ -139,7 +140,7 @@ export function FeedCard({
                       <PostMediaImage
                         key={assetId}
                         assetId={assetId}
-                        variant={locked ? "thumb" : undefined}
+                        variant={locked ? "thumb" : "grid"}
                         className="min-w-0 flex-1 object-cover"
                         initialBlurhash={preview?.blurhash}
                         initialDominantColor={preview?.dominant_color}
@@ -171,27 +172,30 @@ export function FeedCard({
               <button
                 type="button"
                 onClick={onToggleLike}
-                className="font-medium text-brand hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring focus-visible:ring-offset-2 rounded cursor-pointer"
+                className="inline-flex items-center gap-1 font-medium text-brand hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring focus-visible:ring-offset-2 rounded cursor-pointer"
                 aria-label="Like"
               >
+                <Icon name="favorite" filled={viewerLiked} className="icon-base" />
                 {viewerLiked ? "Liked" : "Like"} ({likeCount})
               </button>
               <span className="text-muted-foreground" aria-hidden>·</span>
               <button
                 type="button"
                 onClick={() => setCommentsOpen((v) => !v)}
-                className="text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring focus-visible:ring-offset-2 rounded cursor-pointer"
+                className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring focus-visible:ring-offset-2 rounded cursor-pointer"
                 aria-label="Comment"
               >
+                <Icon name="chat_bubble" className="icon-base" />
                 Comment ({commentCount})
               </button>
               <span className="text-muted-foreground" aria-hidden>·</span>
               <button
                 type="button"
                 onClick={onShare}
-                className="text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring focus-visible:ring-offset-2 rounded cursor-pointer"
+                className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring focus-visible:ring-offset-2 rounded cursor-pointer"
                 aria-label="Share"
               >
+                <Icon name="share" className="icon-base" />
                 Share
               </button>
             </div>
@@ -207,8 +211,9 @@ export function FeedCard({
                   <button
                     type="button"
                     onClick={onSubmitComment}
-                    className="rounded bg-primary px-3 text-xs text-primary-foreground"
+                    className="inline-flex items-center gap-1 rounded bg-primary px-3 text-xs text-primary-foreground"
                   >
+                    <Icon name="send" className="icon-sm" />
                     Send
                   </button>
                 </div>

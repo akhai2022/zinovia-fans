@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Icon } from "@/components/ui/icon";
+import { Spinner } from "@/components/ui/spinner";
 import { createPpvPostIntent } from "@/lib/api/ppv";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
@@ -55,7 +57,8 @@ export function PostUnlockButton({
       {error && (
         <div className="space-y-2">
           <p className="text-sm text-destructive">{error}</p>
-          <Button size="sm" variant="outline" onClick={startPayment}>
+          <Button size="sm" variant="outline" onClick={startPayment} className="gap-1.5">
+            <Icon name="refresh" className="icon-base" />
             Retry
           </Button>
         </div>
@@ -65,8 +68,18 @@ export function PostUnlockButton({
           <p className="text-sm text-muted-foreground">
             You will be redirected to our payment processor to complete the purchase.
           </p>
-          <Button size="sm" onClick={startPayment} disabled={loading}>
-            {loading ? "Redirecting..." : `Pay ${formatPrice(priceCents, currency)}`}
+          <Button size="sm" onClick={startPayment} disabled={loading} className="gap-1.5">
+            {loading ? (
+              <>
+                <Spinner className="icon-base" />
+                Redirecting...
+              </>
+            ) : (
+              <>
+                <Icon name="lock_open" className="icon-base" />
+                Pay {formatPrice(priceCents, currency)}
+              </>
+            )}
           </Button>
         </div>
       )}

@@ -37,7 +37,7 @@ export function SafetyPrivacy({ t }: { t: Dictionary["safety"] }) {
         {FEATURES.map(({ title, description, icon }) => (
           <div
             key={title}
-            className="card-hover-lift flex flex-col gap-4 rounded-2xl border border-white/[0.06] bg-card p-6"
+            className="sr-child card-hover-lift flex flex-col gap-4 rounded-2xl border border-white/[0.06] bg-card p-6"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <FeatureIcon type={icon} />

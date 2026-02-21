@@ -31,23 +31,24 @@ export function LandingHero() {
         <div className="md:grid md:grid-cols-2 md:items-center md:gap-12">
           {/* Left — copy + CTAs */}
           <div className="text-center md:text-left">
-            <Badge variant="primary" className="mb-6 w-fit md:mx-0 mx-auto">
+            <Badge variant="primary" className="hero-animate mb-6 w-fit md:mx-0 mx-auto" style={{ animationDelay: "0.1s" }}>
               {t.hero.badge}
             </Badge>
 
             <h1
               id="hero-heading"
-              className="font-display text-premium-h1 font-bold leading-[1.08] tracking-[-0.03em] text-foreground"
+              className="hero-animate font-display text-premium-h1 font-bold leading-[1.08] tracking-[-0.03em] text-foreground"
+              style={{ animationDelay: "0.2s" }}
             >
               {t.hero.heading}{" "}
               <span className="text-gradient-brand">{t.hero.headingAccent}</span>
             </h1>
 
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl md:mx-0 mx-auto">
+            <p className="hero-animate mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl md:mx-0 mx-auto" style={{ animationDelay: "0.35s" }}>
               {t.hero.description}
             </p>
 
-            <div className="mt-8 flex flex-wrap items-center gap-4 md:justify-start justify-center">
+            <div className="hero-animate mt-8 flex flex-wrap items-center gap-4 md:justify-start justify-center" style={{ animationDelay: "0.5s" }}>
               <Button size="lg" className="btn-cta-primary h-12 px-8 text-base" asChild>
                 <Link href="/signup">{t.hero.ctaCreator}</Link>
               </Button>
@@ -56,7 +57,7 @@ export function LandingHero() {
               </Button>
             </div>
 
-            <p className="mt-10 text-sm font-medium text-muted-foreground">
+            <p className="hero-animate mt-10 text-sm font-medium text-muted-foreground" style={{ animationDelay: "0.65s" }}>
               {t.hero.socialProof}{" "}
               <span className="text-gradient-brand font-semibold">{t.hero.socialProofCount}</span>{" "}
               {t.hero.socialProofSuffix}
@@ -68,7 +69,7 @@ export function LandingHero() {
             <div className="absolute -inset-8 rounded-3xl aurora-bg" aria-hidden />
             <div className="relative grid grid-cols-5 gap-3">
               {/* Tall left image */}
-              <div className="col-span-3 overflow-hidden rounded-2xl border border-white/[0.06] shadow-lg">
+              <div className="hero-animate--scale col-span-3 overflow-hidden rounded-2xl border border-white/[0.06] shadow-lg" style={{ animationDelay: "0.4s" }}>
                 <div className="relative aspect-[3/4]">
                   <Image
                     src={HERO_IMAGES[0]}
@@ -85,7 +86,7 @@ export function LandingHero() {
               </div>
               {/* Two stacked right images */}
               <div className="col-span-2 flex flex-col gap-3">
-                <div className="overflow-hidden rounded-2xl border border-white/[0.06] shadow-lg">
+                <div className="hero-animate--scale overflow-hidden rounded-2xl border border-white/[0.06] shadow-lg" style={{ animationDelay: "0.55s" }}>
                   <div className="relative aspect-square">
                     <Image
                       src={HERO_IMAGES[1]}
@@ -100,7 +101,7 @@ export function LandingHero() {
                     />
                   </div>
                 </div>
-                <div className="overflow-hidden rounded-2xl border border-white/[0.06] shadow-lg">
+                <div className="hero-animate--scale overflow-hidden rounded-2xl border border-white/[0.06] shadow-lg" style={{ animationDelay: "0.65s" }}>
                   <div className="relative aspect-square">
                     <Image
                       src={HERO_IMAGES[2]}

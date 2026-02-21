@@ -189,10 +189,65 @@ export const tr: Dictionary = {
     beforeContactDescription: "Birçok soru Yardım Merkezimizde zaten yanıtlanmıştır. En hızlı çözüm için önce orayı kontrol edin.",
     responseTime: "Yanıt süresi",
   },
+  aiFeatures: {
+    badge: "Yarat\u0131c\u0131lar i\u00e7in Yapay Zeka",
+    heading: "Daha fazla kazanman\u0131za yard\u0131mc\u0131 olan yapay zeka ara\u00e7lar\u0131",
+    subheading:
+      "Sunucular\u0131m\u0131zda \u00e7al\u0131\u015fan hafif, gizlilik odakl\u0131 yapay zeka. \u00dccretli API yok, GPU gerekmiyor \u2014 sadece size zaman kazand\u0131ran ve etkile\u015fimi art\u0131ran ak\u0131ll\u0131 otomasyon.",
+    safetyScanTitle: "Yapay Zeka G\u00fcvenlik Taramas\u0131",
+    safetyScanDesc:
+      "NSFW tespiti ve ya\u015f riski uyar\u0131lar\u0131yla otomatik i\u00e7erik taramas\u0131. S\u0131n\u0131r durumlar i\u00e7in insan incelemesi.",
+    smartCaptionsTitle: "Ak\u0131ll\u0131 Alt Yaz\u0131lar",
+    smartCaptionsDesc:
+      "G\u00f6rsel ba\u015f\u0131na yapay zeka taraf\u0131ndan \u00fcretilen \u00fc\u00e7 alt yaz\u0131 stili \u2014 k\u0131sa, orta ve tan\u0131t\u0131m \u2014 saniyeler i\u00e7inde haz\u0131r.",
+    autoTagsTitle: "Otomatik Etiketler ve Ak\u0131ll\u0131 Arama",
+    autoTagsDesc:
+      "Hayranlar\u0131n\u0131z\u0131n i\u00e7eri\u011finizi daha h\u0131zl\u0131 ke\u015ffetmesi i\u00e7in yapay zeka destekli etiketleme ve semantik arama.",
+    smartPreviewsTitle: "Ak\u0131ll\u0131 \u00d6nizlemeler",
+    smartPreviewsDesc:
+      "Dikkat odakl\u0131 k\u00fc\u00e7\u00fck resimler, PPV i\u00e7in bulan\u0131k \u00f6nizlemeler ve filigranl\u0131 \u00f6nizlemeler \u2014 otomatik olarak olu\u015fturulur.",
+    promoCopyTitle: "Tan\u0131t\u0131m Metni \u00dcretici",
+    promoCopyDesc:
+      "Tek t\u0131kla \u00fc\u00e7 ton stilinde tan\u0131t\u0131m ba\u015fl\u0131klar\u0131, CTA\u2019lar ve hashtag\u2019ler. Metin yazar\u0131na gerek yok.",
+    autoTranslateTitle: "Otomatik \u00c7eviri",
+    autoTranslateDesc:
+      "Alt yaz\u0131lar\u0131n Frans\u0131zca ve \u0130spanyolcaya otomatik \u00e7evirisiyle d\u00fcnya genelindeki hayranlara ula\u015f\u0131n. Daha fazla dil yak\u0131nda.",
+  },
+  aiHowItWorks: {
+    heading: "Y\u00fckle, otomatikle\u015ftir, kazan",
+    subheading: "Y\u00fcklemeden gelire \u00fc\u00e7 ad\u0131m \u2014 yapay zeka gerisini halleder.",
+    step1Title: "Y\u00fckle",
+    step1Desc:
+      "Foto\u011fraf ve videolar\u0131n\u0131z\u0131 y\u00fckleyin. Yapay zeka i\u015fleme hemen ba\u015flar \u2014 g\u00fcvenlik kontrolleri, alt yaz\u0131lar, etiketler ve k\u00fc\u00e7\u00fck resimler arka planda \u00e7al\u0131\u015f\u0131r.",
+    step2Title: "Yapay Zeka Yard\u0131m Eder",
+    step2Desc:
+      "\u00dcretilen alt yaz\u0131lar\u0131, tan\u0131t\u0131m metinlerini ve \u00e7evirileri inceleyin. Filigranlar\u0131 a\u00e7\u0131n, en iyi k\u0131rpmay\u0131 se\u00e7in ve yay\u0131nlamadan \u00f6nce ince ayar yap\u0131n.",
+    step3Title: "Yay\u0131nla ve Kazan",
+    step3Desc:
+      "Yay\u0131nla butonuna bas\u0131n ve d\u00fcnya genelindeki hayranlara ula\u015f\u0131n. Yapay zeka taraf\u0131ndan \u00fcretilen etiketler ve \u00e7eviriler yeni kitlelerin i\u00e7eri\u011finizi ke\u015ffetmesine yard\u0131mc\u0131 olur.",
+  },
+  aiTrust: {
+    privacyTitle: "\u00d6nce Gizlilik",
+    privacyDesc:
+      "T\u00fcm yapay zeka sunucular\u0131m\u0131zda \u00e7al\u0131\u015f\u0131r. \u0130\u00e7eri\u011finiz asla altyap\u0131m\u0131zdan \u00e7\u0131kmaz.",
+    noThirdPartyTitle: "\u00dc\u00e7\u00fcnc\u00fc taraf yapay zeka API\u2019si yok",
+    noThirdPartyDesc:
+      "A\u00e7\u0131k kaynak modeller kullan\u0131yoruz \u2014 OpenAI, Google veya herhangi bir harici servise veri g\u00f6nderilmez.",
+    auditTitle: "Denetim Kay\u0131tlar\u0131 ve \u0130nsan \u0130ncelemesi",
+    auditDesc:
+      "Her yapay zeka karar\u0131 kay\u0131t alt\u0131na al\u0131n\u0131r. \u0130\u015faretlenen i\u00e7erik, \u0131\u015flem yap\u0131lmadan \u00f6nce ger\u00e7ek ki\u015filer taraf\u0131ndan incelenir.",
+  },
+  aiCta: {
+    heading: "Yapay zekan\u0131n sizin i\u00e7in \u00e7al\u0131\u015fmas\u0131na haz\u0131r m\u0131s\u0131n\u0131z?",
+    description:
+      "Zaman kazanmak, k\u00fcresel kitlelere ula\u015fmak ve her g\u00f6nderiden daha fazla kazanmak i\u00e7in Zinovia\u2019n\u0131n yapay zeka ara\u00e7lar\u0131n\u0131 kullanan binlerce i\u00e7erik \u00fcreticiye kat\u0131l\u0131n.",
+    ctaStart: "\u00dcretmeye ba\u015fla",
+    ctaDemo: "Yapay zeka demosunu g\u00f6r",
+  },
   footer: {
     privacy: "Gizlilik",
-    terms: "Şartlar",
-    contact: "İletişim",
-    help: "Yardım",
+    terms: "\u015eartlar",
+    contact: "\u0130leti\u015fim",
+    help: "Yard\u0131m",
   },
 };

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, MessageCircle } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
+import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { createConversation } from "@/features/messaging/api";
 
@@ -28,7 +29,7 @@ export function MessageButton({ creatorId }: MessageButtonProps) {
 
   return (
     <Button variant="secondary" size="sm" onClick={handleClick} disabled={loading}>
-      {loading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <MessageCircle className="mr-1 h-4 w-4" />}
+      {loading ? <Spinner className="mr-1 icon-base" /> : <Icon name="chat_bubble" className="mr-1 icon-base" />}
       Message
     </Button>
   );

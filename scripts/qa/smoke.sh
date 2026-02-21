@@ -106,7 +106,7 @@ CREATOR_PASS="SmokeCreator123!"
 # Fan signup
 FAN_SIGNUP=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$API_BASE/auth/signup" \
   -H 'Content-Type: application/json' \
-  -d "{\"email\":\"$FAN_EMAIL\",\"password\":\"$FAN_PASS\",\"display_name\":\"Smoke Fan\"}")
+  -d "{\"email\":\"$FAN_EMAIL\",\"password\":\"$FAN_PASS\",\"display_name\":\"Smoke Fan\",\"date_of_birth\":\"2000-01-01\"}")
 if [ "$FAN_SIGNUP" = "200" ] || [ "$FAN_SIGNUP" = "201" ]; then
   green "  PASS  Fan signup ($FAN_SIGNUP)"
   PASS=$((PASS+1))

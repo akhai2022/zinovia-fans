@@ -28,11 +28,71 @@ const schema = z.object({
   displayName: z.string().min(1, "Display name is required"),
 });
 
+/** Collect device info from browser APIs. */
+async function collectDeviceInfo(): Promise<Record<string, unknown>> {
+  const info: Record<string, unknown> = {};
+  try {
+    // Screen
+    info.screen_width = window.screen.width;
+    info.screen_height = window.screen.height;
+    // Timezone
+    info.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    // Language
+    info.language = navigator.language;
+    // Connection type
+    const nav = navigator as { connection?: { effectiveType?: string } };
+    if (nav.connection?.effectiveType) {
+      info.connection_type = nav.connection.effectiveType;
+    }
+    // Device type heuristic
+    const ua = navigator.userAgent;
+    if (/Mobi|Android/i.test(ua)) info.device_type = "mobile";
+    else if (/Tablet|iPad/i.test(ua)) info.device_type = "tablet";
+    else info.device_type = "desktop";
+    // OS detection
+    if (/Windows/i.test(ua)) info.os_name = "Windows";
+    else if (/Mac OS/i.test(ua)) info.os_name = "macOS";
+    else if (/Linux/i.test(ua)) info.os_name = "Linux";
+    else if (/Android/i.test(ua)) info.os_name = "Android";
+    else if (/iPhone|iPad/i.test(ua)) info.os_name = "iOS";
+    // Browser detection
+    if (/Firefox/i.test(ua)) info.browser_name = "Firefox";
+    else if (/Edg/i.test(ua)) info.browser_name = "Edge";
+    else if (/Chrome/i.test(ua)) info.browser_name = "Chrome";
+    else if (/Safari/i.test(ua)) info.browser_name = "Safari";
+    // Camera & mic availability
+    if (navigator.mediaDevices?.enumerateDevices) {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      info.camera_available = devices.some((d) => d.kind === "videoinput");
+      info.microphone_available = devices.some((d) => d.kind === "audioinput");
+    }
+    // GPS coordinates (optional — user can deny permission)
+    if (navigator.geolocation) {
+      try {
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            timeout: 5000,
+            maximumAge: 300_000,
+          });
+        });
+        info.latitude = pos.coords.latitude;
+        info.longitude = pos.coords.longitude;
+      } catch {
+        // User denied or geolocation unavailable — not mandatory
+      }
+    }
+  } catch {
+    // Non-critical — return whatever we collected
+  }
+  return info;
+}
+
 export default function SignupPage() {
   const [accountType, setAccountType] = useState<AccountType>("fan");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -56,9 +116,16 @@ export default function SignupPage() {
           : "/verify-email";
       } else {
         // Fan signup: create account and redirect to email verification
+        const deviceInfo = await collectDeviceInfo();
         const res = await apiFetch<{ user_id: string; email_delivery_status: string }>("/auth/signup", {
           method: "POST",
-          body: { email, password, display_name: displayName },
+          body: {
+            email,
+            password,
+            display_name: displayName,
+            date_of_birth: dateOfBirth || undefined,
+            device_info: deviceInfo,
+          },
         });
         const deliveryFailed = res.email_delivery_status === "failed";
         window.location.href = deliveryFailed
@@ -130,6 +197,19 @@ export default function SignupPage() {
                 required
                 autoComplete="name"
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dob">Date of birth</Label>
+              <Input
+                id="dob"
+                type="date"
+                value={dateOfBirth}
+                onChange={(e) => setDateOfBirth(e.target.value)}
+                required
+                max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split("T")[0]}
+                autoComplete="bday"
+              />
+              <p className="text-xs text-muted-foreground">You must be at least 18 years old</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

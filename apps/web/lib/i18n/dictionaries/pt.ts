@@ -188,6 +188,61 @@ export const pt: Dictionary = {
     beforeContactDescription: "Muitas perguntas já estão respondidas em nossa Central de Ajuda. Consulte lá primeiro para uma resolução mais rápida.",
     responseTime: "Tempo de resposta",
   },
+  aiFeatures: {
+    badge: "IA para Criadores",
+    heading: "Ferramentas de IA que ajudam voc\u00ea a ganhar mais",
+    subheading:
+      "IA leve e focada em privacidade que roda em nossos servidores. Sem APIs pagas, sem GPU \u2014 apenas automa\u00e7\u00e3o inteligente que economiza seu tempo e aumenta o engajamento.",
+    safetyScanTitle: "Verifica\u00e7\u00e3o de seguran\u00e7a IA",
+    safetyScanDesc:
+      "Triagem autom\u00e1tica de conte\u00fado com detec\u00e7\u00e3o NSFW e alertas de risco de idade. Revis\u00e3o humana para casos duvidosos.",
+    smartCaptionsTitle: "Legendas inteligentes",
+    smartCaptionsDesc:
+      "Tr\u00eas estilos de legenda gerados por IA por imagem \u2014 curta, m\u00e9dia e promocional \u2014 prontas em segundos.",
+    autoTagsTitle: "Tags autom\u00e1ticas e busca inteligente",
+    autoTagsDesc:
+      "Etiquetagem e busca sem\u00e2ntica com IA para que os f\u00e3s descubram seu conte\u00fado mais r\u00e1pido.",
+    smartPreviewsTitle: "Pr\u00e9vias inteligentes",
+    smartPreviewsDesc:
+      "Miniaturas baseadas em aten\u00e7\u00e3o, teasers desfocados para PPV e pr\u00e9vias com marca d\u2019\u00e1gua \u2014 geradas automaticamente.",
+    promoCopyTitle: "Gerador de texto promocional",
+    promoCopyDesc:
+      "T\u00edtulos promocionais, CTAs e hashtags em tr\u00eas estilos de tom com um clique. Sem necessidade de redator.",
+    autoTranslateTitle: "Tradu\u00e7\u00e3o autom\u00e1tica",
+    autoTranslateDesc:
+      "Alcance f\u00e3s no mundo todo com tradu\u00e7\u00e3o autom\u00e1tica de legendas para franc\u00eas e espanhol. Mais idiomas em breve.",
+  },
+  aiHowItWorks: {
+    heading: "Envie, automatize, ganhe",
+    subheading: "Tr\u00eas passos do envio \u00e0 receita \u2014 a IA cuida do resto.",
+    step1Title: "Envie",
+    step1Desc:
+      "Envie suas fotos e v\u00eddeos. O processamento de IA come\u00e7a imediatamente \u2014 verifica\u00e7\u00f5es de seguran\u00e7a, legendas, tags e miniaturas rodam em segundo plano.",
+    step2Title: "A IA auxilia",
+    step2Desc:
+      "Revise legendas geradas, texto promocional e tradu\u00e7\u00f5es. Ative marcas d\u2019\u00e1gua, escolha o melhor recorte e ajuste antes de publicar.",
+    step3Title: "Publique e ganhe",
+    step3Desc:
+      "Publique e alcance f\u00e3s no mundo todo. Tags e tradu\u00e7\u00f5es geradas por IA ajudam novas audi\u00eancias a descobrir seu conte\u00fado.",
+  },
+  aiTrust: {
+    privacyTitle: "Privacidade em primeiro lugar",
+    privacyDesc:
+      "Toda a IA roda em nossos servidores. Seu conte\u00fado nunca sai da nossa infraestrutura.",
+    noThirdPartyTitle: "Sem APIs de IA de terceiros",
+    noThirdPartyDesc:
+      "Usamos modelos de c\u00f3digo aberto \u2014 nenhum dado \u00e9 enviado para OpenAI, Google ou qualquer servi\u00e7o externo.",
+    auditTitle: "Logs de auditoria e revis\u00e3o humana",
+    auditDesc:
+      "Cada decis\u00e3o de IA \u00e9 registrada. Conte\u00fado sinalizado \u00e9 revisado por pessoas reais antes de qualquer a\u00e7\u00e3o.",
+  },
+  aiCta: {
+    heading: "Pronto para deixar a IA trabalhar por voc\u00ea?",
+    description:
+      "Junte-se a milhares de criadores que usam as ferramentas de IA da Zinovia para economizar tempo, alcan\u00e7ar audi\u00eancias globais e ganhar mais com cada publica\u00e7\u00e3o.",
+    ctaStart: "Comece a criar",
+    ctaDemo: "Ver demo de IA",
+  },
   footer: {
     privacy: "Privacidade",
     terms: "Termos",

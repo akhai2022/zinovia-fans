@@ -11,11 +11,12 @@ import { ImageUploadField } from "@/features/media/ImageUploadField";
 import { listVaultMedia, type MediaMineItem } from "@/features/engagement/api";
 import { MediaService } from "@/features/media/api";
 import { apiFetch } from "@/lib/apiFetch";
+import { SemanticSearch } from "@/features/search/SemanticSearch";
 
 type FilterType = "all" | "image" | "video";
 
 export default function VaultPage() {
-  const { authorized } = useRequireRole(["creator", "admin"]);
+  const { authorized } = useRequireRole(["creator", "admin", "super_admin"]);
   const { addToast } = useToast();
   const [items, setItems] = useState<MediaMineItem[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -176,6 +177,14 @@ export default function VaultPage() {
           </Button>
         ))}
       </div>
+
+      {/* AI semantic search */}
+      <SemanticSearch
+        onSelect={(mediaAssetId) => {
+          const item = items.find((m) => m.id === mediaAssetId);
+          if (item) openPreview(item);
+        }}
+      />
 
       {/* Error */}
       {error && items.length === 0 && (
@@ -380,6 +389,20 @@ function VaultCell({
       {isVideo && (
         <div className="absolute left-2 top-2 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
           VIDEO
+        </div>
+      )}
+      {/* Derived asset status badge */}
+      {!isVideo && (
+        <div className="absolute right-2 top-2">
+          {thumbUrl ? (
+            <div className="rounded bg-emerald-600/80 px-1.5 py-0.5 text-[9px] font-medium text-white">
+              Preview Ready
+            </div>
+          ) : (
+            <div className="rounded bg-amber-600/80 px-1.5 py-0.5 text-[9px] font-medium text-white animate-pulse">
+              Processing
+            </div>
+          )}
         </div>
       )}
       <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">

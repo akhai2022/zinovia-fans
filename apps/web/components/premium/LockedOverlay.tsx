@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { Icon } from "@/components/ui/icon";
 
 interface LockedOverlayProps {
   className?: string;
@@ -28,20 +29,7 @@ export function LockedOverlay({
           className="absolute inset-0 flex flex-col items-center justify-center bg-card/70 backdrop-blur-[2px] transition-opacity duration-fast ease-premium-out"
         >
           <span className="sr-only">{label}</span>
-          <svg
-            className="h-8 w-8 shrink-0 text-foreground"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-            aria-hidden
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
-            />
-          </svg>
+          <Icon name="lock" className="icon-xl text-foreground" />
           <p className="mt-2 text-premium-small font-medium text-foreground">{label}</p>
           {onUnlockClick && (
             <button
@@ -51,9 +39,10 @@ export function LockedOverlay({
                 e.stopPropagation();
                 onUnlockClick();
               }}
-              className="mt-3 rounded-premium-sm bg-primary px-3 py-1.5 text-premium-small font-medium text-white hover:bg-primary/90 focus-visible:outline focus-visible:ring-2 focus-visible:ring-primary/35"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-premium-sm bg-primary px-3 py-1.5 text-premium-small font-medium text-white hover:bg-primary/90 focus-visible:outline focus-visible:ring-2 focus-visible:ring-primary/35"
               aria-label="Subscribe to unlock this content"
             >
+              <Icon name="lock" className="icon-sm" />
               Unlock
             </button>
           )}

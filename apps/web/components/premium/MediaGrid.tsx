@@ -57,10 +57,10 @@ function PostCell({
   const preview = firstAssetId ? (post as any).media_previews?.[firstAssetId] : undefined;
 
   const imageCell = hasImageAsset ? (
-    <div className={cn("h-full w-full bg-muted", locked && "blur-[2px] opacity-90")}>
+    <div className="h-full w-full bg-muted">
       <PostMediaImage
         assetId={post.asset_ids![0]}
-        variant={locked ? "thumb" : undefined}
+        variant={locked ? "teaser" : "grid"}
         className="h-full w-full object-cover"
         watermark={showWatermark && !locked}
         initialBlurhash={preview?.blurhash}
@@ -82,10 +82,10 @@ function PostCell({
         imageCell
       ) : hasVideoAsset ? (
         locked ? (
-          <div className="h-full w-full bg-muted blur-[2px] opacity-90">
+          <div className="h-full w-full bg-muted">
             <PostMediaImage
               assetId={post.asset_ids![0]}
-              variant="poster"
+              variant="teaser"
               className="h-full w-full object-cover"
             />
           </div>

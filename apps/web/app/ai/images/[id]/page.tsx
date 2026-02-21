@@ -21,7 +21,7 @@ import "@/lib/api";
 const POLL_INTERVAL_MS = 2000;
 
 export default function AiImageJobPage() {
-  const { authorized } = useRequireRole(["creator", "admin"]);
+  const { authorized } = useRequireRole(["creator", "admin", "super_admin"]);
   const params = useParams();
   const router = useRouter();
   const { addToast } = useToast();

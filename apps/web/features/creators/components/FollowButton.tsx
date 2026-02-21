@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Icon } from "@/components/ui/icon";
+import { Spinner } from "@/components/ui/spinner";
 import { CreatorsService } from "../api";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -66,7 +68,15 @@ export function FollowButton({
         size="sm"
         onClick={handleClick}
         disabled={loading}
+        className="gap-1.5"
       >
+        {loading ? (
+          <Spinner className="icon-base" />
+        ) : following ? (
+          <Icon name="how_to_reg" className="icon-base" />
+        ) : (
+          <Icon name="person_add" className="icon-base" />
+        )}
         {loading ? "…" : following ? "Unfollow" : "Follow"}
       </Button>
       {error && (

@@ -7,5 +7,8 @@ export const featureFlags = {
   moderation: readBool(process.env.NEXT_PUBLIC_ENABLE_MODERATION),
   analytics: readBool(process.env.NEXT_PUBLIC_ENABLE_ANALYTICS),
   mobileNavPolish: readBool(process.env.NEXT_PUBLIC_ENABLE_MOBILE_NAV_POLISH),
+  smartPreviews: readBool(process.env.NEXT_PUBLIC_ENABLE_SMART_PREVIEWS),
+  promoGenerator: readBool(process.env.NEXT_PUBLIC_ENABLE_PROMO_GENERATOR),
+  translations: readBool(process.env.NEXT_PUBLIC_ENABLE_TRANSLATIONS),
 };
 

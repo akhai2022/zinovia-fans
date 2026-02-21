@@ -130,6 +130,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang={locale} className={`${inter.variable} ${spaceGrotesk.variable} scroll-smooth`}>
       <head>
+        <link rel="preconnect" href="https://api.zinovia.ai" />
+        <link rel="dns-prefetch" href="https://api.zinovia.ai" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

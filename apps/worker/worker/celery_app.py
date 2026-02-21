@@ -18,9 +18,11 @@ celery_app = Celery(
     broker=_redis_broker_url(),
     include=[
         "worker.tasks.ai",
+        "worker.tasks.ai_safety",
         "worker.tasks.media",
         "worker.tasks.notifications",
         "worker.tasks.posts",
+        "worker.tasks.translation",
     ],
 )
 celery_app.conf.beat_schedule = {

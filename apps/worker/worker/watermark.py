@@ -83,6 +83,80 @@ def apply_footer_watermark(
     return out
 
 
+def apply_centered_watermark(
+    image: Image.Image,
+    text: str,
+    *,
+    font_size_pct: float = 0.05,
+    min_font_size: int = 16,
+    max_font_size: int = 72,
+    opacity: float = 0.30,
+    stroke_px: int = 2,
+    bg_rect: bool = False,
+    bg_padding_px: int = 12,
+    position: str = "bottom-center",
+) -> Image.Image:
+    """
+    Draw semi-transparent text at bottom-center with optional stroke and bg rectangle.
+    Deterministic: same input dimensions + params = identical output.
+    Does not modify the original; returns a new image (RGB or RGBA).
+    """
+    w, h = image.size
+    font_size = max(min_font_size, min(max_font_size, int(w * font_size_pct)))
+    font = load_font(size=font_size)
+    alpha = int(255 * max(0.0, min(1.0, opacity)))
+
+    # Measure text
+    tmp_draw = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    bbox = tmp_draw.textbbox(
+        (0, 0), text, font=font, stroke_width=stroke_px,
+    )
+    tw = bbox[2] - bbox[0]
+    th = bbox[3] - bbox[1]
+
+    # Position: bottom-center with margin
+    margin = max(8, int(h * 0.04))
+    text_x = (w - tw) // 2
+    text_y = h - th - margin
+
+    # Create overlay
+    overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+
+    # Optional background rectangle
+    if bg_rect:
+        pad = bg_padding_px
+        rx1 = max(0, text_x - pad)
+        ry1 = max(0, text_y - pad)
+        rx2 = min(w, text_x + tw + pad)
+        ry2 = min(h, text_y + th + pad)
+        bg_alpha = int(alpha * 0.6)
+        draw.rounded_rectangle(
+            [rx1, ry1, rx2, ry2], radius=6, fill=(0, 0, 0, bg_alpha),
+        )
+
+    # Draw text with stroke
+    draw.text(
+        (text_x, text_y),
+        text,
+        font=font,
+        fill=(255, 255, 255, alpha),
+        stroke_width=stroke_px,
+        stroke_fill=(0, 0, 0, alpha) if stroke_px > 0 else None,
+    )
+
+    # Composite
+    if image.mode != "RGBA":
+        out = image.convert("RGBA")
+    else:
+        out = image.copy()
+    out = Image.alpha_composite(out, overlay)
+
+    if image.mode == "RGB":
+        out = out.convert("RGB")
+    return out
+
+
 def should_watermark_variant(variant: str, enabled: bool, variant_list: list[str]) -> bool:
     """Return True if watermark should be applied for this variant."""
     return bool(enabled and variant_list and variant in variant_list)

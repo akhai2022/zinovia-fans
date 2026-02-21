@@ -1,3 +1,5 @@
+@import '@material-symbols/font-400';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -143,14 +145,102 @@
   }
   .btn-secondary:hover { background: rgb(var(--color-surface-alt)); }
 
+  /* ── Scroll reveal base ── */
   .scroll-reveal {
     opacity: 0;
     transform: translateY(24px);
-    transition: opacity 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition: opacity 0.7s cubic-bezier(0.2, 0.8, 0.2, 1),
+                transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1),
+                filter 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
-  .scroll-reveal.is-visible { opacity: 1; transform: translateY(0); }
+  .scroll-reveal.is-visible { opacity: 1; transform: translateY(0); filter: blur(0); }
+
+  /* Direction variants */
+  .scroll-reveal--left  { transform: translateX(-30px); }
+  .scroll-reveal--right { transform: translateX(30px); }
+  .scroll-reveal--down  { transform: translateY(-24px); }
+  .scroll-reveal--left.is-visible,
+  .scroll-reveal--right.is-visible,
+  .scroll-reveal--down.is-visible { opacity: 1; transform: translate(0); filter: blur(0); }
+
+  /* Scale variant */
+  .scroll-reveal--scale { transform: translateY(24px) scale(var(--sr-scale-from, 0.96)); }
+  .scroll-reveal--scale.is-visible { transform: translateY(0) scale(1); }
+
+  /* Blur variant */
+  .scroll-reveal--blur { filter: blur(8px); }
+  .scroll-reveal--blur.is-visible { filter: blur(0); }
+
+  /* Stagger children */
+  .sr-child {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+                transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+                filter 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .is-visible > .sr-child,
+  .is-visible .sr-child { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+
   @media (prefers-reduced-motion: reduce) {
-    .scroll-reveal { opacity: 1; transform: none; transition: none; }
+    .scroll-reveal,
+    .scroll-reveal--left,
+    .scroll-reveal--right,
+    .scroll-reveal--down,
+    .scroll-reveal--scale,
+    .scroll-reveal--blur,
+    .sr-child {
+      opacity: 1; transform: none; filter: none; transition: none; animation: none;
+    }
+  }
+
+  /* ── Hero entrance keyframes (play once on load) ── */
+  @keyframes hero-fade-up {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes hero-scale-in {
+    from { opacity: 0; transform: scale(0.95); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .hero-animate {
+    opacity: 0;
+    animation: hero-fade-up 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+  .hero-animate--scale {
+    opacity: 0;
+    animation: hero-scale-in 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-animate,
+    .hero-animate--scale {
+      opacity: 1; transform: none; animation: none;
+    }
+  }
+
+  /* ── FAQ smooth open (CSS grid trick) ── */
+  .faq-answer {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    overflow: hidden;
+  }
+  details[open] > .faq-answer { grid-template-rows: 1fr; }
+  .faq-answer > * { overflow: hidden; }
+  @media (prefers-reduced-motion: reduce) {
+    .faq-answer { transition: none; }
+  }
+
+  /* ── Floating ambient animation ── */
+  @keyframes float-gentle {
+    0%, 100% { transform: translateY(0) rotate(var(--float-rotate, 0deg)); }
+    50%      { transform: translateY(-8px) rotate(var(--float-rotate, 0deg)); }
+  }
+  .float-gentle {
+    animation: float-gentle var(--float-duration, 6s) ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .float-gentle { animation: none; }
   }
 
   @keyframes marquee {
@@ -201,4 +291,21 @@
   @media (prefers-reduced-motion: reduce) { .aurora-bg { animation: none; } }
 
   .border-soft { border: 1px solid rgb(255 255 255 / 0.06); }
+
+  /* Google Material Symbols configuration */
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    font-size: inherit;
+    line-height: 1;
+  }
+  .material-symbols-filled {
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+  }
+
+  /* Icon size utilities */
+  .icon-xs  { font-size: 12px; width: 12px; height: 12px; }
+  .icon-sm  { font-size: 14px; width: 14px; height: 14px; }
+  .icon-base { font-size: 16px; width: 16px; height: 16px; }
+  .icon-md  { font-size: 20px; width: 20px; height: 20px; }
+  .icon-lg  { font-size: 24px; width: 24px; height: 24px; }
 }

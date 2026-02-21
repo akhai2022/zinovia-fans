@@ -40,6 +40,13 @@ locals {
   mail_provider = var.environment == "prod" ? "resend" : "console"
   mail_from     = "noreply@${var.domain_name}"
   mail_reply_to = "support@${var.domain_name}"
+  # HA-derived values: enable_ha overrides individual settings for production readiness
+  ha_nat_gateway_count = var.enable_ha ? max(var.nat_gateway_count, 2) : var.nat_gateway_count
+  ha_db_multi_az       = var.enable_ha ? true : var.db_multi_az
+  ha_api_scaling_min   = var.enable_ha ? max(var.api_scaling_min, 2) : var.api_scaling_min
+  ha_web_scaling_min   = var.enable_ha ? max(var.web_scaling_min, 2) : var.web_scaling_min
+  ha_enable_waf        = var.enable_ha || var.enable_waf
+
   # API Settings expects "production" not "prod"
   api_environment = var.environment == "prod" ? "production" : var.environment
 }
@@ -110,7 +117,7 @@ module "network" {
   vpc_cidr           = var.vpc_cidr
   availability_zones = local.azs
   environment        = var.environment
-  nat_gateway_count  = var.nat_gateway_count
+  nat_gateway_count  = local.ha_nat_gateway_count
 }
 
 # Security groups when using existing VPC (same rules as module)
@@ -202,7 +209,7 @@ module "rds" {
   subnet_ids            = local.private_subnet_ids
   security_group_ids    = [local.rds_security_group_id]
   instance_class        = var.db_instance_class
-  multi_az              = var.db_multi_az
+  multi_az              = local.ha_db_multi_az
   deletion_protection   = var.db_deletion_protection
   backup_retention_days = var.db_backup_retention_days
   db_name               = "zinovia"
@@ -1077,6 +1084,10 @@ resource "aws_ecs_task_definition" "api" {
         { name = "ENABLE_ANALYTICS", value = tostring(var.enable_analytics) },
         { name = "ENABLE_MOBILE_NAV_POLISH", value = tostring(var.enable_mobile_nav_polish) },
         { name = "ENABLE_MOCK_KYC", value = tostring(var.enable_mock_kyc) },
+        { name = "ENABLE_SMART_PREVIEWS", value = tostring(var.enable_smart_previews) },
+        { name = "ENABLE_PROMO_GENERATOR", value = tostring(var.enable_promo_generator) },
+        { name = "ENABLE_TRANSLATIONS", value = tostring(var.enable_translations) },
+        { name = "ENABLE_AI_SAFETY", value = tostring(var.enable_ai_safety) },
         { name = "DEFAULT_CURRENCY", value = var.default_currency },
         { name = "CCBILL_ACCOUNT_NUMBER", value = var.ccbill_account_number },
         { name = "CCBILL_SUB_ACCOUNT", value = var.ccbill_sub_account },
@@ -1154,7 +1165,11 @@ resource "aws_ecs_task_definition" "web" {
         { name = "NEXT_PUBLIC_ENABLE_PPVM", value = tostring(var.enable_ppvm) },
         { name = "NEXT_PUBLIC_ENABLE_MODERATION", value = tostring(var.enable_moderation) },
         { name = "NEXT_PUBLIC_ENABLE_ANALYTICS", value = tostring(var.enable_analytics) },
-        { name = "NEXT_PUBLIC_ENABLE_MOBILE_NAV_POLISH", value = tostring(var.enable_mobile_nav_polish) }
+        { name = "NEXT_PUBLIC_ENABLE_MOBILE_NAV_POLISH", value = tostring(var.enable_mobile_nav_polish) },
+        { name = "NEXT_PUBLIC_ENABLE_SMART_PREVIEWS", value = tostring(var.enable_smart_previews) },
+        { name = "NEXT_PUBLIC_ENABLE_PROMO_GENERATOR", value = tostring(var.enable_promo_generator) },
+        { name = "NEXT_PUBLIC_ENABLE_TRANSLATIONS", value = tostring(var.enable_translations) },
+        { name = "NEXT_PUBLIC_ENABLE_AI_SAFETY", value = tostring(var.enable_ai_safety) }
       ],
       local.web_base_url != "" ? [{ name = "NEXT_PUBLIC_APP_URL", value = local.web_base_url }] : []
     )
@@ -1192,11 +1207,18 @@ resource "aws_ecs_task_definition" "worker" {
       { name = "CELERY_CONCURRENCY", value = "2" },
       { name = "ENABLE_NOTIFICATIONS", value = tostring(var.enable_notifications) },
       { name = "ENABLE_SCHEDULED_POSTS", value = tostring(var.enable_scheduled_posts) },
-      { name = "AI_PROVIDER", value = var.ai_provider }
+      { name = "AI_PROVIDER", value = var.ai_provider },
+      { name = "ENABLE_AI_SAFETY", value = tostring(var.enable_ai_safety) },
+      { name = "ENABLE_SMART_PREVIEWS", value = tostring(var.enable_smart_previews) },
+      { name = "ENABLE_TRANSLATIONS", value = tostring(var.enable_translations) },
+      # Worker doesn't send email or use cookies but shares Settings with API
+      { name = "MAIL_PROVIDER", value = "resend" },
+      { name = "COOKIE_SECURE", value = "true" }
     ]
     secrets = [
       { name = "DATABASE_URL", valueFrom = aws_secretsmanager_secret.database_url.arn },
       { name = "JWT_SECRET", valueFrom = module.secrets.jwt_secret_arn },
+      { name = "CSRF_SECRET", valueFrom = module.secrets.csrf_secret_arn },
       { name = "REPLICATE_API_TOKEN", valueFrom = module.secrets.replicate_api_token_arn }
     ]
   }])
@@ -1271,7 +1293,7 @@ resource "aws_ecs_service" "api" {
   name            = "${local.name_prefix}-api"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.api.arn
-  desired_count   = var.api_scaling_min
+  desired_count   = local.ha_api_scaling_min
   launch_type     = "FARGATE"
   network_configuration {
     subnets          = local.private_subnet_ids
@@ -1312,7 +1334,7 @@ resource "aws_ecs_service" "web" {
   name            = "${local.name_prefix}-web"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.web.arn
-  desired_count   = var.web_scaling_min
+  desired_count   = local.ha_web_scaling_min
   launch_type     = "FARGATE"
   network_configuration {
     subnets          = local.private_subnet_ids
@@ -1349,7 +1371,7 @@ resource "aws_ecs_service" "worker" {
 resource "aws_appautoscaling_target" "api" {
   count              = var.enable_alb ? 1 : 0
   max_capacity       = var.api_scaling_max
-  min_capacity       = var.api_scaling_min
+  min_capacity       = local.ha_api_scaling_min
   resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.api[0].name}"
   scalable_dimension = "ecs:service:DesiredCount"
   service_namespace  = "ecs"
@@ -1374,7 +1396,7 @@ resource "aws_appautoscaling_policy" "api_cpu" {
 resource "aws_appautoscaling_target" "web" {
   count              = var.enable_alb ? 1 : 0
   max_capacity       = var.web_scaling_max
-  min_capacity       = var.web_scaling_min
+  min_capacity       = local.ha_web_scaling_min
   resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.web[0].name}"
   scalable_dimension = "ecs:service:DesiredCount"
   service_namespace  = "ecs"

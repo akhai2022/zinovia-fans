@@ -22,11 +22,12 @@ from celery import shared_task
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
 from app.core.settings import get_settings
-from app.db.session import async_session_factory
 from app.modules.media.models import MediaDerivedAsset, MediaObject
 from worker.storage_io import get_media_bucket, get_object_bytes, put_object_bytes
-from worker.watermark import apply_footer_watermark, should_watermark_variant
+from worker.watermark import apply_centered_watermark, apply_footer_watermark, should_watermark_variant
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,13 @@ VARIANT_SPECS: dict[str, int] = {
 
 TEASER_BLUR_RADIUS = 30
 SMART_CROP_GRID = 4  # NxN grid for saliency fallback
+
+# Aspect-ratio crop specs: variant_name → (ratio_w, ratio_h, max_dim)
+ASPECT_RATIO_SPECS: dict[str, tuple[int, int, int]] = {
+    "crop_1x1": (1, 1, 600),
+    "crop_4x5": (4, 5, 600),
+    "crop_16x9": (16, 9, 600),
+}
 
 
 def _derived_object_key(parent_key: str, variant: str) -> str:
@@ -162,9 +170,44 @@ def _compute_smart_crop(img: Image.Image, target_w: int, target_h: int) -> Image
 # ---------------------------------------------------------------------------
 
 
+def _generate_aspect_crop(
+    img: Image.Image, ratio_w: int, ratio_h: int, max_dim: int
+) -> Image.Image:
+    """Crop image to a specific aspect ratio using smart crop, then resize.
+
+    The crop region is the largest rectangle with the given aspect ratio that
+    fits within the image, centered on the smart-crop attention point.
+    """
+    w, h = img.size
+    target_ratio = ratio_w / ratio_h
+
+    # Determine crop dimensions that fill the image at the target ratio
+    if w / h > target_ratio:
+        # Image is wider than target ratio → constrain by height
+        crop_h = h
+        crop_w = int(h * target_ratio)
+    else:
+        # Image is taller than target ratio → constrain by width
+        crop_w = w
+        crop_h = int(w / target_ratio)
+
+    crop_w = min(crop_w, w)
+    crop_h = min(crop_h, h)
+
+    # Use existing smart crop (face detection → saliency → center)
+    cropped = _compute_smart_crop(img, crop_w, crop_h)
+
+    # Resize to fit within max_dim
+    return _resize_no_upscale(cropped, max_dim)
+
+
 def _generate_teaser_image(img: Image.Image) -> Image.Image:
-    """Apply a heavy Gaussian blur suitable for locked-post teasers."""
-    return img.filter(ImageFilter.GaussianBlur(radius=TEASER_BLUR_RADIUS))
+    """Apply heavy Gaussian blur + noise for locked-post teasers (anti-deconvolution)."""
+    blurred = img.filter(ImageFilter.GaussianBlur(radius=TEASER_BLUR_RADIUS))
+    arr = np.array(blurred, dtype=np.int16)
+    noise = np.random.normal(0, 8, arr.shape).astype(np.int16)
+    arr = np.clip(arr + noise, 0, 255).astype(np.uint8)
+    return Image.fromarray(arr)
 
 
 # ---------------------------------------------------------------------------
@@ -172,11 +215,22 @@ def _generate_teaser_image(img: Image.Image) -> Image.Image:
 # ---------------------------------------------------------------------------
 
 
+def _make_session_factory() -> async_sessionmaker[AsyncSession]:
+    """Create a fresh async session factory per task invocation.
+
+    Avoids the 'Future attached to a different loop' error that occurs when
+    a module-level engine is reused across separate asyncio.run() calls in
+    Celery forked worker processes.
+    """
+    engine = create_async_engine(str(get_settings().database_url), pool_pre_ping=True)
+    return async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+
+
 async def _update_asset_placeholders(
     parent_asset_id: uuid.UUID, bh: str, color: str
 ) -> None:
     """Store computed blurhash + dominant_color on the media_assets row."""
-    async with async_session_factory() as session:
+    async with _make_session_factory()() as session:
         await session.execute(
             update(MediaObject)
             .where(MediaObject.id == parent_asset_id)
@@ -186,7 +240,7 @@ async def _update_asset_placeholders(
 
 
 async def _insert_derived(parent_asset_id: uuid.UUID, variant: str, object_key: str) -> None:
-    async with async_session_factory() as session:
+    async with _make_session_factory()() as session:
         session.add(
             MediaDerivedAsset(
                 id=uuid.uuid4(),
@@ -209,7 +263,7 @@ async def _derived_exists(session: AsyncSession, parent_asset_id: uuid.UUID, var
 
 
 async def _get_derived_exists(parent_asset_id: uuid.UUID, variant: str) -> bool:
-    async with async_session_factory() as session:
+    async with _make_session_factory()() as session:
         return await _derived_exists(session, parent_asset_id, variant)
 
 
@@ -338,6 +392,35 @@ def generate_derived_variants(
     except Exception:
         logger.exception("Failed to compute blurhash/color", extra={"asset_id": asset_id})
 
+    # --- Aspect-ratio crops (feature-gated) ---
+    settings = get_settings()
+    if settings.enable_smart_previews:
+        try:
+            bucket = get_media_bucket()
+            raw = get_object_bytes(bucket, object_key)
+            img = Image.open(BytesIO(raw)).convert("RGB")
+
+            for crop_variant, (rw, rh, max_dim) in ASPECT_RATIO_SPECS.items():
+                try:
+                    if asyncio.run(_get_derived_exists(parent_id, crop_variant)):
+                        logger.info("Aspect crop exists, skipping", extra={"asset_id": asset_id, "variant": crop_variant})
+                        continue
+
+                    cropped = _generate_aspect_crop(img, rw, rh, max_dim)
+                    cropped = _strip_exif(cropped)
+                    buf = BytesIO()
+                    cropped.save(buf, format="JPEG", quality=85)
+                    buf.seek(0)
+                    crop_key = _derived_object_key(object_key, crop_variant)
+                    put_object_bytes(bucket, crop_key, buf.getvalue(), "image/jpeg")
+                    asyncio.run(_insert_derived(parent_id, crop_variant, crop_key))
+                    result[crop_variant] = crop_key
+                    logger.info("Aspect crop generated", extra={"asset_id": asset_id, "variant": crop_variant})
+                except Exception:
+                    logger.exception("Failed aspect crop", extra={"asset_id": asset_id, "variant": crop_variant})
+        except Exception:
+            logger.exception("Failed to load image for aspect crops", extra={"asset_id": asset_id})
+
     # --- Teaser variant (blurred preview for locked posts) ---
     try:
         if not asyncio.run(_get_derived_exists(parent_id, "teaser")):
@@ -360,6 +443,43 @@ def generate_derived_variants(
             logger.info("Teaser already exists, skipping", extra={"asset_id": asset_id})
     except Exception:
         logger.exception("Failed to generate teaser", extra={"asset_id": asset_id})
+
+    # --- Watermarked preview variant (for non-entitled users) ---
+    if settings.media_wm_preview_enabled:
+        try:
+            if not asyncio.run(_get_derived_exists(parent_id, "wm_preview")):
+                bucket = get_media_bucket()
+                raw = get_object_bytes(bucket, object_key)
+                img = Image.open(BytesIO(raw)).convert("RGB")
+                wm_img = _resize_no_upscale(img, settings.media_wm_preview_max_dim)
+                wm_img = _strip_exif(wm_img)
+
+                wm_text = settings.media_wm_preview_text
+                if settings.media_wm_preview_include_handle and owner_handle:
+                    wm_text = f"{wm_text} @{owner_handle}"
+                wm_img = apply_centered_watermark(
+                    wm_img,
+                    wm_text,
+                    font_size_pct=settings.media_wm_preview_font_size_pct,
+                    min_font_size=settings.media_wm_preview_min_font_size,
+                    max_font_size=settings.media_wm_preview_max_font_size,
+                    opacity=settings.media_wm_preview_opacity,
+                    stroke_px=settings.media_wm_preview_stroke_px,
+                    bg_rect=settings.media_wm_preview_bg_rect,
+                )
+
+                buf = BytesIO()
+                wm_img.save(buf, format="JPEG", quality=75)
+                buf.seek(0)
+                wm_key = _derived_object_key(object_key, "wm_preview")
+                put_object_bytes(bucket, wm_key, buf.getvalue(), "image/jpeg")
+                asyncio.run(_insert_derived(parent_id, "wm_preview", wm_key))
+                result["wm_preview"] = wm_key
+                logger.info("wm_preview generated", extra={"asset_id": asset_id, "key": wm_key})
+            else:
+                logger.info("wm_preview already exists, skipping", extra={"asset_id": asset_id})
+        except Exception:
+            logger.exception("Failed to generate wm_preview", extra={"asset_id": asset_id})
 
     return result
 
@@ -463,7 +583,7 @@ def generate_video_poster(asset_id: str) -> str | None:
 def _get_video_object_key(parent_asset_id: uuid.UUID) -> str:
     """Fetch original object_key for the video asset from DB."""
     async def _fetch() -> str:
-        async with async_session_factory() as session:
+        async with _make_session_factory()() as session:
             r = await session.execute(
                 select(MediaObject.object_key).where(MediaObject.id == parent_asset_id).limit(1)
             )

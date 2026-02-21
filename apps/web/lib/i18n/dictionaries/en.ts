@@ -118,7 +118,7 @@ export const en: Dictionary = {
     smartThumbnailsTitle: "Smart thumbnails",
     smartThumbnailsDesc: "Attention-aware crops that find faces and interesting regions automatically.",
     securePreviewsTitle: "Discovery-ready tagging",
-    securePreviewsDesc: "AI-powered content categorization helps fans find your work. Coming soon.",
+    securePreviewsDesc: "AI-powered auto-tags and semantic search help fans discover your content instantly.",
   },
   safety: {
     heading: "Built for trust",
@@ -184,6 +184,62 @@ export const en: Dictionary = {
     beforeContactTitle: "Before you contact us",
     beforeContactDescription: "Many questions are already answered in our Help Center. Check there first for the fastest resolution.",
     responseTime: "Response time",
+  },
+  aiFeatures: {
+    badge: "AI for Creators",
+    heading: "AI tools that help you earn more",
+    subheading:
+      "Lightweight, privacy-first AI that runs on our servers. No paid APIs, no GPU required \u2014 just smart automation that saves you time and increases engagement.",
+    safetyScanTitle: "AI Safety Scan",
+    safetyScanDesc:
+      "Automatic content screening with NSFW detection and age-risk alerts. Human review for edge cases.",
+    smartCaptionsTitle: "Smart Captions",
+    smartCaptionsDesc:
+      "Three AI-generated caption styles per image \u2014 short, medium, and promotional \u2014 ready in seconds.",
+    autoTagsTitle: "Auto Tags & Smart Search",
+    autoTagsDesc:
+      "AI-powered tagging and semantic search so fans discover your content faster.",
+    smartPreviewsTitle: "Smart Previews",
+    smartPreviewsDesc:
+      "Blurhash placeholders and teaser variants for PPV content \u2014 generated automatically on every upload.",
+    promoCopyTitle: "Promo Copy Generator",
+    promoCopyDesc:
+      "One-click promotional titles, CTAs, and hashtags in three tone styles. Coming soon.",
+    autoTranslateTitle: "Auto-Translate",
+    autoTranslateDesc:
+      "Automatic caption translation to reach global fans in multiple languages. Coming soon.",
+    comingSoonLabel: "Coming soon",
+  },
+  aiHowItWorks: {
+    heading: "Upload, automate, earn",
+    subheading: "Three steps from upload to revenue \u2014 AI handles the rest.",
+    step1Title: "Upload",
+    step1Desc:
+      "Drop your photos and videos. AI processing starts immediately \u2014 safety checks, captions, tags, and thumbnails run in the background.",
+    step2Title: "AI assists",
+    step2Desc:
+      "Review generated captions, promotional copy, and translations. Toggle watermarks, pick the best thumbnail crop, and fine-tune before publishing.",
+    step3Title: "Publish & earn",
+    step3Desc:
+      "Hit publish and reach fans worldwide. AI-generated tags and translations help new audiences discover your content.",
+  },
+  aiTrust: {
+    privacyTitle: "Privacy-first",
+    privacyDesc:
+      "All AI runs on our servers. Your content never leaves our infrastructure.",
+    noThirdPartyTitle: "No third-party AI APIs",
+    noThirdPartyDesc:
+      "We use open-source models \u2014 no data sent to OpenAI, Google, or any external service.",
+    auditTitle: "Audit logs & human review",
+    auditDesc:
+      "Every AI decision is logged. Flagged content is reviewed by real people before action.",
+  },
+  aiCta: {
+    heading: "Ready to let AI work for you?",
+    description:
+      "Join thousands of creators who use Zinovia\u2019s AI tools to save time, reach global audiences, and earn more from every post.",
+    ctaStart: "Start creating",
+    ctaDemo: "See AI demo",
   },
   footer: {
     privacy: "Privacy",

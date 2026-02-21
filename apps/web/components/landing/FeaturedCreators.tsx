@@ -20,7 +20,7 @@ function CreatorCard({ name, handle, niche, image, subscribeLabel }: typeof CREA
   return (
     <div
       className={cn(
-        "group relative flex-shrink-0 overflow-hidden rounded-2xl",
+        "sr-child group relative flex-shrink-0 overflow-hidden rounded-2xl",
         "w-[220px] sm:w-[240px] md:w-full",
         "border border-white/[0.06] bg-card",
         "transition-all duration-300",

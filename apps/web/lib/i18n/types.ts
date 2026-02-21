@@ -162,6 +162,48 @@ export interface Dictionary {
     beforeContactDescription: string;
     responseTime: string;
   };
+  aiFeatures: {
+    badge: string;
+    heading: string;
+    subheading: string;
+    safetyScanTitle: string;
+    safetyScanDesc: string;
+    smartCaptionsTitle: string;
+    smartCaptionsDesc: string;
+    autoTagsTitle: string;
+    autoTagsDesc: string;
+    smartPreviewsTitle: string;
+    smartPreviewsDesc: string;
+    promoCopyTitle: string;
+    promoCopyDesc: string;
+    autoTranslateTitle: string;
+    autoTranslateDesc: string;
+    comingSoonLabel: string;
+  };
+  aiHowItWorks: {
+    heading: string;
+    subheading: string;
+    step1Title: string;
+    step1Desc: string;
+    step2Title: string;
+    step2Desc: string;
+    step3Title: string;
+    step3Desc: string;
+  };
+  aiTrust: {
+    privacyTitle: string;
+    privacyDesc: string;
+    noThirdPartyTitle: string;
+    noThirdPartyDesc: string;
+    auditTitle: string;
+    auditDesc: string;
+  };
+  aiCta: {
+    heading: string;
+    description: string;
+    ctaStart: string;
+    ctaDemo: string;
+  };
   footer: {
     privacy: string;
     terms: string;

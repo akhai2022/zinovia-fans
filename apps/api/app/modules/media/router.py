@@ -12,6 +12,7 @@ from app.core.settings import get_settings
 from app.db.session import get_async_session
 from app.modules.auth.deps import get_current_user, get_optional_user
 from app.modules.auth.models import Profile, User
+from app.modules.auth.constants import ADMIN_ROLE, SUPER_ADMIN_ROLE
 from app.modules.creators.constants import CREATOR_ROLE
 from app.modules.media.models import MediaObject
 from app.modules.media.schemas import (
@@ -30,6 +31,7 @@ from app.modules.media.service import (
     delete_media,
     generate_signed_download,
     generate_signed_upload,
+    is_fully_entitled,
     resolve_download_object_key,
     validate_media_upload,
 )
@@ -82,6 +84,14 @@ async def create_upload_url(
             )
         except Exception as e:
             logger.warning("Failed to enqueue generate_derived_variants: %s", e)
+
+        # AI safety scan (NSFW + age-proxy) — gated by feature flag
+        if get_settings().enable_ai_safety:
+            try:
+                from app.celery_client import enqueue_ai_safety_scan
+                enqueue_ai_safety_scan(str(media.id), media.object_key, media.content_type)
+            except Exception as e:
+                logger.warning("Failed to enqueue AI safety scan: %s", e)
 
     await log_audit_event(
         session,
@@ -141,6 +151,14 @@ async def create_batch_upload_urls(
             except Exception as e:
                 logger.warning("Failed to enqueue generate_derived_variants: %s", e)
 
+            # AI safety scan (NSFW + age-proxy) — gated by feature flag
+            if get_settings().enable_ai_safety:
+                try:
+                    from app.celery_client import enqueue_ai_safety_scan
+                    enqueue_ai_safety_scan(str(media.id), media.object_key, media.content_type)
+                except Exception as e:
+                    logger.warning("Failed to enqueue AI safety scan: %s", e)
+
         await log_audit_event(
             session,
             action=ACTION_MEDIA_UPLOADED,
@@ -175,6 +193,11 @@ async def create_download_url(
         allowed = await can_anonymous_access_media(session, media_uuid, variant=variant)
     if not allowed:
         raise AppError(status_code=404, detail="media_not_found")
+    # Substitute wm_preview for non-entitled users requesting grid/full
+    if variant in ("grid", "full") and get_settings().media_wm_preview_enabled:
+        entitled = await is_fully_entitled(session, media_uuid, user.id) if user else False
+        if not entitled:
+            variant = "wm_preview"
     result = await session.execute(select(MediaObject).where(MediaObject.id == media_uuid))
     media = result.scalar_one_or_none()
     if not media:
@@ -203,7 +226,7 @@ async def media_mine(
 ) -> MediaMinePage:
     if not get_settings().enable_vault:
         raise AppError(status_code=404, detail="feature_disabled")
-    if user.role not in (CREATOR_ROLE, "admin"):
+    if user.role not in (CREATOR_ROLE, ADMIN_ROLE, SUPER_ADMIN_ROLE):
         raise AppError(status_code=403, detail="creator_only")
     q = select(MediaObject).where(MediaObject.owner_user_id == user.id)
     if type == "image":
@@ -262,7 +285,7 @@ async def delete_media_endpoint(
         media_uuid = UUID(media_id)
     except ValueError as exc:
         raise AppError(status_code=404, detail="media_not_found") from exc
-    if user.role not in (CREATOR_ROLE, "admin"):
+    if user.role not in (CREATOR_ROLE, ADMIN_ROLE, SUPER_ADMIN_ROLE):
         raise AppError(status_code=403, detail="creator_only")
     await delete_media(session, media_uuid, user.id)
     await log_audit_event(

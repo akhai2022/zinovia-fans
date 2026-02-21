@@ -45,6 +45,7 @@ export function PostCard({ post, creator }: PostCardProps) {
               >
                 <PostMediaImage
                   assetId={assetId}
+                  variant="thumb"
                   className="h-32 w-32 object-cover sm:h-40 sm:w-40"
                   initialBlurhash={preview?.blurhash}
                   initialDominantColor={preview?.dominant_color}
