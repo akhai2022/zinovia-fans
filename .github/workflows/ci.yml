@@ -20,11 +20,9 @@ jobs:
 
       - name: Start infrastructure
         run: |
-          # Start infra services and wait for healthchecks
           docker compose --env-file .env -f infra/compose/docker-compose.yml up -d \
             postgres redis minio mailpit \
             --wait --wait-timeout 120
-          # minio-init is one-shot (exits after bucket creation) — don't --wait on it
           docker compose --env-file .env -f infra/compose/docker-compose.yml run --rm minio-init
 
       - name: Start API and worker
@@ -48,14 +46,28 @@ jobs:
       - name: API tests
         run: make api-test
 
+      # Web tasks run directly on the runner (Node.js is pre-installed).
+      # Docker compose run would need a separate image build with dev deps.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install web dependencies
+        run: npm ci
+
       - name: Web lint
-        run: make web-lint
+        run: npm --prefix apps/web run lint
 
       - name: Web build
-        run: make web-build
+        run: npm --prefix apps/web run build
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
 
-      - name: Contracts
-        run: make gen-contracts
+      - name: Generate contracts
+        run: |
+          make -s gen-contracts-api
+          npm --prefix packages/contracts run gen
 
       - name: Verify contracts unchanged
         run: git diff --exit-code

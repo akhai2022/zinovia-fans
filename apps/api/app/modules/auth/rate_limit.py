@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from collections import defaultdict, deque
-from typing import Deque
 
 from app.core.settings import get_settings
 
-_LOCAL_WINDOWS: dict[str, Deque[datetime]] = defaultdict(deque)
+_LOCAL_WINDOWS: dict[str, deque[datetime]] = defaultdict(deque)
 
 
 def _check_local_window(key: str, max_count: int, window_seconds: int) -> bool:

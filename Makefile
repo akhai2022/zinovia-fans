@@ -55,6 +55,9 @@ gen-contracts:
 	$(COMPOSE_EXEC) api sh -c "cd /app/apps/api && python -m app.tools.export_openapi --stdout" > packages/contracts/openapi.json
 	$(COMPOSE) run --rm --user root web npm --prefix /app/packages/contracts run gen
 
+gen-contracts-api:
+	$(COMPOSE_EXEC) api sh -c "cd /app/apps/api && python -m app.tools.export_openapi --stdout" > packages/contracts/openapi.json
+
 verify-local:
 	./scripts/verify/local_e2e.sh
 

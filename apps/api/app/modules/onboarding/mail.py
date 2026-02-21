@@ -52,6 +52,11 @@ class MailProvider(Protocol):
     async def send_contact_form_email(self, payload: ContactFormEmailPayload) -> None:
         ...
 
+    async def send_generic_email(
+        self, *, recipient: str, subject: str, text_body: str, html_body: str
+    ) -> None:
+        ...
+
 
 def _build_verify_link(token: str) -> str:
     settings = get_settings()
@@ -66,7 +71,7 @@ class ConsoleMailProvider:
         settings = get_settings()
         if settings.environment not in ("production", "prod"):
             print(f"\n{'='*60}")
-            print(f"  VERIFICATION EMAIL (console provider)")
+            print("  VERIFICATION EMAIL (console provider)")
             print(f"  To:   {payload.recipient}")
             print(f"  Link: {verify_link}")
             print(f"  Token: {payload.token}")
@@ -84,7 +89,7 @@ class ConsoleMailProvider:
         settings = get_settings()
         if settings.environment not in ("production", "prod"):
             print(f"\n{'='*60}")
-            print(f"  PASSWORD RESET EMAIL (console provider)")
+            print("  PASSWORD RESET EMAIL (console provider)")
             print(f"  To:   {payload.recipient}")
             print(f"  Link: {payload.reset_url}")
             print(f"{'='*60}\n")
@@ -101,7 +106,7 @@ class ConsoleMailProvider:
         settings = get_settings()
         if settings.environment not in ("production", "prod"):
             print(f"\n{'='*60}")
-            print(f"  CONTACT FORM (console provider)")
+            print("  CONTACT FORM (console provider)")
             print(f"  From:     {payload.sender_email}")
             print(f"  Category: {payload.category}")
             print(f"  Subject:  {payload.subject}")
@@ -109,6 +114,26 @@ class ConsoleMailProvider:
             print(f"{'='*60}\n")
         logger.info(
             "contact form email (console)",
+            extra={
+                "request_id": get_request_id(),
+                "provider": "console",
+                "outcome": "generated",
+            },
+        )
+
+    async def send_generic_email(
+        self, *, recipient: str, subject: str, text_body: str, html_body: str
+    ) -> None:
+        settings = get_settings()
+        if settings.environment not in ("production", "prod"):
+            print(f"\n{'='*60}")
+            print("  GENERIC EMAIL (console provider)")
+            print(f"  To:      {recipient}")
+            print(f"  Subject: {subject}")
+            print(f"  Body:    {text_body[:200]}")
+            print(f"{'='*60}\n")
+        logger.info(
+            "generic email (console)",
             extra={
                 "request_id": get_request_id(),
                 "provider": "console",
@@ -303,6 +328,17 @@ class ResendMailProvider:
             email_type="contact_form",
         )
 
+    async def send_generic_email(
+        self, *, recipient: str, subject: str, text_body: str, html_body: str
+    ) -> None:
+        await self._send_email(
+            recipient=recipient,
+            subject=subject,
+            text_body=text_body,
+            html_body=html_body,
+            email_type="generic",
+        )
+
     async def send_password_reset_email(self, payload: PasswordResetEmailPayload) -> None:
         await self._send_email(
             recipient=payload.recipient,
@@ -383,6 +419,17 @@ class MailpitProvider:
                 "provider": "mailpit",
                 "outcome": "sent",
             },
+        )
+
+    async def send_generic_email(
+        self, *, recipient: str, subject: str, text_body: str, html_body: str
+    ) -> None:
+        await self._send_email(
+            recipient=recipient,
+            subject=subject,
+            text_body=text_body,
+            html_body=html_body,
+            email_type="generic",
         )
 
     async def send_verification_email(self, payload: VerificationEmailPayload) -> None:
@@ -488,4 +535,34 @@ async def send_contact_form_email(
             subject=subject,
             message=message,
         )
+    )
+
+
+async def send_admin_notification_email(
+    recipient: str, title: str, message: str
+) -> None:
+    """Send an admin broadcast notification email to a user."""
+    import html as _html
+
+    safe_title = _html.escape(title)
+    safe_message = _html.escape(message).replace("\n", "<br/>")
+
+    subject = f"Zinovia Fans: {title}"
+    text_body = (
+        f"{title}\n\n"
+        f"{message}\n\n"
+        "Best regards,\n"
+        "The Zinovia Fans Team\n"
+        "https://zinovia.ai"
+    )
+    html_body = _wrap_html(
+        f'<p style="margin:0 0 16px;font-size:18px;font-weight:600;">{safe_title}</p>'
+        f'<div style="margin:0 0 16px;font-size:14px;line-height:1.6;">{safe_message}</div>'
+    )
+    provider = get_mail_provider()
+    await provider.send_generic_email(
+        recipient=recipient,
+        subject=subject,
+        text_body=text_body,
+        html_body=html_body,
     )

@@ -93,7 +93,7 @@ def create_app() -> FastAPI:
     # --- Paths exempt from CSRF ---
     # Webhooks receive POST from external services; auth endpoints are pre-login
     # and must work even when a stale csrf_token cookie exists from a prior session.
-    _CSRF_EXEMPT_PREFIXES = (
+    csrf_exempt_prefixes = (
         "/billing/webhooks/",
         "/webhooks/",
         "/health",
@@ -111,7 +111,7 @@ def create_app() -> FastAPI:
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["Permissions-Policy"] = "camera=(self), microphone=(self), geolocation=()"
         if settings.is_production:
             response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
         return response
@@ -124,7 +124,7 @@ def create_app() -> FastAPI:
         if request.method in ("GET", "HEAD", "OPTIONS"):
             return await call_next(request)
         path = request.url.path
-        if any(path.startswith(prefix) for prefix in _CSRF_EXEMPT_PREFIXES):
+        if any(path.startswith(prefix) for prefix in csrf_exempt_prefixes):
             return await call_next(request)
         cookie_token = request.cookies.get("csrf_token")
         header_token = request.headers.get("X-CSRF-Token")

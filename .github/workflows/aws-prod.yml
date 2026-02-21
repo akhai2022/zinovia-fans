@@ -54,8 +54,18 @@ jobs:
       - name: API tests
         run: make api-test
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install web dependencies
+        run: npm ci
+
       - name: Web build
-        run: make web-build
+        run: npm --prefix apps/web run build
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
 
   deploy:
     needs: test
