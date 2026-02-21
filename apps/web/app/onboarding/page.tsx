@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { createKycSession, getOnboardingStatus } from "@/lib/onboardingApi";
 import { getApiErrorMessage } from "@/lib/errors";
 import { uuidClient } from "@/lib/uuid";
+import { useTranslation, interpolate } from "@/lib/i18n";
 import "@/lib/api";
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [status, setStatus] = useState<{ state: string; checklist: Record<string, boolean> } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -40,7 +42,7 @@ export default function OnboardingPage() {
   if (loadingStatus) {
     return (
       <Page className="flex min-h-[60vh] items-center justify-center">
-        <p className="text-muted-foreground">Loading…</p>
+        <p className="text-muted-foreground">{t.onboarding.loading}</p>
       </Page>
     );
   }
@@ -54,21 +56,21 @@ export default function OnboardingPage() {
     <Page className="flex min-h-[70vh] items-center justify-center hero-bg">
       <Card className="w-full max-w-md border-border shadow-premium-md">
         <CardHeader>
-          <CardTitle className="font-display text-premium-h3">Creator onboarding</CardTitle>
-          <CardDescription>Complete the steps below to verify your account.</CardDescription>
+          <CardTitle className="font-display text-premium-h3">{t.onboarding.title}</CardTitle>
+          <CardDescription>{t.onboarding.description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <p className="text-sm font-medium">Status: {state}</p>
+            <p className="text-sm font-medium">{interpolate(t.onboarding.statusLabel, { state })}</p>
             <ul className="space-y-1 text-sm">
               <li className={checklist.email_verified ? "text-muted-foreground line-through" : ""}>
-                {checklist.email_verified ? "✓" : "○"} Email verified
+                {checklist.email_verified ? "✓" : "○"} {t.onboarding.checklistEmailVerified}
               </li>
               <li className={checklist.kyc_started ? "text-muted-foreground line-through" : ""}>
-                {checklist.kyc_started ? "✓" : "○"} KYC started
+                {checklist.kyc_started ? "✓" : "○"} {t.onboarding.checklistKycStarted}
               </li>
               <li className={checklist.kyc_approved ? "text-muted-foreground line-through" : ""}>
-                {checklist.kyc_approved ? "✓" : "○"} KYC approved
+                {checklist.kyc_approved ? "✓" : "○"} {t.onboarding.checklistKycApproved}
               </li>
             </ul>
           </div>
@@ -77,25 +79,25 @@ export default function OnboardingPage() {
               onClick={onStartVerification}
               disabled={loading || !checklist.email_verified}
             >
-              {loading ? "Redirecting…" : checklist.kyc_started ? "Resume verification" : "Start verification"}
+              {loading ? t.onboarding.redirecting : checklist.kyc_started ? t.onboarding.resumeVerification : t.onboarding.startVerification}
             </Button>
           )}
           {allDone && (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Verification complete! Set up your profile to start publishing.
+                {t.onboarding.verificationCompleteMessage}
               </p>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button
                   onClick={() => router.push("/settings/profile")}
                 >
-                  Set up profile
+                  {t.onboarding.setUpProfile}
                 </Button>
                 <Button
                   variant="secondary"
                   onClick={() => router.push("/creator/post/new")}
                 >
-                  Create your first post
+                  {t.onboarding.createFirstPost}
                 </Button>
               </div>
             </div>

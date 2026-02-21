@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Icon } from "@/components/ui/icon";
 import { apiFetch } from "@/lib/api/client";
 
 type SearchResult = {
@@ -58,11 +59,19 @@ export function SemanticSearch({ onSelect }: Props) {
   return (
     <div className="space-y-3">
       <div>
-        <Input
-          placeholder="Search your media by description..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+        <div className="flex items-center gap-2 mb-2">
+          <Icon name="auto_awesome" className="icon-base text-primary" />
+          <span className="text-sm font-medium text-foreground">AI Search</span>
+        </div>
+        <div className="relative">
+          <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 icon-sm text-muted-foreground" />
+          <Input
+            placeholder="Search your media by description..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         {mode && (
           <p className="mt-1 text-[10px] text-muted-foreground">
             Search mode: {mode === "vector" ? "Semantic (AI)" : "Keyword"}

@@ -2,30 +2,28 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import type { UserOut } from "@zinovia/contracts";
-import { useApiFetch } from "@/lib/hooks/useApiFetch";
+import { useSession } from "@/lib/hooks/useSession";
 
 type Role = "creator" | "admin" | "super_admin" | "fan";
 
 const KYC_DONE_STATES = new Set(["KYC_APPROVED", "COMPLETED"]);
 
 /**
- * Client-side role guard. Fetches the current user via `/auth/me` and
- * redirects to `redirectTo` (default `/`) if the user's role does not
- * match `requiredRole`.
+ * Client-side role guard. Reads the session from the root layout's SSR call
+ * (via SessionProvider context) and redirects to `redirectTo` (default `/`)
+ * if the user's role does not match `requiredRole`.
  *
  * For creators, also checks that KYC is complete. If not, redirects
  * to `/onboarding` so they can finish identity verification.
  *
- * Returns `{ user, isLoading, authorized }` so pages can show a loading
- * skeleton until the check completes.
+ * Returns `{ user, authorized }` so pages can render conditionally.
  */
 export function useRequireRole(
   requiredRole: Role | Role[],
   redirectTo = "/",
 ) {
   const router = useRouter();
-  const { data: user, error, isLoading } = useApiFetch<UserOut>("/auth/me");
+  const { user } = useSession();
 
   const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
   const hasRole = !!user && roles.includes(user.role as Role);
@@ -37,9 +35,8 @@ export function useRequireRole(
     !KYC_DONE_STATES.has(user.onboarding_state ?? "");
 
   useEffect(() => {
-    if (isLoading) return;
     // Not authenticated — middleware should already redirect, but handle edge case
-    if (!user || error) {
+    if (!user) {
       router.replace("/login");
       return;
     }
@@ -50,11 +47,11 @@ export function useRequireRole(
     if (needsKyc) {
       router.replace("/onboarding");
     }
-  }, [isLoading, user, error, hasRole, needsKyc, router, redirectTo]);
+  }, [user, hasRole, needsKyc, router, redirectTo]);
 
   return {
     user: hasRole && !needsKyc ? user : null,
-    isLoading,
-    authorized: hasRole && !needsKyc && !isLoading,
+    isLoading: false,
+    authorized: hasRole && !needsKyc,
   };
 }

@@ -23,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getApiErrorCode, getApiErrorMessage } from "@/lib/errors";
 import { useRequireRole } from "@/lib/hooks/useRequireRole";
 import { MediaService } from "@/features/media/api";
+import { useTranslation, interpolate, getCountryName } from "@/lib/i18n";
 import "@/lib/api";
 
 /** Renders a single banner asset by signed URL (used for profile banner preview). */
@@ -43,21 +44,29 @@ function BannerPreview({ assetId }: { assetId: string }) {
   return <img src={url} alt="" className="h-full w-full object-cover" />;
 }
 
-const PROFILE_ERROR_MESSAGES: Record<string, string> = {
-  handle_taken: "That handle is already taken. Choose another.",
-  handle_length_invalid: "Handle must be between 2 and 64 characters.",
-  handle_format_invalid:
-    "Handle can only use letters, numbers, hyphens and underscores (e.g. my-handle_1).",
-  handle_reserved: "That handle is reserved.",
-  profile_not_found: "Profile not found. Please try again.",
-  profile_incomplete: "Complete your profile (handle, avatar) before saving.",
-  kyc_required: "Identity verification required. Complete KYC to unlock full features.",
-};
+const COUNTRY_CODES = [
+  "FR", "US", "GB", "DE", "ES", "IT", "PT", "NL", "BE", "CH", "AT", "CA",
+  "AU", "JP", "BR", "MX", "IN", "SE", "NO", "DK", "FI", "PL", "IE", "RO",
+  "CZ", "GR", "HU", "HR", "BG", "SK", "SI", "LT", "LV", "EE", "CY", "LU",
+  "MT", "NZ", "SG", "KR", "AE", "ZA", "AR", "CL", "CO", "TH", "MY", "PH",
+  "IL", "TR", "MA", "TN", "DZ",
+];
 
 export default function SettingsProfilePage() {
   const { authorized } = useRequireRole(["creator", "admin", "super_admin"]);
+  const { t, locale } = useTranslation();
   const router = useRouter();
   const { addToast } = useToast();
+
+  const PROFILE_ERROR_MESSAGES: Record<string, string> = {
+    handle_taken: t.profile.errorHandleTaken,
+    handle_length_invalid: t.profile.errorHandleLengthInvalid,
+    handle_format_invalid: t.profile.errorHandleFormatInvalid,
+    handle_reserved: t.profile.errorHandleReserved,
+    profile_not_found: t.profile.errorProfileNotFound,
+    profile_incomplete: t.profile.errorProfileIncomplete,
+    kyc_required: t.profile.errorKycRequired,
+  };
   const [handle, setHandle] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
@@ -110,7 +119,7 @@ export default function SettingsProfilePage() {
       const updated = await BillingService.billingUpdatePlan({ price: subscriptionPrice });
       setPlan(updated);
       setSubscriptionPrice(updated.price);
-      addToast("Subscription price updated", "success");
+      addToast(t.profile.toastSubscriptionPriceUpdated, "success");
     } catch (err) {
       const { message } = getApiErrorMessage(err);
       addToast(message, "error");
@@ -123,7 +132,7 @@ export default function SettingsProfilePage() {
     event.preventDefault();
     setLoading(true);
     if (!avatarMediaId) {
-      addToast("A profile photo is required.", "error");
+      addToast(t.profile.avatarRequiredToast, "error");
       setLoading(false);
       return;
     }
@@ -140,11 +149,11 @@ export default function SettingsProfilePage() {
     };
     try {
       await CreatorsService.creatorsUpdateMe(payload);
-      addToast("Profile saved", "success");
+      addToast(t.profile.toastProfileSaved, "success");
     } catch (err) {
       const code = getApiErrorCode(err);
       if (err instanceof ApiError && err.status === 403) {
-        const friendly = PROFILE_ERROR_MESSAGES[code] || "Creator-only. Set up your account as a creator to edit profile.";
+        const friendly = PROFILE_ERROR_MESSAGES[code] || t.profile.errorCreatorOnly;
         addToast(friendly, "error");
         return;
       }
@@ -161,7 +170,7 @@ export default function SettingsProfilePage() {
   if (prefillStatus === "loading") {
     return (
       <Page>
-        <h1 className="font-display text-premium-h2 font-semibold text-foreground">Creator profile</h1>
+        <h1 className="font-display text-premium-h2 font-semibold text-foreground">{t.profile.title}</h1>
         <Card className="mt-4">
           <CardHeader>
             <Skeleton className="h-6 w-32" />
@@ -179,24 +188,24 @@ export default function SettingsProfilePage() {
 
   return (
     <Page className="space-y-4">
-      <h1 className="font-display text-premium-h2 font-semibold text-foreground">Creator profile</h1>
+      <h1 className="font-display text-premium-h2 font-semibold text-foreground">{t.profile.title}</h1>
       {prefillStatus === "error" && (
         <p className="mt-2 text-sm text-muted-foreground">
-          Creator-only. Set up your account as a creator to edit profile.
+          {t.profile.errorCreatorOnly}
         </p>
       )}
       <Card className="mt-4">
         <CardHeader>
-          <CardTitle>Profile details</CardTitle>
-          <CardDescription>Control your public presence and trust signals.</CardDescription>
+          <CardTitle>{t.profile.profileDetailsTitle}</CardTitle>
+          <CardDescription>{t.profile.profileDetailsDescription}</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-6" onSubmit={onSubmit}>
             <div className="space-y-2 rounded-premium-lg border border-border bg-surface-alt p-4">
-              <Label>Profile photo (avatar) <span className="text-destructive">*</span></Label>
+              <Label>{t.profile.avatarLabel} <span className="text-destructive">*</span></Label>
               {!avatarMediaId && (
                 <p className="text-xs text-destructive">
-                  A profile photo is required to save your profile.
+                  {t.profile.avatarRequired}
                 </p>
               )}
               <div className="flex flex-wrap items-center gap-4">
@@ -216,16 +225,16 @@ export default function SettingsProfilePage() {
                   />
                   <Button variant="secondary" size="sm" asChild>
                     <Link href="/ai/images/new?apply=creator.avatar">
-                      Generate with AI
+                      {t.profile.generateWithAi}
                     </Link>
                   </Button>
                 </div>
               </div>
             </div>
             <div className="space-y-2 rounded-premium-lg border border-border bg-surface-alt p-4">
-              <Label>Banner image</Label>
+              <Label>{t.profile.bannerLabel}</Label>
               <p className="text-xs text-muted-foreground">
-                Shown at the top of your creator profile (e.g. 1500×500).
+                {t.profile.bannerDescription}
               </p>
               {bannerMediaId && (
                 <div className="mt-2 max-h-32 w-full max-w-2xl overflow-hidden rounded-brand border border-border bg-muted">
@@ -239,137 +248,89 @@ export default function SettingsProfilePage() {
                 />
                 <Button variant="secondary" size="sm" asChild>
                   <Link href="/ai/images/new?apply=creator.banner">
-                    Generate with AI
+                    {t.profile.generateWithAi}
                   </Link>
                 </Button>
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="handle">Handle</Label>
+              <Label htmlFor="handle">{t.profile.handleLabel}</Label>
               <Input
                 id="handle"
                 type="text"
                 value={handle}
                 onChange={(e) => setHandle(e.target.value)}
-                placeholder="your-handle"
+                placeholder={t.profile.handlePlaceholder}
               />
               <p className="text-xs text-muted-foreground">
-                Unique URL handle (e.g. /creators/your-handle).
+                {t.profile.handleDescription}
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="displayName">Display name</Label>
+              <Label htmlFor="displayName">{t.profile.displayNameLabel}</Label>
               <Input
                 id="displayName"
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Display name"
+                placeholder={t.profile.displayNamePlaceholder}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="bio">Bio</Label>
+              <Label htmlFor="bio">{t.profile.bioLabel}</Label>
               <Textarea
                 id="bio"
                 rows={3}
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                placeholder="Short bio"
+                placeholder={t.profile.bioPlaceholder}
               />
             </div>
             <div className="grid gap-6 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone number <span className="text-destructive">*</span></Label>
+                <Label htmlFor="phone">{t.profile.phoneLabel} <span className="text-destructive">*</span></Label>
                 <Input
                   id="phone"
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+33 6 12 34 56 78"
+                  placeholder={t.profile.phonePlaceholder}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Include country code (e.g. +33 for France, +1 for US).
+                  {t.profile.phoneDescription}
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="country">Country <span className="text-destructive">*</span></Label>
+                <Label htmlFor="country">{t.profile.countryLabel} <span className="text-destructive">*</span></Label>
                 <select
                   id="country"
                   value={country}
                   onChange={(e) => setCountry(e.target.value)}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  <option value="">Select country…</option>
-                  <option value="FR">France</option>
-                  <option value="US">United States</option>
-                  <option value="GB">United Kingdom</option>
-                  <option value="DE">Germany</option>
-                  <option value="ES">Spain</option>
-                  <option value="IT">Italy</option>
-                  <option value="PT">Portugal</option>
-                  <option value="NL">Netherlands</option>
-                  <option value="BE">Belgium</option>
-                  <option value="CH">Switzerland</option>
-                  <option value="AT">Austria</option>
-                  <option value="CA">Canada</option>
-                  <option value="AU">Australia</option>
-                  <option value="JP">Japan</option>
-                  <option value="BR">Brazil</option>
-                  <option value="MX">Mexico</option>
-                  <option value="IN">India</option>
-                  <option value="SE">Sweden</option>
-                  <option value="NO">Norway</option>
-                  <option value="DK">Denmark</option>
-                  <option value="FI">Finland</option>
-                  <option value="PL">Poland</option>
-                  <option value="IE">Ireland</option>
-                  <option value="RO">Romania</option>
-                  <option value="CZ">Czech Republic</option>
-                  <option value="GR">Greece</option>
-                  <option value="HU">Hungary</option>
-                  <option value="HR">Croatia</option>
-                  <option value="BG">Bulgaria</option>
-                  <option value="SK">Slovakia</option>
-                  <option value="SI">Slovenia</option>
-                  <option value="LT">Lithuania</option>
-                  <option value="LV">Latvia</option>
-                  <option value="EE">Estonia</option>
-                  <option value="CY">Cyprus</option>
-                  <option value="LU">Luxembourg</option>
-                  <option value="MT">Malta</option>
-                  <option value="NZ">New Zealand</option>
-                  <option value="SG">Singapore</option>
-                  <option value="KR">South Korea</option>
-                  <option value="AE">United Arab Emirates</option>
-                  <option value="ZA">South Africa</option>
-                  <option value="AR">Argentina</option>
-                  <option value="CL">Chile</option>
-                  <option value="CO">Colombia</option>
-                  <option value="TH">Thailand</option>
-                  <option value="MY">Malaysia</option>
-                  <option value="PH">Philippines</option>
-                  <option value="IL">Israel</option>
-                  <option value="TR">Turkey</option>
-                  <option value="MA">Morocco</option>
-                  <option value="TN">Tunisia</option>
-                  <option value="DZ">Algeria</option>
+                  <option value="">{t.profile.countryPlaceholder}</option>
+                  {COUNTRY_CODES.map((code) => (
+                    <option key={code} value={code}>
+                      {getCountryName(code, locale)}
+                    </option>
+                  ))}
                 </select>
                 <p className="text-xs text-muted-foreground">
-                  Your country of residence.
+                  {t.profile.countryDescription}
                 </p>
               </div>
             </div>
             <div className="flex items-center justify-between rounded-brand border border-border bg-surface-alt p-4">
               <div>
                 <Label htmlFor="discoverable" className="text-base">
-                  Discoverable
+                  {t.profile.discoverableLabel}
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  Show your profile in discovery and feed.
+                  {t.profile.discoverableDescription}
                 </p>
                 {!handle.trim() && (
                   <p className="mt-1 text-xs text-amber-600">
-                    A handle is required to appear in discovery. Set one above.
+                    {t.profile.discoverableHandleWarning}
                   </p>
                 )}
               </div>
@@ -383,16 +344,16 @@ export default function SettingsProfilePage() {
             <div className="flex items-center justify-between rounded-brand border border-border bg-surface-alt p-4">
               <div>
                 <Label htmlFor="nsfw" className="text-base">
-                  NSFW
+                  {t.profile.nsfwLabel}
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  Mark your profile as adult content.
+                  {t.profile.nsfwDescription}
                 </p>
               </div>
               <Switch id="nsfw" checked={nsfw} onCheckedChange={setNsfw} />
             </div>
             <Button type="submit" disabled={loading}>
-              {loading ? "Saving…" : "Save"}
+              {loading ? t.profile.savingButton : t.profile.saveButton}
             </Button>
           </form>
         </CardContent>
@@ -400,15 +361,15 @@ export default function SettingsProfilePage() {
       {plan && (
         <Card>
           <CardHeader>
-            <CardTitle>Subscription pricing</CardTitle>
+            <CardTitle>{t.profile.subscriptionPricingTitle}</CardTitle>
             <CardDescription>
-              Set your monthly subscription price. Platform fee: {plan.platform_fee_percent}%.
+              {interpolate(t.profile.subscriptionPricingDescription, { percent: String(plan.platform_fee_percent) })}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="subscriptionPrice">
-                Monthly price ({plan.currency.toUpperCase()})
+                {interpolate(t.profile.monthlyPriceLabel, { currency: plan.currency.toUpperCase() })}
               </Label>
               <div className="flex items-center gap-3">
                 <Input
@@ -426,13 +387,15 @@ export default function SettingsProfilePage() {
                   onClick={onPriceSave}
                   disabled={priceLoading || subscriptionPrice === plan.price}
                 >
-                  {priceLoading ? "Saving..." : "Update price"}
+                  {priceLoading ? t.profile.updatePriceSavingButton : t.profile.updatePriceButton}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Min {(plan.min_price_cents / 100).toFixed(2)} {plan.currency.toUpperCase()} — Max{" "}
-                {(plan.max_price_cents / 100).toFixed(2)} {plan.currency.toUpperCase()}.
-                Existing subscribers keep their current rate until renewal.
+                {interpolate(t.profile.priceRangeHint, {
+                  min: (plan.min_price_cents / 100).toFixed(2),
+                  max: (plan.max_price_cents / 100).toFixed(2),
+                  currency: plan.currency.toUpperCase(),
+                })}
               </p>
             </div>
           </CardContent>
@@ -440,10 +403,10 @@ export default function SettingsProfilePage() {
       )}
       <div className="mt-4 flex gap-2">
         <Button variant="secondary" size="sm" asChild>
-          <Link href="/settings/security">Change password</Link>
+          <Link href="/settings/security">{t.profile.changePasswordLink}</Link>
         </Button>
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/">Back to home</Link>
+          <Link href="/">{t.profile.backToHomeLink}</Link>
         </Button>
       </div>
     </Page>

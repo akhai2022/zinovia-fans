@@ -9,6 +9,7 @@ import {
   getCreatorEarnings,
   type CreatorEarningsOut,
 } from "@/features/creator-earnings/api";
+import { useTranslation, interpolate, type Dictionary } from "@/lib/i18n";
 
 function formatCents(cents: number, currency: string): string {
   return new Intl.NumberFormat("en-US", {
@@ -28,19 +29,20 @@ function formatDate(iso: string): string {
   });
 }
 
-function typeLabel(t: string): string {
-  switch (t) {
-    case "SUBSCRIPTION": return "Subscription";
-    case "TIP": return "Tip";
-    case "PPV_POST": return "PPV Post";
-    case "PPV_MESSAGE": return "PPV Message";
-    case "REFUND": return "Refund";
-    default: return t.replace(/_/g, " ");
+function typeLabel(type: string, dict: Dictionary): string {
+  switch (type) {
+    case "SUBSCRIPTION": return dict.earnings.typeSubscription;
+    case "TIP": return dict.earnings.typeTip;
+    case "PPV_POST": return dict.earnings.typePpvPost;
+    case "PPV_MESSAGE": return dict.earnings.typePpvMessage;
+    case "REFUND": return dict.earnings.typeRefund;
+    default: return type.replace(/_/g, " ");
   }
 }
 
 export default function EarningsPage() {
   const { authorized } = useRequireRole(["creator", "admin", "super_admin"]);
+  const { t } = useTranslation();
   const [data, setData] = useState<CreatorEarningsOut | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +54,7 @@ export default function EarningsPage() {
         setError(
           err && typeof err === "object" && "message" in err
             ? (err as { message: string }).message
-            : "Failed to load earnings.",
+            : t.earnings.errorLoadEarnings,
         );
       })
       .finally(() => setLoading(false));
@@ -64,7 +66,7 @@ export default function EarningsPage() {
     return (
       <Page className="max-w-4xl space-y-6">
         <h1 className="font-display text-premium-h2 font-semibold text-foreground">
-          Earnings
+          {t.earnings.title}
         </h1>
         <div className="grid gap-4 sm:grid-cols-3">
           {[1, 2, 3].map((i) => (
@@ -80,10 +82,10 @@ export default function EarningsPage() {
     return (
       <Page className="max-w-4xl space-y-6">
         <h1 className="font-display text-premium-h2 font-semibold text-foreground">
-          Earnings
+          {t.earnings.title}
         </h1>
         <Card className="border-destructive/20 bg-destructive/5 p-6">
-          <p className="text-sm text-destructive">{error || "No data available."}</p>
+          <p className="text-sm text-destructive">{error || t.earnings.noDataAvailable}</p>
         </Card>
       </Page>
     );
@@ -95,7 +97,7 @@ export default function EarningsPage() {
   return (
     <Page className="max-w-4xl space-y-6">
       <h1 className="font-display text-premium-h2 font-semibold text-foreground">
-        Earnings
+        {t.earnings.title}
       </h1>
 
       {/* Summary cards */}
@@ -103,7 +105,7 @@ export default function EarningsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Gross (30 days)
+              {t.earnings.grossThirtyDays}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -115,7 +117,7 @@ export default function EarningsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Platform fees
+              {t.earnings.platformFees}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -127,7 +129,7 @@ export default function EarningsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Net earnings
+              {t.earnings.netEarnings}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -141,21 +143,21 @@ export default function EarningsPage() {
       {/* Payout status */}
       <Card>
         <CardHeader>
-          <CardTitle>Payout method</CardTitle>
+          <CardTitle>{t.earnings.payoutMethodTitle}</CardTitle>
         </CardHeader>
         <CardContent>
           {payout_method.configured ? (
             <div className="space-y-1 text-sm">
               <p className="text-foreground">
-                Payout status:{" "}
+                {t.earnings.payoutStatusLabel}{" "}
                 <span className="font-medium">
-                  {payout_method.payouts_enabled ? "Payouts enabled" : "Payouts pending"}
+                  {payout_method.payouts_enabled ? t.earnings.payoutsEnabled : t.earnings.payoutsPending}
                 </span>
               </p>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              No payout method configured. Contact support to set up payouts.
+              {t.earnings.noPayoutMethod}
             </p>
           )}
         </CardContent>
@@ -164,12 +166,12 @@ export default function EarningsPage() {
       {/* Transactions */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent transactions</CardTitle>
+          <CardTitle>{t.earnings.recentTransactionsTitle}</CardTitle>
         </CardHeader>
         <CardContent>
           {last_transactions.length === 0 ? (
             <p className="py-4 text-center text-sm text-muted-foreground">
-              No transactions yet.
+              {t.earnings.noTransactions}
             </p>
           ) : (
             <>
@@ -177,11 +179,11 @@ export default function EarningsPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
-                      <th className="px-4 py-3 font-semibold">Date</th>
-                      <th className="px-4 py-3 font-semibold">Type</th>
-                      <th className="px-4 py-3 font-semibold text-right">Gross</th>
-                      <th className="px-4 py-3 font-semibold text-right">Fee</th>
-                      <th className="px-4 py-3 font-semibold text-right">Net</th>
+                      <th className="px-4 py-3 font-semibold">{t.earnings.tableHeaderDate}</th>
+                      <th className="px-4 py-3 font-semibold">{t.earnings.tableHeaderType}</th>
+                      <th className="px-4 py-3 font-semibold text-right">{t.earnings.tableHeaderGross}</th>
+                      <th className="px-4 py-3 font-semibold text-right">{t.earnings.tableHeaderFee}</th>
+                      <th className="px-4 py-3 font-semibold text-right">{t.earnings.tableHeaderNet}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -192,7 +194,7 @@ export default function EarningsPage() {
                         </td>
                         <td className="px-4 py-3">
                           <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                            {typeLabel(tx.type)}
+                            {typeLabel(tx.type, t)}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right font-mono">
@@ -210,7 +212,7 @@ export default function EarningsPage() {
                 </table>
               </div>
               <p className="mt-3 text-center text-xs text-muted-foreground">
-                Showing last {last_transactions.length} transactions (30 days)
+                {interpolate(t.earnings.showingTransactions, { count: last_transactions.length })}
               </p>
             </>
           )}

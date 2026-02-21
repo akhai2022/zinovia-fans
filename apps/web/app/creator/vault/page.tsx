@@ -12,11 +12,13 @@ import { listVaultMedia, type MediaMineItem } from "@/features/engagement/api";
 import { MediaService } from "@/features/media/api";
 import { apiFetch } from "@/lib/apiFetch";
 import { SemanticSearch } from "@/features/search/SemanticSearch";
+import { useTranslation } from "@/lib/i18n";
 
 type FilterType = "all" | "image" | "video";
 
 export default function VaultPage() {
   const { authorized } = useRequireRole(["creator", "admin", "super_admin"]);
+  const { t } = useTranslation();
   const { addToast } = useToast();
   const [items, setItems] = useState<MediaMineItem[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -53,7 +55,7 @@ export default function VaultPage() {
       })
       .catch((err) => {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Failed to load media");
+        setError(err instanceof Error ? err.message : t.vault.errorLoadMedia);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -76,7 +78,7 @@ export default function VaultPage() {
       });
       setNextCursor(data.next_cursor);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load more");
+      setError(err instanceof Error ? err.message : t.vault.errorLoadMore);
     } finally {
       setLoadingMore(false);
       loadingRef.current = false;
@@ -115,7 +117,7 @@ export default function VaultPage() {
     try {
       await apiFetch(`/media/${deleteConfirm.id}`, { method: "DELETE" });
       setItems((prev) => prev.filter((m) => m.id !== deleteConfirm.id));
-      addToast("Media deleted", "success");
+      addToast(t.vault.toastMediaDeleted, "success");
       setDeleteConfirm(null);
       // Close preview if it was the deleted item
       if (previewItem?.id === deleteConfirm.id) {
@@ -124,7 +126,7 @@ export default function VaultPage() {
       }
     } catch (err: unknown) {
       const msg =
-        err instanceof Error ? err.message : "Failed to delete media";
+        err instanceof Error ? err.message : t.vault.errorDeleteMedia;
       addToast(msg, "error");
     } finally {
       setDeleting(false);
@@ -141,13 +143,13 @@ export default function VaultPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-    addToast("Uploaded successfully", "success");
+    addToast(t.vault.toastUploadedSuccessfully, "success");
   };
 
   const FILTERS: { key: FilterType; label: string }[] = [
-    { key: "all", label: "All" },
-    { key: "image", label: "Images" },
-    { key: "video", label: "Videos" },
+    { key: "all", label: t.vault.filterAll },
+    { key: "image", label: t.vault.filterImages },
+    { key: "video", label: t.vault.filterVideos },
   ];
 
   if (!authorized) return null;
@@ -156,7 +158,7 @@ export default function VaultPage() {
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="font-display text-premium-h2 font-semibold text-foreground">
-          Media Vault
+          {t.vault.title}
         </h1>
         <ImageUploadField
           onUploadComplete={handleUploadComplete}
@@ -190,7 +192,7 @@ export default function VaultPage() {
       {error && items.length === 0 && (
         <Card className="py-10 text-center" role="alert">
           <p className="font-display text-premium-h3 font-semibold text-foreground">
-            Something went wrong
+            {t.vault.errorTitle}
           </p>
           <p className="mt-2 text-premium-body text-muted-foreground">
             {error}
@@ -211,10 +213,10 @@ export default function VaultPage() {
       {!loading && items.length === 0 && !error && (
         <Card className="py-16 text-center">
           <p className="font-display text-premium-h3 font-semibold text-foreground">
-            No media yet
+            {t.vault.emptyTitle}
           </p>
           <p className="mt-2 text-premium-body text-muted-foreground">
-            Upload images or videos above to see them here.
+            {t.vault.emptyDescription}
           </p>
         </Card>
       )}
@@ -250,7 +252,7 @@ export default function VaultPage() {
       {/* End indicator */}
       {!loading && items.length > 0 && !nextCursor && !loadingMore && (
         <p className="py-4 text-center text-sm text-muted-foreground">
-          All media loaded.
+          {t.vault.allMediaLoaded}
         </p>
       )}
 
@@ -261,7 +263,7 @@ export default function VaultPage() {
           setPreviewItem(null);
           setPreviewUrl(null);
         }}
-        title="Media Preview"
+        title={t.vault.previewModalTitle}
         className="max-w-2xl"
       >
         {previewItem && (
@@ -276,7 +278,7 @@ export default function VaultPage() {
               ) : (
                 <img
                   src={previewUrl}
-                  alt="Preview"
+                  alt={t.vault.previewAlt}
                   className="max-h-[60vh] w-full rounded-lg object-contain"
                 />
               )
@@ -296,7 +298,7 @@ export default function VaultPage() {
                 setDeleteConfirm(previewItem);
               }}
             >
-              Delete
+              {t.vault.deleteButton}
             </Button>
           </div>
         )}
@@ -306,12 +308,10 @@ export default function VaultPage() {
       <Modal
         open={!!deleteConfirm}
         onClose={() => !deleting && setDeleteConfirm(null)}
-        title="Delete media?"
+        title={t.vault.deleteModalTitle}
       >
         <p className="text-sm text-muted-foreground">
-          This will permanently delete the file and all derived variants. If
-          it&apos;s used in a post, profile, or collection, the delete will
-          fail.
+          {t.vault.deleteModalDescription}
         </p>
         <div className="mt-4 flex justify-end gap-2">
           <Button
@@ -320,7 +320,7 @@ export default function VaultPage() {
             onClick={() => setDeleteConfirm(null)}
             disabled={deleting}
           >
-            Cancel
+            {t.vault.cancelButton}
           </Button>
           <Button
             variant="destructive"
@@ -328,7 +328,7 @@ export default function VaultPage() {
             onClick={handleDelete}
             disabled={deleting}
           >
-            {deleting ? "Deleting..." : "Delete"}
+            {deleting ? t.vault.deletingButton : t.vault.deleteButton}
           </Button>
         </div>
       </Modal>
@@ -345,6 +345,7 @@ function VaultCell({
   onPreview: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
   const isVideo = item.content_type.startsWith("video/");
 
@@ -382,13 +383,13 @@ function VaultCell({
       ) : (
         <div className="flex h-full w-full items-center justify-center">
           <span className="text-xs text-muted-foreground">
-            {isVideo ? "Video" : "Image"}
+            {isVideo ? t.vault.cellVideo : t.vault.cellImage}
           </span>
         </div>
       )}
       {isVideo && (
         <div className="absolute left-2 top-2 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
-          VIDEO
+          {t.vault.badgeVideo}
         </div>
       )}
       {/* Derived asset status badge */}
@@ -396,21 +397,21 @@ function VaultCell({
         <div className="absolute right-2 top-2">
           {thumbUrl ? (
             <div className="rounded bg-emerald-600/80 px-1.5 py-0.5 text-[9px] font-medium text-white">
-              Preview Ready
+              {t.vault.badgePreviewReady}
             </div>
           ) : (
             <div className="rounded bg-amber-600/80 px-1.5 py-0.5 text-[9px] font-medium text-white animate-pulse">
-              Processing
+              {t.vault.badgeProcessing}
             </div>
           )}
         </div>
       )}
       <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
         <Button variant="secondary" size="sm" onClick={onPreview}>
-          Preview
+          {t.vault.previewButton}
         </Button>
         <Button variant="destructive" size="sm" onClick={onDelete}>
-          Delete
+          {t.vault.deleteButton}
         </Button>
       </div>
     </div>

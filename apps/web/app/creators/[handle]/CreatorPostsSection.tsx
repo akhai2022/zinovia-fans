@@ -7,8 +7,8 @@ import { SubscribeSheet } from "@/components/premium/SubscribeSheet";
 import { BillingService } from "@/features/billing/api";
 import { buildBillingReturnUrls } from "@/features/billing/checkoutUrls";
 import { getApiErrorMessage } from "@/lib/errors";
-import { apiFetch } from "@/lib/api/client";
 import { PostUnlockButton } from "@/features/ppv/PostUnlockButton";
+import { useSession } from "@/lib/hooks/useSession";
 import type { PostItem, SubscriptionOffer } from "@/types/creator";
 import { DEFAULT_SUBSCRIPTION_OFFER } from "@/types/creator";
 import { uuidClient } from "@/lib/uuid";
@@ -34,6 +34,7 @@ export function CreatorPostsSection({
   isSubscriber = false,
 }: CreatorPostsSectionProps) {
   const router = useRouter();
+  const { user: sessionUser } = useSession();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -56,15 +57,10 @@ export function CreatorPostsSection({
     setCheckoutError(null);
 
     // Auth check: redirect unauthenticated users to login
-    try {
-      await apiFetch("/auth/me", { method: "GET" });
-    } catch (authErr) {
-      const parsed = getApiErrorMessage(authErr);
-      if (parsed.kind === "unauthorized") {
-        const returnTo = `/creators/${creatorHandle}`;
-        router.push(`/login?next=${encodeURIComponent(returnTo)}`);
-        return;
-      }
+    if (!sessionUser) {
+      const returnTo = `/creators/${creatorHandle}`;
+      router.push(`/login?next=${encodeURIComponent(returnTo)}`);
+      return;
     }
 
     if (!idempotencyRef.current) {
@@ -100,7 +96,7 @@ export function CreatorPostsSection({
       setCheckoutLoading(false);
       idempotencyRef.current = null;
     }
-  }, [creatorId, creatorHandle, checkoutLoading, router]);
+  }, [creatorId, creatorHandle, checkoutLoading, router, sessionUser]);
 
   return (
     <>

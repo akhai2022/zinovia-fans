@@ -7,6 +7,7 @@ import { Page } from "@/components/brand/Page";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ApiClientError, apiFetchServer } from "@/lib/api/client";
+import { getServerDictionary } from "@/lib/i18n/server";
 import { CreatorGrid } from "./CreatorGrid";
 
 export const metadata: Metadata = {
@@ -55,6 +56,7 @@ export default async function CreatorsPage({
 }) {
   const q = normalizeQ(searchParams?.q);
   const cookieHeader = cookies().toString();
+  const { dictionary: t } = await getServerDictionary();
   let data: CreatorDiscoverPage | null = null;
   let fetchError: ApiClientError | null = null;
   try {
@@ -76,11 +78,11 @@ export default async function CreatorsPage({
     return (
       <Page className="max-w-6xl space-y-6">
         <h1 className="font-display text-premium-h2 font-semibold text-foreground">
-          Creators
+          {t.creatorsPage.title}
         </h1>
         <Card className="rounded-2xl border border-border p-8 text-center shadow-sm">
           <p className="text-sm font-medium text-foreground">
-            Unable to load creators right now.
+            {t.creatorsPage.errorMessage}
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
             {fetchError.detail || fetchError.message}
@@ -93,7 +95,7 @@ export default async function CreatorsPage({
                   : "/creators"
               }
             >
-              Retry
+              {t.creatorsPage.retryButton}
             </Link>
           </Button>
         </Card>
@@ -104,10 +106,10 @@ export default async function CreatorsPage({
   return (
     <Page className="max-w-6xl space-y-6">
       <h1 className="font-display text-premium-h2 font-semibold text-foreground">
-        Creators
+        {t.creatorsPage.title}
       </h1>
       <p className="text-sm text-muted-foreground">
-        Discover and follow creators.
+        {t.creatorsPage.subtitle}
       </p>
       <CreatorGrid
         initialItems={data?.items ?? []}
@@ -116,7 +118,7 @@ export default async function CreatorsPage({
         pageSize={PAGE_SIZE}
       />
       <Button variant="ghost" size="sm" asChild>
-        <Link href="/">Back to home</Link>
+        <Link href="/">{t.creatorsPage.backToHome}</Link>
       </Button>
     </Page>
   );

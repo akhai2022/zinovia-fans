@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
 import { kycComplete } from "@/lib/onboardingApi";
+import { useTranslation, interpolate } from "@/lib/i18n";
 import "@/lib/api";
 
 function getAge(dob: string): number {
@@ -39,6 +40,7 @@ function SelfieStep({
   onSubmit: () => void;
   submitting: boolean;
 }) {
+  const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -48,7 +50,7 @@ function SelfieStep({
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
     setCameraReady(false);
@@ -67,11 +69,9 @@ function SelfieStep({
         setCameraReady(true);
       }
     } catch {
-      setCameraError(
-        "Camera access denied. Please allow camera access in your browser settings to take a selfie."
-      );
+      setCameraError(t.kyc.cameraAccessDenied);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!selfieFile && !previewUrl) {
@@ -120,10 +120,9 @@ function SelfieStep({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label>Selfie photo</Label>
+        <Label>{t.kyc.selfieLabel}</Label>
         <p className="text-xs text-muted-foreground">
-          Take a clear selfie using your camera. Make sure your face is clearly
-          visible and matches your ID document.
+          {t.kyc.selfieInstructions}
         </p>
         <div className="overflow-hidden rounded-lg border-2 border-border bg-black">
           {selfieFile && previewUrl ? (
@@ -131,12 +130,12 @@ function SelfieStep({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={previewUrl}
-                alt="Selfie preview"
+                alt={t.kyc.selfiePreviewAlt}
                 className="aspect-square w-full object-cover"
               />
               <div className="absolute inset-x-0 bottom-0 flex justify-center gap-2 bg-gradient-to-t from-black/60 to-transparent p-4">
                 <Button variant="secondary" size="sm" onClick={retake}>
-                  Retake
+                  {t.kyc.retakeButton}
                 </Button>
               </div>
             </div>
@@ -155,13 +154,13 @@ function SelfieStep({
                     type="button"
                     onClick={takePhoto}
                     className="h-14 w-14 rounded-full border-4 border-white bg-white/30 transition-transform active:scale-90"
-                    aria-label="Take photo"
+                    aria-label={t.kyc.takePhotoAriaLabel}
                   />
                 </div>
               )}
               {!cameraReady && !cameraError && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <p className="text-sm text-white/70">Starting camera...</p>
+                  <p className="text-sm text-white/70">{t.kyc.startingCamera}</p>
                 </div>
               )}
             </div>
@@ -174,14 +173,14 @@ function SelfieStep({
       </div>
       <div className="flex gap-2">
         <Button variant="secondary" onClick={onBack}>
-          Back
+          {t.kyc.backButton}
         </Button>
         <Button
           onClick={onSubmit}
           disabled={submitting || !selfieFile}
           className="flex-1"
         >
-          {submitting ? "Verifying..." : "Submit verification"}
+          {submitting ? t.kyc.submittingButton : t.kyc.submitButton}
         </Button>
       </div>
     </div>
@@ -193,6 +192,7 @@ export default function KycVerifyPage() {
   const params = useSearchParams();
   const sessionId = params.get("session_id");
   const { addToast } = useToast();
+  const { t } = useTranslation();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [dob, setDob] = useState("");
@@ -203,47 +203,47 @@ export default function KycVerifyPage() {
 
   const onNextAge = useCallback(() => {
     if (!dob) {
-      addToast("Please enter your date of birth.", "error");
+      addToast(t.kyc.toastDobRequired, "error");
       return;
     }
     const age = getAge(dob);
     if (age < 18) {
-      addToast("You must be at least 18 years old to become a creator.", "error");
+      addToast(t.kyc.toastAgeRestriction, "error");
       return;
     }
     setStep(2);
-  }, [dob, addToast]);
+  }, [dob, addToast, t]);
 
   const onNextId = useCallback(() => {
     if (!idFile) {
-      addToast("Please upload a photo of your ID card or passport.", "error");
+      addToast(t.kyc.toastIdRequired, "error");
       return;
     }
     setStep(3);
-  }, [idFile, addToast]);
+  }, [idFile, addToast, t]);
 
   const onSubmit = useCallback(async () => {
     if (!selfieFile) {
-      addToast("Please take or upload a selfie photo.", "error");
+      addToast(t.kyc.toastSelfieRequired, "error");
       return;
     }
     if (!sessionId) {
-      addToast("Invalid session. Please restart the verification.", "error");
+      addToast(t.kyc.toastInvalidSession, "error");
       return;
     }
     setSubmitting(true);
     try {
       await kycComplete(sessionId, "APPROVED");
       setDone(true);
-      addToast("Identity verified successfully!", "success");
+      addToast(t.kyc.toastVerified, "success");
     } catch (err) {
       const msg =
-        err instanceof Error ? err.message : "Verification failed. Please try again.";
+        err instanceof Error ? err.message : t.kyc.toastVerificationFailed;
       addToast(msg, "error");
     } finally {
       setSubmitting(false);
     }
-  }, [selfieFile, sessionId, addToast]);
+  }, [selfieFile, sessionId, addToast, t]);
 
   if (!sessionId) {
     return (
@@ -251,11 +251,11 @@ export default function KycVerifyPage() {
         <Card className="w-full max-w-md">
           <CardContent className="py-8 text-center">
             <p className="text-sm text-destructive">
-              Invalid verification link. Please go to{" "}
+              {t.kyc.invalidLinkMessage.split("{onboardingLink}")[0]}
               <a href="/onboarding" className="underline">
-                onboarding
-              </a>{" "}
-              to start the process.
+                {t.kyc.onboardingLinkText}
+              </a>
+              {t.kyc.invalidLinkMessage.split("{onboardingLink}")[1]}
             </p>
           </CardContent>
         </Card>
@@ -269,22 +269,21 @@ export default function KycVerifyPage() {
         <Card className="w-full max-w-md border-border shadow-premium-md">
           <CardHeader className="text-center">
             <CardTitle className="font-display text-premium-h3">
-              Verification complete
+              {t.kyc.verificationCompleteTitle}
             </CardTitle>
             <CardDescription>
-              Your identity has been verified. You can now set up your profile and start
-              creating content.
+              {t.kyc.verificationCompleteDescription}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 sm:flex-row sm:justify-center">
             <Button onClick={() => router.push("/settings/profile")}>
-              Set up profile
+              {t.kyc.setUpProfile}
             </Button>
             <Button
               variant="secondary"
               onClick={() => router.push("/creator/post/new")}
             >
-              Create first post
+              {t.kyc.createFirstPost}
             </Button>
           </CardContent>
         </Card>
@@ -297,11 +296,10 @@ export default function KycVerifyPage() {
       <Card className="w-full max-w-md border-border shadow-premium-md">
         <CardHeader>
           <CardTitle className="font-display text-premium-h3">
-            Identity verification
+            {t.kyc.identityVerificationTitle}
           </CardTitle>
           <CardDescription>
-            Step {step} of 3 — We need to verify your identity before you can publish
-            content. This information is kept secure and confidential.
+            {interpolate(t.kyc.stepDescription, { step })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -321,7 +319,7 @@ export default function KycVerifyPage() {
           {step === 1 && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="dob">Date of birth</Label>
+                <Label htmlFor="dob">{t.kyc.dobLabel}</Label>
                 <Input
                   id="dob"
                   type="date"
@@ -330,11 +328,11 @@ export default function KycVerifyPage() {
                   max={new Date().toISOString().split("T")[0]}
                 />
                 <p className="text-xs text-muted-foreground">
-                  You must be at least 18 years old to create content on Zinovia.
+                  {t.kyc.dobAgeRequirement}
                 </p>
               </div>
               <Button onClick={onNextAge} className="w-full">
-                Continue
+                {t.kyc.continueButton}
               </Button>
             </div>
           )}
@@ -344,11 +342,10 @@ export default function KycVerifyPage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="id-upload">
-                  ID card or passport photo
+                  {t.kyc.idUploadLabel}
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Upload a clear photo of the front of your government-issued ID card,
-                  passport, or driver&apos;s license.
+                  {t.kyc.idUploadInstructions}
                 </p>
                 <div className="rounded-lg border-2 border-dashed border-border bg-muted/30 p-6 text-center">
                   {idFile ? (
@@ -357,14 +354,14 @@ export default function KycVerifyPage() {
                         {idFile.name}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {(idFile.size / 1024 / 1024).toFixed(1)} MB
+                        {interpolate(t.kyc.idUploadFileSizeInfo, { size: (idFile.size / 1024 / 1024).toFixed(1) })}
                       </p>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => setIdFile(null)}
                       >
-                        Remove
+                        {t.kyc.removeButton}
                       </Button>
                     </div>
                   ) : (
@@ -373,10 +370,10 @@ export default function KycVerifyPage() {
                       className="cursor-pointer space-y-1"
                     >
                       <p className="text-sm text-muted-foreground">
-                        Click to select a file
+                        {t.kyc.clickToSelectFile}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        JPG, PNG, or PDF up to 10 MB
+                        {t.kyc.fileFormats}
                       </p>
                     </label>
                   )}
@@ -389,7 +386,7 @@ export default function KycVerifyPage() {
                       const file = e.target.files?.[0];
                       if (file) {
                         if (file.size > 10 * 1024 * 1024) {
-                          addToast("File too large. Maximum 10 MB.", "error");
+                          addToast(t.kyc.toastFileTooLarge, "error");
                           return;
                         }
                         setIdFile(file);
@@ -400,10 +397,10 @@ export default function KycVerifyPage() {
               </div>
               <div className="flex gap-2">
                 <Button variant="secondary" onClick={() => setStep(1)}>
-                  Back
+                  {t.kyc.backButton}
                 </Button>
                 <Button onClick={onNextId} className="flex-1">
-                  Continue
+                  {t.kyc.continueButton}
                 </Button>
               </div>
             </div>

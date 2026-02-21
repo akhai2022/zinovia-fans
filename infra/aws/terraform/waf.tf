@@ -53,7 +53,7 @@ resource "aws_wafv2_web_acl" "alb" {
     visibility_config {
       cloudwatch_metrics_enabled = true
       metric_name                = "CommonRuleSet"
-      sampled_requests_enabled    = true
+      sampled_requests_enabled   = true
     }
   }
 
@@ -72,7 +72,7 @@ resource "aws_wafv2_web_acl" "alb" {
     visibility_config {
       cloudwatch_metrics_enabled = true
       metric_name                = "RateLimitRule"
-      sampled_requests_enabled    = true
+      sampled_requests_enabled   = true
     }
   }
 
@@ -92,11 +92,12 @@ resource "aws_wafv2_web_acl_association" "alb" {
 }
 
 # CloudFront WAF (must be in us-east-1, CLOUDFRONT scope)
+# Shared by all CloudFront distributions (media + web)
 resource "aws_wafv2_web_acl" "cloudfront" {
   count       = local.ha_enable_waf && var.enable_cloudfront ? 1 : 0
   provider    = aws.us_east_1
-  name        = "${local.name_prefix}-cf-media-waf"
-  description = "WAF for CloudFront media distribution"
+  name        = "${local.name_prefix}-cf-waf"
+  description = "WAF for CloudFront distributions (media + web)"
   scope       = "CLOUDFRONT"
 
   default_action {
@@ -150,9 +151,9 @@ resource "aws_wafv2_web_acl" "cloudfront" {
 
   visibility_config {
     cloudwatch_metrics_enabled = true
-    metric_name                = "${local.name_prefix}-cf-media-waf"
+    metric_name                = "${local.name_prefix}-cf-waf"
     sampled_requests_enabled   = true
   }
 
-  tags = { Name = "${local.name_prefix}-cf-media-waf" }
+  tags = { Name = "${local.name_prefix}-cf-waf" }
 }

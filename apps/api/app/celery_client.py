@@ -76,6 +76,12 @@ def enqueue_ai_safety_scan(asset_id: str, object_key: str, content_type: str) ->
     )
 
 
+def enqueue_remove_background(job_id: str) -> None:
+    """Enqueue AI tool remove-background task. Idempotent on worker side."""
+    app = _get_celery_app()
+    app.send_task("ai_tools.remove_background", args=[job_id])  # type: ignore[attr-defined]
+
+
 def enqueue_translate_caption(
     translation_id: str,
     source_text: str,

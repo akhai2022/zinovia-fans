@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { apiFetch } from "@/lib/api/client";
 import { featureFlags } from "@/lib/featureFlags";
+import { useTranslation } from "@/lib/i18n";
 import { Icon } from "@/components/ui/icon";
 
 type Tone = "professional" | "playful" | "teasing";
@@ -26,10 +27,10 @@ type Props = {
   onInsertCaption?: (text: string) => void;
 };
 
-const TONES: { value: Tone; label: string }[] = [
-  { value: "professional", label: "Professional" },
-  { value: "playful", label: "Playful" },
-  { value: "teasing", label: "Teasing" },
+const TONES: { value: Tone; labelKey: "toneProfessional" | "tonePlayful" | "toneTeasing" }[] = [
+  { value: "professional", labelKey: "toneProfessional" },
+  { value: "playful", labelKey: "tonePlayful" },
+  { value: "teasing", labelKey: "toneTeasing" },
 ];
 
 export function PromoSuggestions({ postId, onInsertCaption }: Props) {
@@ -38,6 +39,7 @@ export function PromoSuggestions({ postId, onInsertCaption }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { addToast } = useToast();
+  const { t } = useTranslation();
 
   if (!featureFlags.promoGenerator) return null;
 
@@ -52,7 +54,7 @@ export function PromoSuggestions({ postId, onInsertCaption }: Props) {
       });
       setPromo(data);
     } catch {
-      setError("Could not generate promo. Try again in a moment.");
+      setError(t.promo.errorGenerate);
     } finally {
       setLoading(false);
     }
@@ -60,7 +62,7 @@ export function PromoSuggestions({ postId, onInsertCaption }: Props) {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
-      addToast("Copied to clipboard", "success");
+      addToast(t.promo.toastCopiedToClipboard, "success");
     });
   };
 
@@ -69,26 +71,26 @@ export function PromoSuggestions({ postId, onInsertCaption }: Props) {
       <CardContent className="p-4 space-y-3">
         <div className="flex items-center gap-2">
           <Icon name="auto_awesome" className="icon-base text-primary" />
-          <span className="text-sm font-medium text-foreground">Promo suggestions</span>
+          <span className="text-sm font-medium text-foreground">{t.promo.title}</span>
         </div>
 
         {/* Tone selector */}
         <div className="flex gap-1.5">
-          {TONES.map((t) => (
+          {TONES.map((toneItem) => (
             <button
-              key={t.value}
+              key={toneItem.value}
               type="button"
               onClick={() => {
-                setTone(t.value);
+                setTone(toneItem.value);
                 setPromo(null);
               }}
               className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                tone === t.value
+                tone === toneItem.value
                   ? "bg-primary text-white"
                   : "bg-surface-alt text-muted-foreground hover:text-foreground"
               }`}
             >
-              {t.label}
+              {t.promo[toneItem.labelKey]}
             </button>
           ))}
         </div>
@@ -103,7 +105,7 @@ export function PromoSuggestions({ postId, onInsertCaption }: Props) {
             disabled={!postId}
           >
             <Icon name="auto_awesome" className="mr-1.5 icon-sm" />
-            Generate promo copy
+            {t.promo.generateButton}
           </Button>
         )}
 
@@ -125,7 +127,7 @@ export function PromoSuggestions({ postId, onInsertCaption }: Props) {
             {/* Title */}
             <div className="space-y-1">
               <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wider">
-                Title
+                {t.promo.sectionTitle}
               </span>
               <div className="flex items-center gap-2">
                 <p className="text-sm font-medium text-foreground flex-1">{promo.title}</p>
@@ -142,7 +144,7 @@ export function PromoSuggestions({ postId, onInsertCaption }: Props) {
             {/* Description */}
             <div className="space-y-1">
               <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wider">
-                Description
+                {t.promo.sectionDescription}
               </span>
               <div className="flex items-start gap-2">
                 <p className="text-sm text-muted-foreground flex-1 leading-relaxed">
@@ -155,7 +157,7 @@ export function PromoSuggestions({ postId, onInsertCaption }: Props) {
                     else copyToClipboard(promo.description);
                   }}
                   className="mt-0.5 shrink-0 text-muted-foreground hover:text-foreground"
-                  title={onInsertCaption ? "Insert as caption" : "Copy"}
+                  title={onInsertCaption ? t.promo.insertAsCaption : t.promo.copy}
                 >
                   <Icon name="content_copy" className="icon-sm" />
                 </button>
@@ -165,7 +167,7 @@ export function PromoSuggestions({ postId, onInsertCaption }: Props) {
             {/* CTAs */}
             <div className="space-y-1">
               <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wider">
-                Call to action
+                {t.promo.sectionCta}
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {promo.cta_lines.map((cta) => (
@@ -184,7 +186,7 @@ export function PromoSuggestions({ postId, onInsertCaption }: Props) {
             {/* Hashtags */}
             <div className="space-y-1">
               <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wider">
-                Hashtags
+                {t.promo.sectionHashtags}
               </span>
               <div className="flex flex-wrap gap-1">
                 {promo.hashtags.map((tag) => (
@@ -204,7 +206,7 @@ export function PromoSuggestions({ postId, onInsertCaption }: Props) {
                 className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
               >
                 <Icon name="tag" className="icon-xs" />
-                Copy all hashtags
+                {t.promo.copyAllHashtags}
               </button>
             </div>
 
@@ -217,7 +219,7 @@ export function PromoSuggestions({ postId, onInsertCaption }: Props) {
               className="mt-1"
             >
               <Icon name="auto_awesome" className="mr-1 icon-xs" />
-              Regenerate
+              {t.promo.regenerateButton}
             </Button>
           </div>
         )}

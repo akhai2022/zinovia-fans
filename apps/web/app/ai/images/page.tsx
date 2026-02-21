@@ -8,10 +8,12 @@ import { Page } from "@/components/brand/Page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "@/lib/i18n";
 import "@/lib/api";
 
 export default function AiImagesListPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [jobs, setJobs] = useState<AiImageJobOut[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +36,7 @@ export default function AiImagesListPage() {
     return (
       <Page>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          AI Image Studio
+          {t.aiStudio.title}
         </h1>
         <Skeleton className="mt-4 h-32 w-full" />
         <Skeleton className="mt-2 h-32 w-full" />
@@ -46,7 +48,7 @@ export default function AiImagesListPage() {
     return (
       <Page>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          AI Image Studio
+          {t.aiStudio.title}
         </h1>
         <p className="mt-2 text-sm text-destructive">{error}</p>
       </Page>
@@ -57,20 +59,20 @@ export default function AiImagesListPage() {
     <Page>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          AI Image Studio
+          {t.aiStudio.title}
         </h1>
         <Button asChild>
-          <Link href="/ai/images/new">Generate new</Link>
+          <Link href="/ai/images/new">{t.aiStudio.generateNewButton}</Link>
         </Button>
       </div>
       {!jobs || jobs.length === 0 ? (
         <Card className="mt-4">
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">
-              No AI images yet. Generate your first image.
+              {t.aiStudio.emptyMessage}
             </p>
             <Button className="mt-4" asChild>
-              <Link href="/ai/images/new">Generate new</Link>
+              <Link href="/ai/images/new">{t.aiStudio.generateNewButton}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -103,7 +105,7 @@ export default function AiImagesListPage() {
                   </div>
                 )}
                 <Button variant="outline" size="sm" className="mt-2 w-full" asChild>
-                  <Link href={`/ai/images/${job.id}`}>View & apply</Link>
+                  <Link href={`/ai/images/${job.id}`}>{t.aiStudio.viewApplyButton}</Link>
                 </Button>
               </CardContent>
             </Card>

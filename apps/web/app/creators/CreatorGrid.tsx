@@ -10,6 +10,7 @@ import { CreatorAvatarAsset } from "@/features/creators/components/CreatorAvatar
 import { FollowButton } from "@/features/creators/components/FollowButton";
 import { apiFetch } from "@/lib/api/client";
 import { getApiErrorMessage } from "@/lib/errors";
+import { useTranslation, interpolate } from "@/lib/i18n";
 import "@/lib/api";
 import type { CreatorItem, CreatorDiscoverPage } from "./page";
 
@@ -26,6 +27,7 @@ export function CreatorGrid({
   initialQuery,
   pageSize,
 }: CreatorGridProps) {
+  const { t } = useTranslation();
   const [items, setItems] = useState<CreatorItem[]>(initialItems);
   const [total, setTotal] = useState(initialTotal);
   const [query, setQuery] = useState(initialQuery);
@@ -91,10 +93,10 @@ export function CreatorGrid({
             name="q"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search creators..."
+            placeholder={t.creatorsPage.searchPlaceholder}
             className="h-10 flex-1 rounded-xl border border-input bg-background px-3 text-sm"
           />
-          <Button type="submit">Search</Button>
+          <Button type="submit">{t.creatorsPage.searchButton}</Button>
         </div>
       </form>
 
@@ -108,7 +110,7 @@ export function CreatorGrid({
             className="mt-3"
             onClick={() => fetchPage(page, query, false)}
           >
-            Retry
+            {t.creatorsPage.retryButton}
           </Button>
         </Card>
       )}
@@ -139,18 +141,17 @@ export function CreatorGrid({
             </svg>
           </div>
           <p className="font-display text-lg font-semibold text-foreground">
-            No creators have published profiles yet.
+            {t.creatorsPage.noCreatorsTitle}
           </p>
           <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-            This is a new platform. Creators are signing up and building their
-            profiles. Be the first to share your work!
+            {t.creatorsPage.noCreatorsDescription}
           </p>
           <div className="mt-6 flex flex-col gap-2 sm:flex-row">
             <Button size="sm" asChild>
-              <Link href="/signup">Become a creator</Link>
+              <Link href="/signup">{t.creatorsPage.becomeCreator}</Link>
             </Button>
             <Button variant="secondary" size="sm" asChild>
-              <Link href="/">Back to home</Link>
+              <Link href="/">{t.creatorsPage.backToHome}</Link>
             </Button>
           </div>
         </div>
@@ -182,7 +183,7 @@ export function CreatorGrid({
             </svg>
           </div>
           <p className="text-sm font-medium text-foreground">
-            No results for &quot;{query}&quot;.
+            {interpolate(t.creatorsPage.noResultsForQuery, { query })}
           </p>
           <Button
             variant="secondary"
@@ -194,7 +195,7 @@ export function CreatorGrid({
               fetchPage(1, "", false);
             }}
           >
-            Clear search
+            {t.creatorsPage.clearSearch}
           </Button>
         </div>
       )}
@@ -239,7 +240,7 @@ export function CreatorGrid({
                         {creator.display_name || creator.handle}
                         {creator.verified && (
                           <span className="ml-1.5 inline-block shrink-0 rounded-full bg-success-bg px-1.5 py-0.5 align-middle text-[10px] uppercase tracking-wide text-success-500">
-                            Verified
+                            {t.creatorsPage.verified}
                           </span>
                         )}
                       </p>
@@ -247,11 +248,10 @@ export function CreatorGrid({
                         @{creator.handle}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {creator.followers_count} followers ·{" "}
-                        {creator.posts_count} posts
+                        {interpolate(t.creatorsPage.followersAndPosts, { followersCount: creator.followers_count, postsCount: creator.posts_count })}
                       </p>
                       <span className="mt-2 inline-block text-premium-small font-medium text-primary">
-                        View →
+                        {t.creatorsPage.viewLink}
                       </span>
                     </div>
                   </Link>
@@ -298,7 +298,7 @@ export function CreatorGrid({
             onClick={onLoadMore}
             disabled={loading}
           >
-            Load more creators
+            {t.creatorsPage.loadMoreCreators}
           </Button>
         </div>
       )}
@@ -306,7 +306,7 @@ export function CreatorGrid({
       {/* End of list */}
       {items.length > 0 && !hasMore && !loading && (
         <p className="py-2 text-center text-sm text-muted-foreground">
-          Showing all {total} creator{total !== 1 ? "s" : ""}.
+          {interpolate(t.creatorsPage.showingAll, { total })}
         </p>
       )}
     </>

@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { FeedCard } from "@/features/posts/components/FeedCard";
 import { apiFetch } from "@/lib/api/client";
 import { getApiErrorMessage } from "@/lib/errors";
+import { useTranslation, interpolate } from "@/lib/i18n";
 import "@/lib/api";
 
 type SearchCreator = {
@@ -39,6 +40,7 @@ type SearchPage = {
 };
 
 export default function SearchPostsPage() {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [total, setTotal] = useState(0);
@@ -82,7 +84,7 @@ export default function SearchPostsPage() {
   return (
     <Page className="max-w-3xl space-y-6">
       <h1 className="font-display text-premium-h2 font-semibold text-foreground">
-        Search Posts
+        {t.searchPage.title}
       </h1>
       <form onSubmit={onSubmit} className="rounded-2xl border border-border bg-card p-3 shadow-sm">
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -90,12 +92,12 @@ export default function SearchPostsPage() {
             name="q"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by caption..."
+            placeholder={t.searchPage.searchPlaceholder}
             className="h-10 flex-1 rounded-xl border border-input bg-background px-3 text-sm"
             autoFocus
           />
           <Button type="submit" disabled={loading || !query.trim()}>
-            {loading ? "Searching..." : "Search"}
+            {loading ? t.searchPage.searchButtonLoading : t.searchPage.searchButton}
           </Button>
         </div>
       </form>
@@ -109,7 +111,7 @@ export default function SearchPostsPage() {
       {searched && results.length === 0 && !loading && (
         <div className="rounded-2xl border border-border bg-card p-8 text-center">
           <p className="text-sm text-muted-foreground">
-            No posts found for &quot;{query}&quot;.
+            {interpolate(t.searchPage.noResults, { query })}
           </p>
         </div>
       )}
@@ -139,19 +141,19 @@ export default function SearchPostsPage() {
             size="sm"
             onClick={() => doSearch(query, page + 1, true)}
           >
-            Load more
+            {t.searchPage.loadMore}
           </Button>
         </div>
       )}
 
       {results.length > 0 && !hasMore && !loading && (
         <p className="py-2 text-center text-sm text-muted-foreground">
-          Showing all {total} result{total !== 1 ? "s" : ""}.
+          {interpolate(t.searchPage.showingAll, { total })}
         </p>
       )}
 
       <Button variant="ghost" size="sm" asChild>
-        <Link href="/">Back to home</Link>
+        <Link href="/">{t.searchPage.backToHome}</Link>
       </Button>
     </Page>
   );

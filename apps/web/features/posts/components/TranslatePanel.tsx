@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { apiFetch } from "@/lib/api/client";
 import { featureFlags } from "@/lib/featureFlags";
+import { useTranslation } from "@/lib/i18n";
 import { Icon } from "@/components/ui/icon";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -23,9 +24,9 @@ type Props = {
 };
 
 const LANGUAGES = [
-  { code: "fr", label: "French", flag: "FR" },
-  { code: "es", label: "Spanish", flag: "ES" },
-  { code: "ar", label: "Arabic", flag: "AR", comingSoon: true },
+  { code: "fr", labelKey: "languageFrench" as const, flag: "FR" },
+  { code: "es", labelKey: "languageSpanish" as const, flag: "ES" },
+  { code: "ar", labelKey: "languageArabic" as const, flag: "AR", comingSoon: true },
 ];
 
 export function TranslatePanel({ postId, caption }: Props) {
@@ -35,6 +36,7 @@ export function TranslatePanel({ postId, caption }: Props) {
   const [polling, setPolling] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { addToast } = useToast();
+  const { t } = useTranslation();
 
   if (!featureFlags.translations) return null;
 
@@ -62,7 +64,7 @@ export function TranslatePanel({ postId, caption }: Props) {
         startPolling();
       }
     } catch {
-      addToast("Translation request failed", "error");
+      addToast(t.translate.toastTranslationFailed, "error");
     } finally {
       setLoading(false);
     }
@@ -108,7 +110,7 @@ export function TranslatePanel({ postId, caption }: Props) {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
-      addToast("Copied to clipboard", "success");
+      addToast(t.translate.toastCopiedToClipboard, "success");
     });
   };
 
@@ -119,7 +121,7 @@ export function TranslatePanel({ postId, caption }: Props) {
       <CardContent className="p-4 space-y-3">
         <div className="flex items-center gap-2">
           <Icon name="translate" className="icon-base text-primary" />
-          <span className="text-sm font-medium text-foreground">Translate caption</span>
+          <span className="text-sm font-medium text-foreground">{t.translate.title}</span>
         </div>
 
         {/* Language selector */}
@@ -137,11 +139,11 @@ export function TranslatePanel({ postId, caption }: Props) {
                     ? "bg-primary text-white"
                     : "bg-surface-alt text-muted-foreground hover:text-foreground"
               }`}
-              title={lang.comingSoon ? "Coming soon" : lang.label}
+              title={lang.comingSoon ? t.translate.comingSoon : t.translate[lang.labelKey]}
             >
               {lang.flag}
               {lang.comingSoon && (
-                <span className="ml-1 text-[10px]">soon</span>
+                <span className="ml-1 text-[10px]">{t.translate.comingSoonBadge}</span>
               )}
             </button>
           ))}
@@ -157,7 +159,7 @@ export function TranslatePanel({ postId, caption }: Props) {
             disabled={selectedLangs.length === 0 || !postId}
           >
             <Icon name="translate" className="mr-1.5 icon-sm" />
-            Translate
+            {t.translate.translateButton}
           </Button>
         )}
 
@@ -171,45 +173,45 @@ export function TranslatePanel({ postId, caption }: Props) {
         {/* Translation results */}
         {translations.length > 0 && (
           <div className="space-y-2">
-            {translations.map((t) => {
-              const lang = LANGUAGES.find((l) => l.code === t.target_language);
+            {translations.map((tr) => {
+              const lang = LANGUAGES.find((l) => l.code === tr.target_language);
               return (
                 <div
-                  key={t.id}
+                  key={tr.id}
                   className="rounded-lg border border-border bg-surface-alt p-3"
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wider">
-                      {lang?.label ?? t.target_language}
+                      {lang ? t.translate[lang.labelKey] : tr.target_language}
                     </span>
-                    {t.status === "pending" && (
+                    {tr.status === "pending" && (
                       <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
                         <Spinner className="icon-xs" />
-                        Translating...
+                        {t.translate.translating}
                       </span>
                     )}
-                    {t.status === "completed" && t.translated_text && (
+                    {tr.status === "completed" && tr.translated_text && (
                       <button
                         type="button"
-                        onClick={() => copyToClipboard(t.translated_text!)}
+                        onClick={() => copyToClipboard(tr.translated_text!)}
                         className="text-muted-foreground hover:text-foreground"
                       >
                         <Icon name="content_copy" className="icon-sm" />
                       </button>
                     )}
-                    {t.status === "failed" && (
-                      <span className="text-[10px] text-destructive">Failed</span>
+                    {tr.status === "failed" && (
+                      <span className="text-[10px] text-destructive">{t.translate.translationFailed}</span>
                     )}
                   </div>
-                  {t.status === "completed" && t.translated_text ? (
+                  {tr.status === "completed" && tr.translated_text ? (
                     <p className="text-sm text-foreground leading-relaxed">
-                      {t.translated_text}
+                      {tr.translated_text}
                     </p>
-                  ) : t.status === "pending" ? (
+                  ) : tr.status === "pending" ? (
                     <Skeleton className="h-10 w-full" />
                   ) : (
                     <p className="text-xs text-muted-foreground italic">
-                      Translation unavailable
+                      {t.translate.translationUnavailable}
                     </p>
                   )}
                 </div>
@@ -225,7 +227,7 @@ export function TranslatePanel({ postId, caption }: Props) {
                 onClick={requestTranslation}
               >
                 <Icon name="translate" className="mr-1 icon-xs" />
-                Translate again
+                {t.translate.translateAgainButton}
               </Button>
             )}
           </div>

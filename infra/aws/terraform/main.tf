@@ -300,7 +300,7 @@ resource "aws_s3_bucket_policy" "logs" {
         Effect    = "Allow"
         Principal = { Service = "delivery.logs.amazonaws.com" }
         Action    = "s3:PutObject"
-        Resource  = "${aws_s3_bucket.logs.arn}/cloudfront/media/*"
+        Resource  = "${aws_s3_bucket.logs.arn}/cloudfront/*"
         Condition = {
           StringEquals = { "aws:SourceAccount" = data.aws_caller_identity.current.account_id }
         }
@@ -428,6 +428,21 @@ module "acm_apex" {
 }
 
 # -----------------------------------------------------------------------------
+# ACM: CloudFront web cert (us-east-1) — zinovia.ai + www (when CF + ALB)
+# -----------------------------------------------------------------------------
+module "acm_cloudfront_web" {
+  count                     = var.enable_cloudfront && var.enable_alb && var.enable_acm ? 1 : 0
+  source                    = "./modules/acm"
+  providers                 = { aws = aws.us_east_1 }
+  domain_name               = var.domain_name
+  subject_alternative_names = [local.www_domain]
+  zone_id                   = local.zone_id
+  name_prefix               = "${local.name_prefix}-cf-web"
+  create_validation_records = var.dns_delegated
+  wait_for_validation       = var.wait_for_certificate_validation
+}
+
+# -----------------------------------------------------------------------------
 # CloudFront media CDN (when enable_cloudfront; default domain when no ACM, custom when enable_acm)
 # -----------------------------------------------------------------------------
 module "cloudfront_media" {
@@ -442,7 +457,7 @@ module "cloudfront_media" {
   environment                    = var.environment
   logs_bucket_domain             = aws_s3_bucket.logs.bucket_regional_domain_name
   logs_prefix                    = "cloudfront/media"
-  web_acl_id                     = length(aws_wafv2_web_acl.cloudfront) > 0 ? aws_wafv2_web_acl.cloudfront[0].id : null
+  web_acl_id                     = length(aws_wafv2_web_acl.cloudfront) > 0 ? aws_wafv2_web_acl.cloudfront[0].arn : null
 }
 
 # Store CloudFront private key in Secrets Manager for ECS task injection
@@ -457,6 +472,266 @@ resource "aws_secretsmanager_secret_version" "cloudfront_private_key" {
   count         = var.enable_cloudfront ? 1 : 0
   secret_id     = aws_secretsmanager_secret.cloudfront_private_key[0].id
   secret_string = module.cloudfront_media[0].private_key_pem
+}
+
+# -----------------------------------------------------------------------------
+# CloudFront Web CDN: origin verify secret, CF function, cache policies,
+# response headers, and distribution (when enable_cloudfront + enable_alb)
+# -----------------------------------------------------------------------------
+
+# Secret header to verify requests come from CloudFront (not direct ALB bypass)
+resource "random_password" "origin_verify" {
+  count   = var.enable_cloudfront && var.enable_alb ? 1 : 0
+  length  = 64
+  special = false
+}
+
+resource "aws_secretsmanager_secret" "origin_verify" {
+  count                   = var.enable_cloudfront && var.enable_alb ? 1 : 0
+  name                    = "${local.name_prefix}-cf-origin-verify"
+  recovery_window_in_days = 7
+  tags                    = { Name = "${local.name_prefix}-cf-origin-verify" }
+}
+
+resource "aws_secretsmanager_secret_version" "origin_verify" {
+  count         = var.enable_cloudfront && var.enable_alb ? 1 : 0
+  secret_id     = aws_secretsmanager_secret.origin_verify[0].id
+  secret_string = random_password.origin_verify[0].result
+}
+
+# CloudFront Function: strip /api prefix so ALB host-based routing works
+resource "aws_cloudfront_function" "strip_api_prefix" {
+  count   = var.enable_cloudfront && var.enable_alb ? 1 : 0
+  name    = "${local.name_prefix}-strip-api-prefix"
+  runtime = "cloudfront-js-2.0"
+  comment = "Strip /api prefix for ALB API routing"
+  publish = true
+  code    = <<-JS
+    function handler(event) {
+      var request = event.request;
+      request.uri = request.uri.replace(/^\\/api/, '') || '/';
+      return request;
+    }
+  JS
+}
+
+# Cache policy: 1-year immutable for hashed /_next/static/* assets
+resource "aws_cloudfront_cache_policy" "static_immutable" {
+  count       = var.enable_cloudfront && var.enable_alb ? 1 : 0
+  name        = "${local.name_prefix}-static-immutable"
+  comment     = "1-year immutable cache for hashed static assets"
+  default_ttl = 31536000
+  max_ttl     = 31536000
+  min_ttl     = 31536000
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    cookies_config { cookie_behavior = "none" }
+    headers_config {
+      header_behavior = "whitelist"
+      headers { items = ["Accept-Encoding"] }
+    }
+    query_strings_config { query_string_behavior = "none" }
+    enable_accept_encoding_gzip   = true
+    enable_accept_encoding_brotli = true
+  }
+}
+
+# Cache policy: 1-day default / 30-day max for /assets, /fonts, /_next/image
+resource "aws_cloudfront_cache_policy" "assets" {
+  count       = var.enable_cloudfront && var.enable_alb ? 1 : 0
+  name        = "${local.name_prefix}-assets-cache"
+  comment     = "Cache assets 1d default, up to 30d"
+  default_ttl = 86400
+  max_ttl     = 2592000
+  min_ttl     = 0
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    cookies_config { cookie_behavior = "none" }
+    headers_config {
+      header_behavior = "whitelist"
+      headers { items = ["Accept-Encoding"] }
+    }
+    query_strings_config { query_string_behavior = "all" }
+    enable_accept_encoding_gzip   = true
+    enable_accept_encoding_brotli = true
+  }
+}
+
+# Response headers: enforce security headers at edge
+resource "aws_cloudfront_response_headers_policy" "security" {
+  count   = var.enable_cloudfront && var.enable_alb ? 1 : 0
+  name    = "${local.name_prefix}-security-headers"
+  comment = "Security headers for web distribution"
+
+  security_headers_config {
+    strict_transport_security {
+      access_control_max_age_sec = 63072000
+      include_subdomains         = true
+      preload                    = true
+      override                   = true
+    }
+    content_type_options {
+      override = true
+    }
+    frame_options {
+      frame_option = "DENY"
+      override     = true
+    }
+    referrer_policy {
+      referrer_policy = "strict-origin-when-cross-origin"
+      override        = true
+    }
+  }
+}
+
+# CloudFront Web distribution: ALB origin with path-based behaviors
+resource "aws_cloudfront_distribution" "web_alb" {
+  count               = var.enable_cloudfront && var.enable_alb ? 1 : 0
+  enabled             = true
+  is_ipv6_enabled     = true
+  comment             = "Web CDN for ${local.name_prefix} (ALB origin)"
+  default_root_object = ""
+  price_class         = "PriceClass_100"
+  aliases             = var.enable_custom_domain ? local.web_domains : []
+  web_acl_id          = length(aws_wafv2_web_acl.cloudfront) > 0 ? aws_wafv2_web_acl.cloudfront[0].arn : null
+
+  viewer_certificate {
+    cloudfront_default_certificate = !(var.enable_acm && var.enable_custom_domain)
+    acm_certificate_arn            = var.enable_acm && var.enable_custom_domain ? module.acm_cloudfront_web[0].certificate_arn : null
+    ssl_support_method             = var.enable_acm && var.enable_custom_domain ? "sni-only" : null
+    minimum_protocol_version       = var.enable_acm && var.enable_custom_domain ? "TLSv1.2_2021" : null
+  }
+
+  # --- Origins ---
+
+  # Web origin: ALB via api.zinovia.ai; AllViewer forwards Host: zinovia.ai for ALB routing
+  origin {
+    domain_name = local.api_domain
+    origin_id   = "web-alb"
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+    custom_header {
+      name  = "X-Origin-Verify"
+      value = random_password.origin_verify[0].result
+    }
+  }
+
+  # API origin: ALB via api.zinovia.ai; AllViewerExceptHostHeader sends Host: api.zinovia.ai
+  origin {
+    domain_name = local.api_domain
+    origin_id   = "api-alb"
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+    custom_header {
+      name  = "X-Origin-Verify"
+      value = random_password.origin_verify[0].result
+    }
+  }
+
+  # --- Behaviors (ordered by precedence) ---
+
+  # 1. /_next/static/* — immutable hashed JS/CSS chunks (1 year)
+  ordered_cache_behavior {
+    path_pattern               = "/_next/static/*"
+    target_origin_id           = "web-alb"
+    allowed_methods            = ["GET", "HEAD"]
+    cached_methods             = ["GET", "HEAD"]
+    compress                   = true
+    viewer_protocol_policy     = "redirect-to-https"
+    cache_policy_id            = aws_cloudfront_cache_policy.static_immutable[0].id
+    origin_request_policy_id   = "216adef6-5c7f-47e4-b989-5492eafa07d3" # AllViewer
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security[0].id
+  }
+
+  # 2. /assets/* — public directory images/icons (1 day)
+  ordered_cache_behavior {
+    path_pattern               = "/assets/*"
+    target_origin_id           = "web-alb"
+    allowed_methods            = ["GET", "HEAD"]
+    cached_methods             = ["GET", "HEAD"]
+    compress                   = true
+    viewer_protocol_policy     = "redirect-to-https"
+    cache_policy_id            = aws_cloudfront_cache_policy.assets[0].id
+    origin_request_policy_id   = "216adef6-5c7f-47e4-b989-5492eafa07d3" # AllViewer
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security[0].id
+  }
+
+  # 3. /fonts/* — web fonts (1 day)
+  ordered_cache_behavior {
+    path_pattern               = "/fonts/*"
+    target_origin_id           = "web-alb"
+    allowed_methods            = ["GET", "HEAD"]
+    cached_methods             = ["GET", "HEAD"]
+    compress                   = true
+    viewer_protocol_policy     = "redirect-to-https"
+    cache_policy_id            = aws_cloudfront_cache_policy.assets[0].id
+    origin_request_policy_id   = "216adef6-5c7f-47e4-b989-5492eafa07d3" # AllViewer
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security[0].id
+  }
+
+  # 4. /_next/image/* — Next.js image optimizer (1 day, query strings in cache key)
+  ordered_cache_behavior {
+    path_pattern               = "/_next/image/*"
+    target_origin_id           = "web-alb"
+    allowed_methods            = ["GET", "HEAD"]
+    cached_methods             = ["GET", "HEAD"]
+    compress                   = true
+    viewer_protocol_policy     = "redirect-to-https"
+    cache_policy_id            = aws_cloudfront_cache_policy.assets[0].id
+    origin_request_policy_id   = "216adef6-5c7f-47e4-b989-5492eafa07d3" # AllViewer
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security[0].id
+  }
+
+  # 5. /api/* — API proxy (no cache, strip prefix via CF function, API origin)
+  ordered_cache_behavior {
+    path_pattern             = "/api/*"
+    target_origin_id         = "api-alb"
+    allowed_methods          = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods           = ["GET", "HEAD"]
+    compress                 = true
+    viewer_protocol_policy   = "redirect-to-https"
+    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # CachingDisabled
+    origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac" # AllViewerExceptHostHeader
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.strip_api_prefix[0].arn
+    }
+  }
+
+  # 6. /* (default) — SSR HTML (no cache, forward everything for auth)
+  default_cache_behavior {
+    target_origin_id           = "web-alb"
+    allowed_methods            = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods             = ["GET", "HEAD"]
+    compress                   = true
+    viewer_protocol_policy     = "redirect-to-https"
+    cache_policy_id            = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # CachingDisabled
+    origin_request_policy_id   = "216adef6-5c7f-47e4-b989-5492eafa07d3" # AllViewer
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security[0].id
+  }
+
+  restrictions {
+    geo_restriction { restriction_type = "none" }
+  }
+
+  logging_config {
+    bucket          = aws_s3_bucket.logs.bucket_regional_domain_name
+    prefix          = "cloudfront/web"
+    include_cookies = false
+  }
+
+  tags = { Name = "${local.name_prefix}-web-cdn" }
+
+  depends_on = [module.acm_cloudfront_web]
 }
 
 # -----------------------------------------------------------------------------
@@ -487,8 +762,9 @@ resource "aws_route53_record" "app" {
 }
 
 # Apex (zinovia.ai) and www.zinovia.ai → ALB when web_use_apex (Next.js at root domain)
+# Apex + www → ALB (only when CloudFront disabled; otherwise CF handles these)
 resource "aws_route53_record" "apex_alb_a" {
-  count   = var.enable_alb && var.enable_route53 && var.dns_delegated && var.web_use_apex ? 1 : 0
+  count   = var.enable_alb && var.enable_route53 && var.dns_delegated && var.web_use_apex && !var.enable_cloudfront ? 1 : 0
   zone_id = local.zone_id
   name    = ""
   type    = "A"
@@ -500,7 +776,7 @@ resource "aws_route53_record" "apex_alb_a" {
 }
 
 resource "aws_route53_record" "www_alb" {
-  count   = var.enable_alb && var.enable_route53 && var.dns_delegated && var.web_use_apex ? 1 : 0
+  count   = var.enable_alb && var.enable_route53 && var.dns_delegated && var.web_use_apex && !var.enable_cloudfront ? 1 : 0
   zone_id = local.zone_id
   name    = "www"
   type    = "A"
@@ -508,6 +784,31 @@ resource "aws_route53_record" "www_alb" {
     name                   = aws_lb.main[0].dns_name
     zone_id                = aws_lb.main[0].zone_id
     evaluate_target_health = true
+  }
+}
+
+# Apex + www → CloudFront web distribution (when CloudFront + ALB enabled)
+resource "aws_route53_record" "apex_cf_a" {
+  count   = var.enable_alb && var.enable_route53 && var.dns_delegated && var.web_use_apex && var.enable_cloudfront ? 1 : 0
+  zone_id = local.zone_id
+  name    = ""
+  type    = "A"
+  alias {
+    name                   = aws_cloudfront_distribution.web_alb[0].domain_name
+    zone_id                = aws_cloudfront_distribution.web_alb[0].hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_route53_record" "www_cf" {
+  count   = var.enable_alb && var.enable_route53 && var.dns_delegated && var.web_use_apex && var.enable_cloudfront ? 1 : 0
+  zone_id = local.zone_id
+  name    = "www"
+  type    = "A"
+  alias {
+    name                   = aws_cloudfront_distribution.web_alb[0].domain_name
+    zone_id                = aws_cloudfront_distribution.web_alb[0].hosted_zone_id
+    evaluate_target_health = false
   }
 }
 
@@ -774,8 +1075,51 @@ resource "aws_lb_listener_rule" "api" {
   }
 }
 
+# Priority 90: CloudFront web traffic (verified via X-Origin-Verify header)
+resource "aws_lb_listener_rule" "web_cf" {
+  count        = local.use_https_listener && var.enable_cloudfront ? 1 : 0
+  listener_arn = aws_lb_listener.https[0].arn
+  priority     = 90
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.web[0].arn
+  }
+  condition {
+    host_header {
+      values = local.web_domains
+    }
+  }
+  condition {
+    http_header {
+      http_header_name = "X-Origin-Verify"
+      values           = [random_password.origin_verify[0].result]
+    }
+  }
+}
+
+# Priority 105: Reject direct web access that bypasses CloudFront
+resource "aws_lb_listener_rule" "web_reject_bypass" {
+  count        = local.use_https_listener && var.enable_cloudfront ? 1 : 0
+  listener_arn = aws_lb_listener.https[0].arn
+  priority     = 105
+  action {
+    type = "fixed-response"
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Access denied"
+      status_code  = "403"
+    }
+  }
+  condition {
+    host_header {
+      values = local.web_domains
+    }
+  }
+}
+
+# Priority 110: Direct web access (only when CloudFront is disabled)
 resource "aws_lb_listener_rule" "web" {
-  count        = local.use_https_listener ? 1 : 0
+  count        = local.use_https_listener && !var.enable_cloudfront ? 1 : 0
   listener_arn = aws_lb_listener.https[0].arn
   priority     = 110
   action {
@@ -1088,6 +1432,7 @@ resource "aws_ecs_task_definition" "api" {
         { name = "ENABLE_PROMO_GENERATOR", value = tostring(var.enable_promo_generator) },
         { name = "ENABLE_TRANSLATIONS", value = tostring(var.enable_translations) },
         { name = "ENABLE_AI_SAFETY", value = tostring(var.enable_ai_safety) },
+        { name = "ENABLE_AI_TOOLS", value = tostring(var.enable_ai_tools) },
         { name = "DEFAULT_CURRENCY", value = var.default_currency },
         { name = "CCBILL_ACCOUNT_NUMBER", value = var.ccbill_account_number },
         { name = "CCBILL_SUB_ACCOUNT", value = var.ccbill_sub_account },
@@ -1095,7 +1440,9 @@ resource "aws_ecs_task_definition" "api" {
         { name = "CCBILL_DATALINK_USERNAME", value = var.ccbill_datalink_username },
         { name = "CCBILL_TEST_MODE", value = tostring(var.ccbill_test_mode) },
         { name = "CHECKOUT_SUCCESS_URL", value = local.web_base_url != "" ? "${local.web_base_url}/billing/success" : "http://localhost:3000/billing/success" },
-        { name = "CHECKOUT_CANCEL_URL", value = local.web_base_url != "" ? "${local.web_base_url}/billing/cancel" : "http://localhost:3000/billing/cancel" }
+        { name = "CHECKOUT_CANCEL_URL", value = local.web_base_url != "" ? "${local.web_base_url}/billing/cancel" : "http://localhost:3000/billing/cancel" },
+        { name = "MEDIA_WM_PREVIEW_ENABLED", value = "true" },
+        { name = "MEDIA_WM_PREVIEW_TEXT", value = "zinovia-fans" }
       ],
       local.web_base_url != "" ? [
         { name = "APP_BASE_URL", value = local.web_base_url },
@@ -1158,6 +1505,7 @@ resource "aws_ecs_task_definition" "web" {
     environment = concat(
       [
         { name = "NEXT_PUBLIC_API_BASE_URL", value = (var.enable_alb && !var.enable_custom_domain) ? "http://${aws_lb.main[0].dns_name}" : "https://${local.api_domain}" },
+        { name = "API_BASE_URL", value = "https://${local.api_domain}" },
         { name = "NEXT_PUBLIC_API_SAME_ORIGIN_PROXY", value = "true" },
         { name = "NEXT_PUBLIC_ENABLE_PROMOTIONS", value = tostring(var.enable_promotions) },
         { name = "NEXT_PUBLIC_ENABLE_DM_BROADCAST", value = tostring(var.enable_dm_broadcast) },
@@ -1169,7 +1517,8 @@ resource "aws_ecs_task_definition" "web" {
         { name = "NEXT_PUBLIC_ENABLE_SMART_PREVIEWS", value = tostring(var.enable_smart_previews) },
         { name = "NEXT_PUBLIC_ENABLE_PROMO_GENERATOR", value = tostring(var.enable_promo_generator) },
         { name = "NEXT_PUBLIC_ENABLE_TRANSLATIONS", value = tostring(var.enable_translations) },
-        { name = "NEXT_PUBLIC_ENABLE_AI_SAFETY", value = tostring(var.enable_ai_safety) }
+        { name = "NEXT_PUBLIC_ENABLE_AI_SAFETY", value = tostring(var.enable_ai_safety) },
+        { name = "NEXT_PUBLIC_ENABLE_AI_TOOLS", value = tostring(var.enable_ai_tools) }
       ],
       local.web_base_url != "" ? [{ name = "NEXT_PUBLIC_APP_URL", value = local.web_base_url }] : []
     )
@@ -1209,11 +1558,14 @@ resource "aws_ecs_task_definition" "worker" {
       { name = "ENABLE_SCHEDULED_POSTS", value = tostring(var.enable_scheduled_posts) },
       { name = "AI_PROVIDER", value = var.ai_provider },
       { name = "ENABLE_AI_SAFETY", value = tostring(var.enable_ai_safety) },
+      { name = "ENABLE_AI_TOOLS", value = tostring(var.enable_ai_tools) },
       { name = "ENABLE_SMART_PREVIEWS", value = tostring(var.enable_smart_previews) },
       { name = "ENABLE_TRANSLATIONS", value = tostring(var.enable_translations) },
       # Worker doesn't send email or use cookies but shares Settings with API
       { name = "MAIL_PROVIDER", value = "resend" },
-      { name = "COOKIE_SECURE", value = "true" }
+      { name = "COOKIE_SECURE", value = "true" },
+      { name = "MEDIA_WM_PREVIEW_ENABLED", value = "true" },
+      { name = "MEDIA_WM_PREVIEW_TEXT", value = "zinovia-fans" }
     ]
     secrets = [
       { name = "DATABASE_URL", valueFrom = aws_secretsmanager_secret.database_url.arn },
@@ -1459,19 +1811,6 @@ resource "aws_s3_bucket_public_access_block" "web" {
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
-}
-
-# ACM for CloudFront web (app/apex) — only when no-ALB + ACM
-module "acm_cloudfront_web" {
-  count                     = (!var.enable_alb && var.enable_acm) ? 1 : 0
-  source                    = "./modules/acm"
-  providers                 = { aws = aws.us_east_1 }
-  domain_name               = var.domain_name
-  subject_alternative_names = [local.app_domain]
-  zone_id                   = local.zone_id
-  name_prefix               = "${local.name_prefix}-cf-web"
-  create_validation_records = var.dns_delegated
-  wait_for_validation       = var.wait_for_certificate_validation
 }
 
 resource "aws_cloudfront_origin_access_control" "web" {

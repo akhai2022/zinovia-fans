@@ -4,10 +4,12 @@ import { cookies } from "next/headers";
 import { Inter, Space_Grotesk } from "next/font/google";
 import { ApiBaseSync } from "@/components/app/ApiBaseSync";
 import { ApiHealthBanner } from "@/components/app/ApiHealthBanner";
+import { VersionGuard } from "@/components/app/VersionGuard";
 import { Navbar } from "@/components/app/Navbar";
 import { Footer } from "@/components/app/Footer";
 import { ToastProvider } from "@/components/ui/toast";
 import { getSession } from "@/lib/api/auth";
+import { SessionProvider } from "@/lib/hooks/useSession";
 import { I18nProvider } from "@/lib/i18n/context";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { DEFAULT_LOCALE, LOCALE_COOKIE, SUPPORTED_LOCALES, type Locale } from "@/lib/i18n/config";
@@ -138,15 +140,18 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         />
       </head>
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
-        <I18nProvider locale={locale} dictionary={dictionary}>
-          <ToastProvider>
-            <ApiBaseSync />
-            <ApiHealthBanner />
-            <Navbar initialSession={session.user} sessionUnavailable={session.unavailable} />
-            {children}
-            <Footer />
-          </ToastProvider>
-        </I18nProvider>
+        <SessionProvider user={session.user} unavailable={session.unavailable}>
+          <I18nProvider locale={locale} dictionary={dictionary}>
+            <ToastProvider>
+              <ApiBaseSync />
+              <ApiHealthBanner />
+              <VersionGuard />
+              <Navbar initialSession={session.user} sessionUnavailable={session.unavailable} />
+              {children}
+              <Footer />
+            </ToastProvider>
+          </I18nProvider>
+        </SessionProvider>
       </body>
     </html>
   );

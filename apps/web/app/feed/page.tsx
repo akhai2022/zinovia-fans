@@ -5,6 +5,7 @@ import { Page } from "@/components/brand/Page";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ApiClientError, apiFetchServer } from "@/lib/api/client";
+import { getServerDictionary } from "@/lib/i18n/server";
 import { FeedContent } from "./FeedContent";
 
 type FeedCreator = {
@@ -38,6 +39,7 @@ export type FeedPageData = {
 };
 
 export default async function FeedPage() {
+  const { dictionary: t } = await getServerDictionary();
   const cookieHeader = cookies().toString();
   let data: FeedPageData | null = null;
   let fetchError: string | null = null;
@@ -57,17 +59,17 @@ export default async function FeedPage() {
           <Page className="flex min-h-[60vh] items-center justify-center">
             <Card className="w-full max-w-md rounded-2xl border border-border py-10 text-center shadow-premium-md">
               <p className="font-display text-premium-h3 font-semibold text-foreground">
-                Sign in to view your feed
+                {t.feed.signInToViewFeed}
               </p>
               <p className="mt-2 px-6 text-premium-body text-muted-foreground">
-                Follow and subscribe to creators, then come back here to see their latest posts.
+                {t.feed.signInToViewFeedDescription}
               </p>
               <div className="mt-6 flex justify-center gap-3">
                 <Button size="sm" asChild>
-                  <Link href="/login?next=/feed">Sign in</Link>
+                  <Link href="/login?next=/feed">{t.feed.signInButton}</Link>
                 </Button>
                 <Button variant="secondary" size="sm" asChild>
-                  <Link href="/creators">Discover creators</Link>
+                  <Link href="/creators">{t.feed.discoverCreators}</Link>
                 </Button>
               </div>
             </Card>
@@ -76,7 +78,7 @@ export default async function FeedPage() {
       }
       fetchError = error.detail || error.message;
     } else {
-      fetchError = "Failed to load feed.";
+      fetchError = t.feed.fallbackError;
     }
   }
 

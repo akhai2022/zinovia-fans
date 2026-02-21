@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
+import { useTranslation, interpolate } from "@/lib/i18n";
 import "@/lib/api";
 
 const POLL_INTERVAL_MS = 2000;
@@ -25,6 +26,7 @@ export default function AiImageJobPage() {
   const params = useParams();
   const router = useRouter();
   const { addToast } = useToast();
+  const { t } = useTranslation();
   const jobId = params.id as string;
   const [job, setJob] = useState<AiImageJobOut | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,7 +37,7 @@ export default function AiImageJobPage() {
     AiImagesService.get(jobId)
       .then(setJob)
       .catch((e) => {
-        setError(e instanceof Error ? e.message : "Failed to load");
+        setError(e instanceof Error ? e.message : t.aiImages.errorFallbackDetail);
       })
       .finally(() => setLoading(false));
   };
@@ -46,8 +48,8 @@ export default function AiImageJobPage() {
 
   useEffect(() => {
     if (!job || job.status === "READY" || job.status === "FAILED") return;
-    const t = setInterval(fetchJob, POLL_INTERVAL_MS);
-    return () => clearInterval(t);
+    const timer = setInterval(fetchJob, POLL_INTERVAL_MS);
+    return () => clearInterval(timer);
   }, [job?.status, jobId]);
 
   const handleApply = async (applyTo: AiImageApplyIn["apply_to"]) => {
@@ -57,16 +59,16 @@ export default function AiImageJobPage() {
         apply_to: applyTo,
         result_index: 0,
       });
-      addToast("Image applied successfully", "success");
+      addToast(t.aiImages.toastApplied, "success");
       if (applyTo === "landing.hero") {
-        addToast("View on the home page", "default");
+        addToast(t.aiImages.toastViewHomePage, "default");
         router.push("/");
       } else if (applyTo.startsWith("creator.")) {
-        addToast("View in Settings → Profile", "default");
+        addToast(t.aiImages.toastViewSettings, "default");
         router.push("/settings/profile");
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to apply";
+      const msg = err instanceof Error ? err.message : t.aiImages.applyErrorFallback;
       addToast(msg, "error");
     } finally {
       setApplying(false);
@@ -89,7 +91,7 @@ export default function AiImageJobPage() {
       <Page>
         <p className="text-destructive">{error}</p>
         <Button variant="outline" className="mt-2" asChild>
-          <Link href="/ai/images">Back to list</Link>
+          <Link href="/ai/images">{t.aiImages.backToList}</Link>
         </Button>
       </Page>
     );
@@ -101,7 +103,7 @@ export default function AiImageJobPage() {
     <Page>
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/ai/images">← Back</Link>
+          <Link href="/ai/images">{t.aiImages.backButton}</Link>
         </Button>
       </div>
       <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
@@ -121,7 +123,7 @@ export default function AiImageJobPage() {
                   <div key={idx} className="relative">
                     <img
                       src={url}
-                      alt={`Result ${idx + 1}`}
+                      alt={interpolate(t.aiImages.resultAlt, { index: idx + 1 })}
                       className="w-full rounded-brand object-cover"
                     />
                     <div className="absolute bottom-2 right-2">
@@ -132,24 +134,24 @@ export default function AiImageJobPage() {
                             variant="secondary"
                             disabled={applying}
                           >
-                            Use as…
+                            {t.aiImages.useAsDropdown}
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
                             onClick={() => handleApply("landing.hero")}
                           >
-                            Use as Landing Hero (admin)
+                            {t.aiImages.useAsLandingHero}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleApply("creator.avatar")}
                           >
-                            Use as My Avatar
+                            {t.aiImages.useAsMyAvatar}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleApply("creator.banner")}
                           >
-                            Use as My Banner
+                            {t.aiImages.useAsMyBanner}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -161,9 +163,9 @@ export default function AiImageJobPage() {
           ) : (
             <div className="flex h-48 items-center justify-center rounded-brand bg-muted text-muted-foreground">
               {job.status === "QUEUED" || job.status === "GENERATING"
-                ? "Generating…"
+                ? t.aiImages.statusGenerating
                 : job.status === "FAILED"
-                ? "Generation failed"
+                ? t.aiImages.statusFailed
                 : job.status}
             </div>
           )}

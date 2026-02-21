@@ -11,16 +11,19 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
 import { ApiClientError, apiFetch } from "@/lib/api/client";
 import { getApiErrorCode } from "@/lib/errors";
+import { useTranslation, interpolate } from "@/lib/i18n";
 import "@/lib/api";
 
 const MIN_PASSWORD_LENGTH = 10;
 
-const ERROR_MESSAGES: Record<string, string> = {
-  wrong_current_password: "Current password is incorrect.",
-  same_as_current: "New password must be different from the current one.",
+const ERROR_CODE_KEYS: Record<string, "errorWrongCurrentPassword" | "errorSameAsCurrent"> = {
+  wrong_current_password: "errorWrongCurrentPassword",
+  same_as_current: "errorSameAsCurrent",
 };
 
-function getPasswordStrength(pw: string): { label: string; color: string; percent: number } {
+type StrengthKey = "strengthWeak" | "strengthFair" | "strengthGood" | "strengthStrong";
+
+function getPasswordStrength(pw: string): { key: StrengthKey; color: string; percent: number } {
   let score = 0;
   if (pw.length >= 10) score++;
   if (pw.length >= 14) score++;
@@ -29,15 +32,16 @@ function getPasswordStrength(pw: string): { label: string; color: string; percen
   if (/[0-9]/.test(pw)) score++;
   if (/[^A-Za-z0-9]/.test(pw)) score++;
 
-  if (score <= 2) return { label: "Weak", color: "bg-destructive", percent: 25 };
-  if (score <= 3) return { label: "Fair", color: "bg-amber-500", percent: 50 };
-  if (score <= 4) return { label: "Good", color: "bg-emerald-400", percent: 75 };
-  return { label: "Strong", color: "bg-emerald-500", percent: 100 };
+  if (score <= 2) return { key: "strengthWeak", color: "bg-destructive", percent: 25 };
+  if (score <= 3) return { key: "strengthFair", color: "bg-amber-500", percent: 50 };
+  if (score <= 4) return { key: "strengthGood", color: "bg-emerald-400", percent: 75 };
+  return { key: "strengthStrong", color: "bg-emerald-500", percent: 100 };
 }
 
 export default function SecuritySettingsPage() {
   const router = useRouter();
   const { addToast } = useToast();
+  const { t } = useTranslation();
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -62,7 +66,7 @@ export default function SecuritySettingsPage() {
         method: "POST",
         body: { current_password: currentPassword, new_password: newPassword },
       });
-      addToast("Password changed successfully.", "success");
+      addToast(t.security.toastPasswordChanged, "success");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -72,7 +76,8 @@ export default function SecuritySettingsPage() {
         return;
       }
       const code = getApiErrorCode(err);
-      const message = ERROR_MESSAGES[code] || "Failed to change password.";
+      const key = ERROR_CODE_KEYS[code];
+      const message = key ? t.security[key] : t.security.errorFailedToChange;
       addToast(message, "error");
     } finally {
       setLoading(false);
@@ -81,37 +86,36 @@ export default function SecuritySettingsPage() {
 
   return (
     <Page className="space-y-4">
-      <h1 className="font-display text-premium-h2 font-semibold text-foreground">Security</h1>
+      <h1 className="font-display text-premium-h2 font-semibold text-foreground">{t.security.title}</h1>
       <Card>
         <CardHeader>
-          <CardTitle>Change password</CardTitle>
+          <CardTitle>{t.security.changePasswordTitle}</CardTitle>
           <CardDescription>
-            Enter your current password and choose a new one. Minimum {MIN_PASSWORD_LENGTH} characters.
-            Use a mix of uppercase, lowercase, numbers, and symbols.
+            {interpolate(t.security.changePasswordDescription, { minLength: String(MIN_PASSWORD_LENGTH) })}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="currentPassword">Current password</Label>
+              <Label htmlFor="currentPassword">{t.security.currentPasswordLabel}</Label>
               <Input
                 id="currentPassword"
                 type="password"
                 autoComplete="current-password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Enter current password"
+                placeholder={t.security.currentPasswordPlaceholder}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="newPassword">New password</Label>
+              <Label htmlFor="newPassword">{t.security.newPasswordLabel}</Label>
               <Input
                 id="newPassword"
                 type="password"
                 autoComplete="new-password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="At least 10 characters"
+                placeholder={t.security.newPasswordPlaceholder}
               />
               {newPassword.length > 0 && (
                 <div className="space-y-1">
@@ -122,39 +126,39 @@ export default function SecuritySettingsPage() {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Strength: <span className="font-medium">{strength.label}</span>
+                    {t.security.strengthLabel} <span className="font-medium">{t.security[strength.key]}</span>
                   </p>
                 </div>
               )}
               {passwordTooShort && (
                 <p className="text-xs text-destructive">
-                  Must be at least {MIN_PASSWORD_LENGTH} characters.
+                  {interpolate(t.security.passwordMinLengthError, { minLength: String(MIN_PASSWORD_LENGTH) })}
                 </p>
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm new password</Label>
+              <Label htmlFor="confirmPassword">{t.security.confirmPasswordLabel}</Label>
               <Input
                 id="confirmPassword"
                 type="password"
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter new password"
+                placeholder={t.security.confirmPasswordPlaceholder}
               />
               {mismatch && (
-                <p className="text-xs text-destructive">Passwords do not match.</p>
+                <p className="text-xs text-destructive">{t.security.passwordsDoNotMatch}</p>
               )}
             </div>
             <Button type="submit" disabled={!canSubmit}>
-              {loading ? "Changing..." : "Change password"}
+              {loading ? t.security.submitChanging : t.security.submitChangePassword}
             </Button>
           </form>
         </CardContent>
       </Card>
       <div className="flex gap-2">
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/settings/profile">Back to profile</Link>
+          <Link href="/settings/profile">{t.security.backToProfile}</Link>
         </Button>
       </div>
     </Page>

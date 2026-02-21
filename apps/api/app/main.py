@@ -50,6 +50,7 @@ from app.modules.onboarding.webhook_router import router as webhook_kyc_router
 from app.modules.admin.router import router as admin_router
 from app.modules.ai_safety.router import router as ai_safety_router
 from app.modules.ai_tools.router import router as ai_tools_promo_router
+from app.modules.ai_tools.tool_router import router as ai_tools_tool_router
 from app.modules.ai_tools.translation_router import router as ai_tools_translation_router
 from app.modules.collections.router import router as collections_router
 from app.modules.contact.router import router as contact_router
@@ -219,6 +220,7 @@ def create_app() -> FastAPI:
     app.include_router(ai_safety_router, prefix="/ai-safety", tags=["ai-safety"])
     app.include_router(ai_tools_promo_router, prefix="/ai-tools", tags=["ai-tools"])
     app.include_router(ai_tools_translation_router, prefix="/ai-tools", tags=["ai-tools"])
+    app.include_router(ai_tools_tool_router, prefix="/ai-tools", tags=["ai-tools"])
 
     # E2E test-only endpoints — gated by E2E_ENABLE + E2E_SECRET, never in production
     if settings.e2e_enable and not settings.is_production:

@@ -126,4 +126,29 @@ function DropdownMenuItem({
   );
 }
 
-export { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem };
+function DropdownMenuLabel({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("px-2 py-1.5 text-xs font-medium text-muted-foreground", className)}>
+      {children}
+    </div>
+  );
+}
+
+function DropdownMenuSeparator({ className }: { className?: string }) {
+  return <div className={cn("my-1 border-t border-border", className)} />;
+}
+
+export {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+};

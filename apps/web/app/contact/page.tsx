@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Send, CheckCircle, AlertCircle, Mail } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { Page } from "@/components/brand/Page";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -84,7 +84,7 @@ export default function ContactPage() {
       {status === "success" ? (
         <Card className="border-emerald-500/30 bg-emerald-500/5">
           <CardContent className="flex items-start gap-4 py-8">
-            <CheckCircle className="mt-0.5 h-6 w-6 shrink-0 text-emerald-500" />
+            <Icon name="check_circle" className="mt-0.5 icon-lg shrink-0 text-emerald-500" />
             <div>
               <h2 className="font-display text-lg font-semibold text-foreground">
                 {t.contact.successTitle}
@@ -98,6 +98,7 @@ export default function ContactPage() {
                 className="mt-4"
                 onClick={() => setStatus("idle")}
               >
+                <Icon name="edit" className="mr-1.5 icon-sm" />
                 Send another message
               </Button>
             </div>
@@ -159,7 +160,7 @@ export default function ContactPage() {
 
               {status === "error" && (
                 <div className="flex items-center gap-2 rounded-brand border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <Icon name="error" className="icon-base shrink-0" />
                   {t.contact.errorMessage}
                 </div>
               )}
@@ -173,7 +174,7 @@ export default function ContactPage() {
                   t.contact.sending
                 ) : (
                   <>
-                    <Send className="mr-2 h-4 w-4" />
+                    <Icon name="send" className="mr-2 icon-base" />
                     {t.contact.submit}
                   </>
                 )}
@@ -202,7 +203,7 @@ export default function ContactPage() {
                   href={`mailto:${channel.email}`}
                   className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline"
                 >
-                  <Mail className="h-3.5 w-3.5" />
+                  <Icon name="mail" className="icon-sm" />
                   {channel.email}
                 </a>
                 <p className="text-xs text-muted-foreground">

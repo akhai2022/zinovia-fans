@@ -8,6 +8,7 @@ import { CreatorsService } from "../api";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { getApiErrorCode, getApiErrorMessage } from "@/lib/errors";
+import { useTranslation } from "@/lib/i18n";
 
 type FollowButtonProps = {
   creatorId: string;
@@ -21,6 +22,7 @@ export function FollowButton({
   onToggle,
 }: FollowButtonProps) {
   const { addToast } = useToast();
+  const { t } = useTranslation();
   const [following, setFollowing] = useState(initialFollowing);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,11 +38,11 @@ export function FollowButton({
       if (following) {
         await CreatorsService.creatorsUnfollow(creatorId);
         onToggle?.(false);
-        addToast("Unfollowed", "success");
+        addToast(t.follow.toastUnfollowed, "success");
       } else {
         await CreatorsService.creatorsFollow(creatorId);
         onToggle?.(true);
-        addToast("Following", "success");
+        addToast(t.follow.toastFollowing, "success");
       }
     } catch (err) {
       setFollowing(previous);
@@ -49,9 +51,9 @@ export function FollowButton({
       const code = getApiErrorCode(err);
       const displayMessage =
         kind === "unauthorized"
-          ? "Sign in to follow"
+          ? t.follow.errorSignInToFollow
           : code === "cannot_follow_self"
-            ? "You can't follow yourself"
+            ? t.follow.errorCannotFollowSelf
             : message;
       setError(displayMessage);
       setErrorKind(kind === "unauthorized" ? "unauthorized" : "error");
@@ -77,7 +79,7 @@ export function FollowButton({
         ) : (
           <Icon name="person_add" className="icon-base" />
         )}
-        {loading ? "…" : following ? "Unfollow" : "Follow"}
+        {loading ? t.follow.loading : following ? t.follow.unfollowButton : t.follow.followButton}
       </Button>
       {error && (
         <p className="text-xs text-destructive">
@@ -86,7 +88,7 @@ export function FollowButton({
             <>
               {" "}
               <Link href="/login" className="underline focus:outline-none focus:ring-2 focus:ring-ring rounded">
-                Sign in
+                {t.follow.signIn}
               </Link>
             </>
           )}

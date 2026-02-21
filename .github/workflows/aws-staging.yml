@@ -6,14 +6,15 @@ name: AWS Deploy
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'apps/**'
-      - 'packages/**'
-      - 'infra/docker/**'
-      - 'infra/aws/**'
-      - '.github/workflows/aws-staging.yml'
+  # TEMPORARILY DISABLED — re-enable push trigger when ready
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - 'apps/**'
+  #     - 'packages/**'
+  #     - 'infra/docker/**'
+  #     - 'infra/aws/**'
+  #     - '.github/workflows/aws-staging.yml'
 
 env:
   AWS_REGION: us-east-1

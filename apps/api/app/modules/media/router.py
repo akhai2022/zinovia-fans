@@ -194,6 +194,7 @@ async def create_download_url(
     if not allowed:
         raise AppError(status_code=404, detail="media_not_found")
     # Substitute wm_preview for non-entitled users requesting grid/full
+    original_variant = variant
     if variant in ("grid", "full") and get_settings().media_wm_preview_enabled:
         entitled = await is_fully_entitled(session, media_uuid, user.id) if user else False
         if not entitled:
@@ -205,6 +206,11 @@ async def create_download_url(
     object_key = await resolve_download_object_key(
         session, media_uuid, media.object_key, variant
     )
+    # Graceful fallback: if wm_preview doesn't exist yet, serve the original variant
+    if object_key is None and variant == "wm_preview" and original_variant is not None:
+        object_key = await resolve_download_object_key(
+            session, media_uuid, media.object_key, original_variant
+        )
     if object_key is None:
         raise AppError(status_code=404, detail="variant_not_found")
     storage = get_storage_client()

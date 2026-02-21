@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { getApiErrorMessage } from "@/lib/errors";
+import { useTranslation } from "@/lib/i18n";
 import "@/lib/api";
 
 function formatDate(iso: string | null): string {
@@ -23,6 +24,7 @@ function formatDate(iso: string | null): string {
 }
 
 export default function MessagesInboxPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [conversations, setConversations] = useState<ConversationOut[]>([]);
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
@@ -40,7 +42,7 @@ export default function MessagesInboxPage() {
           router.replace("/login?redirect=/messages");
           return;
         }
-        setErrorMessage("Failed to load conversations.");
+        setErrorMessage(t.messages.errorLoadConversations);
         setStatus("error");
       });
   }, [router]);
@@ -48,7 +50,7 @@ export default function MessagesInboxPage() {
   if (status === "loading") {
     return (
       <Page>
-        <h1 className="font-display text-premium-h2 font-semibold text-foreground">Messages</h1>
+        <h1 className="font-display text-premium-h2 font-semibold text-foreground">{t.messages.title}</h1>
         <div className="mt-4 space-y-2">
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-16 w-full rounded-brand" />
@@ -61,10 +63,10 @@ export default function MessagesInboxPage() {
   if (status === "error") {
     return (
       <Page>
-        <h1 className="font-display text-premium-h2 font-semibold text-foreground">Messages</h1>
+        <h1 className="font-display text-premium-h2 font-semibold text-foreground">{t.messages.title}</h1>
         <p className="mt-4 text-destructive">{errorMessage}</p>
         <Button variant="secondary" size="sm" className="mt-4" asChild>
-          <Link href="/">Back to home</Link>
+          <Link href="/">{t.messages.backToHome}</Link>
         </Button>
       </Page>
     );
@@ -72,14 +74,14 @@ export default function MessagesInboxPage() {
 
   return (
     <Page>
-      <h1 className="font-display text-premium-h2 font-semibold text-foreground">Messages</h1>
+      <h1 className="font-display text-premium-h2 font-semibold text-foreground">{t.messages.title}</h1>
       {conversations.length === 0 ? (
         <Card className="mt-8 py-12 text-center">
           <p className="text-muted-foreground">
-            No messages yet. Start a conversation from a creator&apos;s profile.
+            {t.messages.emptyInbox}
           </p>
           <Button variant="secondary" size="sm" className="mt-4" asChild>
-            <Link href="/creators">Browse creators</Link>
+            <Link href="/creators">{t.messages.browseCreators}</Link>
           </Button>
         </Card>
       ) : (
@@ -97,10 +99,10 @@ export default function MessagesInboxPage() {
                 </Avatar>
                 <div className="min-w-0 flex-1">
                   <p className="font-medium truncate">
-                    {c.other_party.display_name || c.other_party.handle || "User"}
+                    {c.other_party.display_name || c.other_party.handle || t.messages.userFallbackName}
                   </p>
                   <p className="truncate text-sm text-muted-foreground">
-                    {c.last_message_preview || "No messages yet"}
+                    {c.last_message_preview || t.messages.noMessagesPreview}
                   </p>
                 </div>
                 <span className="shrink-0 text-xs text-muted-foreground">
@@ -112,7 +114,7 @@ export default function MessagesInboxPage() {
         </ul>
       )}
       <Button variant="ghost" size="sm" className="mt-4" asChild>
-        <Link href="/">Back to home</Link>
+        <Link href="/">{t.messages.backToHome}</Link>
       </Button>
     </Page>
   );

@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api/client";
 import { getApiErrorMessage } from "@/lib/errors";
 import { useRequireRole } from "@/lib/hooks/useRequireRole";
+import { useTranslation, interpolate, type Dictionary } from "@/lib/i18n";
 import "@/lib/api";
 
 /* ------------------------------------------------------------------ */
@@ -155,13 +156,13 @@ function formatCents(cents: number, currency: string): string {
   }).format(cents / 100);
 }
 
-function txTypeLabel(t: string): string {
-  switch (t) {
-    case "SUBSCRIPTION": return "Subscription";
-    case "TIP": return "Tip";
-    case "PPV_UNLOCK": return "PPV Message";
-    case "PPV_POST_UNLOCK": return "PPV Post";
-    default: return t.replace(/_/g, " ");
+function txTypeLabel(type: string, adminT: Dictionary["admin"]): string {
+  switch (type) {
+    case "SUBSCRIPTION": return adminT.txTypeSubscription;
+    case "TIP": return adminT.txTypeTip;
+    case "PPV_UNLOCK": return adminT.txTypePpvUnlock;
+    case "PPV_POST_UNLOCK": return adminT.txTypePpvPostUnlock;
+    default: return type.replace(/_/g, " ");
   }
 }
 
@@ -179,14 +180,16 @@ const STATUS_COLORS: Record<string, string> = {
   deleted: "text-red-400",
 };
 
-const CATEGORY_LABELS: Record<string, string> = {
-  support: "Support",
-  privacy: "Privacy",
-  creators: "Creators",
-  safety: "Safety",
-  legal: "Legal",
-  unknown: "Other",
-};
+function getCategoryLabels(adminT: Dictionary["admin"]): Record<string, string> {
+  return {
+    support: adminT.categorySupport,
+    privacy: adminT.categoryPrivacy,
+    creators: adminT.categoryCreators,
+    safety: adminT.categorySafety,
+    legal: adminT.categoryLegal,
+    unknown: adminT.categoryUnknown,
+  };
+}
 
 const CATEGORY_COLORS: Record<string, string> = {
   support: "bg-blue-500/15 text-blue-400",
@@ -203,9 +206,9 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function userStatusLabel(u: AdminUser): string {
-  if (u.role === "deleted") return "Deleted";
-  return u.is_active ? "Active" : "Suspended";
+function userStatusLabel(u: AdminUser, adminT: Dictionary["admin"]): string {
+  if (u.role === "deleted") return adminT.userStatusDeleted;
+  return u.is_active ? adminT.userStatusActive : adminT.userStatusSuspended;
 }
 
 /* ------------------------------------------------------------------ */
@@ -213,18 +216,23 @@ function userStatusLabel(u: AdminUser): string {
 /* ------------------------------------------------------------------ */
 
 const PAGE_SIZE = 25;
-const ROLE_FILTERS = [
-  { value: null, label: "All" },
-  { value: "fan", label: "Fan" },
-  { value: "creator", label: "Creator" },
-  { value: "admin", label: "Admin" },
-  { value: "deleted", label: "Deleted" },
-] as const;
+function getRoleFilters(adminT: Dictionary["admin"]) {
+  return [
+    { value: null, label: adminT.roleFilterAll },
+    { value: "fan", label: adminT.roleFilterFan },
+    { value: "creator", label: adminT.roleFilterCreator },
+    { value: "admin", label: adminT.roleFilterAdmin },
+    { value: "deleted", label: adminT.roleFilterDeleted },
+  ] as const;
+}
 
 export default function AdminPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { authorized, user: adminUser } = useRequireRole(["admin", "super_admin"]);
   const isSuperAdmin = adminUser?.role === "super_admin";
+  const ROLE_FILTERS = getRoleFilters(t.admin);
+  const CATEGORY_LABELS = getCategoryLabels(t.admin);
   const [tab, setTab] = useState<"users" | "posts" | "transactions" | "inbox" | "moderation">("users");
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -542,6 +550,7 @@ export default function AdminPage() {
       await apiFetch(`/admin/users/${userId}/action`, {
         method: "POST",
         body: { action, reason },
+        ...(action === "hard_delete" ? { timeoutMs: 60_000 } : {}),
       });
       if (action === "hard_delete") {
         // User is gone — close detail and refresh list
@@ -929,7 +938,7 @@ export default function AdminPage() {
                         </td>
                         <td className="px-4 py-3">
                           <span className={`text-xs font-medium ${STATUS_COLORS[u.role === "deleted" ? "deleted" : u.is_active ? "active" : "suspended"]}`}>
-                            {userStatusLabel(u)}
+                            {userStatusLabel(u, t.admin)}
                           </span>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
@@ -1085,7 +1094,7 @@ export default function AdminPage() {
                         {selectedUser.role}
                       </span>
                       <span className={`text-xs font-medium ${STATUS_COLORS[selectedUser.role === "deleted" ? "deleted" : selectedUser.is_active ? "active" : "suspended"]}`}>
-                        {userStatusLabel(selectedUser)}
+                        {userStatusLabel(selectedUser, t.admin)}
                       </span>
                       {selectedUser.discoverable && (
                         <span className="text-xs text-muted-foreground">Discoverable</span>
@@ -1642,7 +1651,7 @@ export default function AdminPage() {
                         </td>
                         <td className="px-4 py-3">
                           <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                            {txTypeLabel(tx.type)}
+                            {txTypeLabel(tx.type, t.admin)}
                           </span>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">

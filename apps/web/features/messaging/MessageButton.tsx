@@ -6,12 +6,14 @@ import { Icon } from "@/components/ui/icon";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { createConversation } from "@/features/messaging/api";
+import { useTranslation } from "@/lib/i18n";
 
 interface MessageButtonProps {
   creatorId: string;
 }
 
 export function MessageButton({ creatorId }: MessageButtonProps) {
+  const { t } = useTranslation();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -30,7 +32,7 @@ export function MessageButton({ creatorId }: MessageButtonProps) {
   return (
     <Button variant="secondary" size="sm" onClick={handleClick} disabled={loading}>
       {loading ? <Spinner className="mr-1 icon-base" /> : <Icon name="chat_bubble" className="mr-1 icon-base" />}
-      Message
+      {t.messages.messageButton}
     </Button>
   );
 }

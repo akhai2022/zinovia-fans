@@ -10,5 +10,6 @@ export const featureFlags = {
   smartPreviews: readBool(process.env.NEXT_PUBLIC_ENABLE_SMART_PREVIEWS),
   promoGenerator: readBool(process.env.NEXT_PUBLIC_ENABLE_PROMO_GENERATOR),
   translations: readBool(process.env.NEXT_PUBLIC_ENABLE_TRANSLATIONS),
+  aiTools: readBool(process.env.NEXT_PUBLIC_ENABLE_AI_TOOLS),
 };
 

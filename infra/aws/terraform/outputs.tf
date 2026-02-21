@@ -113,6 +113,16 @@ output "cloudfront_distribution_id" {
   description = "CloudFront distribution ID for media (null when enable_cloudfront = false)"
 }
 
+output "cloudfront_web_distribution_id" {
+  value       = try(aws_cloudfront_distribution.web_alb[0].id, null)
+  description = "CloudFront web distribution ID (null when not enabled)"
+}
+
+output "cloudfront_web_domain" {
+  value       = try(aws_cloudfront_distribution.web_alb[0].domain_name, null)
+  description = "CloudFront web distribution domain (for testing before DNS switch)"
+}
+
 output "private_subnet_ids" {
   value       = local.private_subnet_ids
   description = "Private subnet IDs for ECS tasks (e.g. migration run-task)"

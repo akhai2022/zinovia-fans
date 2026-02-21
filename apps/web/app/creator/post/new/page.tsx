@@ -21,8 +21,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { listVaultMedia, type MediaMineItem } from "@/features/engagement/api";
 import { CaptionSuggestions } from "@/features/posts/components/CaptionSuggestions";
+import { AiToolSuggestions } from "@/features/ai-tools/AiToolSuggestions";
 import { PromoSuggestions } from "@/features/posts/components/PromoSuggestions";
 import { TranslatePanel } from "@/features/posts/components/TranslatePanel";
+import { useTranslation, interpolate } from "@/lib/i18n";
 import "@/lib/api";
 
 export interface UploadedImage {
@@ -30,17 +32,26 @@ export interface UploadedImage {
   previewUrl: string | null;
 }
 
-const VISIBILITY_OPTIONS = [
-  { value: "PUBLIC" as const, label: "Public", description: "Visible to everyone", icon: "public" },
-  { value: "FOLLOWERS" as const, label: "Followers", description: "Only your followers", icon: "group" },
-  { value: "SUBSCRIBERS" as const, label: "Subscribers", description: "Paid subscribers only", icon: "workspace_premium" },
-  { value: "PPV" as const, label: "Pay-per-view", description: "Fans pay to unlock", icon: "lock" },
-];
+const VISIBILITY_ICONS = {
+  PUBLIC: "public",
+  FOLLOWERS: "group",
+  SUBSCRIBERS: "workspace_premium",
+  PPV: "lock",
+} as const;
 
 export default function NewPostPage() {
   const { authorized } = useRequireRole(["creator", "admin", "super_admin"]);
   const router = useRouter();
   const { addToast } = useToast();
+  const { t } = useTranslation();
+
+  const VISIBILITY_OPTIONS = [
+    { value: "PUBLIC" as const, label: t.newPost.visibilityPublicLabel, description: t.newPost.visibilityPublicDescription, icon: VISIBILITY_ICONS.PUBLIC },
+    { value: "FOLLOWERS" as const, label: t.newPost.visibilityFollowersLabel, description: t.newPost.visibilityFollowersDescription, icon: VISIBILITY_ICONS.FOLLOWERS },
+    { value: "SUBSCRIBERS" as const, label: t.newPost.visibilitySubscribersLabel, description: t.newPost.visibilitySubscribersDescription, icon: VISIBILITY_ICONS.SUBSCRIBERS },
+    { value: "PPV" as const, label: t.newPost.visibilityPpvLabel, description: t.newPost.visibilityPpvDescription, icon: VISIBILITY_ICONS.PPV },
+  ];
+
   const [caption, setCaption] = useState("");
   const [visibility, setVisibility] = useState<"PUBLIC" | "FOLLOWERS" | "SUBSCRIBERS" | "PPV">("PUBLIC");
   const [priceCents, setPriceCents] = useState<number>(500);
@@ -108,12 +119,12 @@ export default function NewPostPage() {
     try {
       await PostsService.postsCreate(body);
       setStatus("ok");
-      addToast("Post created successfully!", "success");
+      addToast(t.newPost.toastPostCreatedSuccess, "success");
       router.push("/feed");
     } catch (err: unknown) {
       setStatus("error");
-      setErrorDetail(err instanceof Error ? err.message : "Failed to create post");
-      addToast("Failed to create post", "error");
+      setErrorDetail(err instanceof Error ? err.message : t.newPost.errorFallback);
+      addToast(t.newPost.toastPostCreatedError, "error");
     }
   };
 
@@ -144,12 +155,12 @@ export default function NewPostPage() {
         <Button variant="ghost" size="sm" asChild>
           <Link href="/feed">
             <Icon name="arrow_back" className="mr-1 icon-base" />
-            Back
+            {t.newPost.back}
           </Link>
         </Button>
         <div className="h-6 w-px bg-border" />
         <h1 className="font-display text-premium-h2 font-semibold text-foreground">
-          Create post
+          {t.newPost.title}
         </h1>
       </div>
 
@@ -160,11 +171,11 @@ export default function NewPostPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label htmlFor="caption" className="text-base font-medium">
-                  Caption
+                  {t.newPost.captionLabel}
                 </Label>
                 {caption.length > 0 && (
                   <span className="text-xs text-muted-foreground">
-                    {caption.length} characters
+                    {interpolate(t.newPost.captionCharacterCount, { count: caption.length })}
                   </span>
                 )}
               </div>
@@ -173,14 +184,19 @@ export default function NewPostPage() {
                 rows={4}
                 value={caption}
                 onChange={(e) => setCaption(e.target.value)}
-                placeholder="What's on your mind? Share something with your fans..."
+                placeholder={t.newPost.captionPlaceholder}
                 className="resize-none"
               />
               {uploadedImages.length > 0 && (
-                <CaptionSuggestions
-                  mediaAssetId={uploadedImages[0]?.assetId ?? null}
-                  onSelect={(text) => setCaption(text)}
-                />
+                <>
+                  <CaptionSuggestions
+                    mediaAssetId={uploadedImages[0]?.assetId ?? null}
+                    onSelect={(text) => setCaption(text)}
+                  />
+                  <AiToolSuggestions
+                    mediaAssetId={uploadedImages[0]?.assetId ?? null}
+                  />
+                </>
               )}
             </div>
           </CardContent>
@@ -204,7 +220,7 @@ export default function NewPostPage() {
           <CardContent className="p-5">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label className="text-base font-medium">Media</Label>
+                <Label className="text-base font-medium">{t.newPost.mediaLabel}</Label>
                 {hasMedia && (
                   <Badge variant={detectedType === "VIDEO" ? "accent" : detectedType === "IMAGE" ? "primary" : "neutral"}>
                     {detectedType}
@@ -217,19 +233,19 @@ export default function NewPostPage() {
                   <TabsTrigger value="images">
                     <span className="flex items-center gap-1.5">
                       <Icon name="add_photo_alternate" className="icon-sm" />
-                      Images
+                      {t.newPost.tabImages}
                     </span>
                   </TabsTrigger>
                   <TabsTrigger value="video">
                     <span className="flex items-center gap-1.5">
                       <Icon name="videocam" className="icon-sm" />
-                      Video
+                      {t.newPost.tabVideo}
                     </span>
                   </TabsTrigger>
                   <TabsTrigger value="vault">
                     <span className="flex items-center gap-1.5">
                       <Icon name="folder_open" className="icon-sm" />
-                      Vault
+                      {t.newPost.tabVault}
                     </span>
                   </TabsTrigger>
                 </TabsList>
@@ -259,7 +275,7 @@ export default function NewPostPage() {
                               type="button"
                               onClick={() => removeUploadedImage(index)}
                               className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                              aria-label={`Remove image ${index + 1}`}
+                              aria-label={interpolate(t.newPost.removeImageAriaLabel, { index: index + 1 })}
                             >
                               <Icon name="close" className="icon-sm" />
                             </button>
@@ -280,12 +296,12 @@ export default function NewPostPage() {
                       />
                     ) : (
                       <p className="text-sm text-muted-foreground">
-                        Maximum of 20 images reached.
+                        {t.newPost.maxImagesReached}
                       </p>
                     )}
                     {uploadedImages.length === 0 && (
                       <p className="text-xs text-muted-foreground">
-                        JPEG, PNG, WebP, GIF — up to 25 MB each, max 20 images per post.
+                        {t.newPost.imageFormatHint}
                       </p>
                     )}
                   </div>
@@ -301,10 +317,10 @@ export default function NewPostPage() {
                         </div>
                         <div className="flex-1">
                           <p className="text-sm font-medium text-foreground">
-                            Video uploaded
+                            {t.newPost.videoUploaded}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            Ready to publish
+                            {t.newPost.videoReady}
                           </p>
                         </div>
                         <Button
@@ -314,7 +330,7 @@ export default function NewPostPage() {
                           onClick={removeVideo}
                         >
                           <Icon name="close" className="mr-1 icon-sm" />
-                          Remove
+                          {t.newPost.removeButton}
                         </Button>
                       </div>
                     ) : (
@@ -325,7 +341,7 @@ export default function NewPostPage() {
                     )}
                     {!videoAssetId && (
                       <p className="text-xs text-muted-foreground">
-                        MP4 only — up to 200 MB. One video per post.
+                        {t.newPost.videoFormatHint}
                       </p>
                     )}
                   </div>
@@ -338,7 +354,7 @@ export default function NewPostPage() {
                       <div className="flex flex-col items-center justify-center rounded-brand border border-dashed border-border py-8">
                         <Icon name="folder_open" className="icon-xl text-muted-foreground mb-2" />
                         <p className="text-sm text-muted-foreground mb-3">
-                          Browse your media vault to reuse existing uploads.
+                          {t.newPost.vaultEmptyPrompt}
                         </p>
                         <Button
                           type="button"
@@ -350,10 +366,10 @@ export default function NewPostPage() {
                           {vaultLoading ? (
                             <>
                               <Spinner className="mr-1.5 icon-sm" />
-                              Loading...
+                              {t.newPost.vaultLoading}
                             </>
                           ) : (
-                            "Load vault"
+                            t.newPost.vaultLoadButton
                           )}
                         </Button>
                       </div>
@@ -363,8 +379,8 @@ export default function NewPostPage() {
                         <div className="flex items-center justify-between">
                           <p className="text-xs text-muted-foreground">
                             {vaultSelection.length > 0
-                              ? `${vaultSelection.length} selected`
-                              : "Tap to select"}
+                              ? interpolate(t.newPost.vaultSelectedCount, { count: vaultSelection.length })
+                              : t.newPost.vaultTapToSelect}
                           </p>
                           <Button
                             type="button"
@@ -376,7 +392,7 @@ export default function NewPostPage() {
                             {vaultLoading ? (
                               <Spinner className="icon-sm" />
                             ) : (
-                              "Refresh"
+                              t.newPost.vaultRefreshButton
                             )}
                           </Button>
                         </div>
@@ -427,14 +443,14 @@ export default function NewPostPage() {
                   onClick={() => setShowManualIds((v) => !v)}
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  {showManualIds ? "Hide" : "Advanced:"} manual asset IDs
+                  {showManualIds ? t.newPost.manualAssetIdsHideLabel : t.newPost.manualAssetIdsShowLabel}
                 </button>
                 {showManualIds && (
                   <div className="mt-2 space-y-1.5">
                     <Input
                       id="assetIds"
                       type="text"
-                      placeholder="Paste asset UUIDs separated by commas..."
+                      placeholder={t.newPost.manualAssetIdsPlaceholder}
                       value={assetIdsInput}
                       onChange={(e) => setAssetIdsInput(e.target.value)}
                     />
@@ -449,11 +465,11 @@ export default function NewPostPage() {
         <Card>
           <CardContent className="p-5">
             <div className="space-y-5">
-              <Label className="text-base font-medium">Post settings</Label>
+              <Label className="text-base font-medium">{t.newPost.postSettingsLabel}</Label>
 
               {/* Visibility */}
               <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Visibility</Label>
+                <Label className="text-sm text-muted-foreground">{t.newPost.visibilityLabel}</Label>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {VISIBILITY_OPTIONS.map((opt) => {
                     const active = visibility === opt.value;
@@ -483,7 +499,7 @@ export default function NewPostPage() {
               {visibility === "PPV" && (
                 <div className="rounded-brand border border-border bg-surface-alt p-4 space-y-2">
                   <Label htmlFor="ppv-price" className="text-sm font-medium">
-                    Unlock price
+                    {t.newPost.unlockPriceLabel}
                   </Label>
                   <div className="flex items-center gap-2">
                     <Input
@@ -496,10 +512,10 @@ export default function NewPostPage() {
                       onChange={(e) => setPriceCents(Math.round(parseFloat(e.target.value || "0") * 100))}
                       className="w-28"
                     />
-                    <span className="text-sm font-medium text-muted-foreground">EUR</span>
+                    <span className="text-sm font-medium text-muted-foreground">{t.newPost.unlockPriceCurrency}</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Fans will pay this amount to view the full post content.
+                    {t.newPost.unlockPriceDescription}
                   </p>
                 </div>
               )}
@@ -510,10 +526,10 @@ export default function NewPostPage() {
                   <Icon name="gpp_maybe" className="icon-md text-muted-foreground" />
                   <div>
                     <Label htmlFor="nsfw" className="text-sm font-medium cursor-pointer">
-                      NSFW content
+                      {t.newPost.nsfwLabel}
                     </Label>
                     <p className="text-xs text-muted-foreground">
-                      Mark if this post contains adult content
+                      {t.newPost.nsfwDescription}
                     </p>
                   </div>
                 </div>
@@ -527,10 +543,10 @@ export default function NewPostPage() {
                     <Icon name="calendar_today" className="icon-md text-muted-foreground" />
                     <div>
                       <Label htmlFor="schedule" className="text-sm font-medium cursor-pointer">
-                        Schedule post
+                        {t.newPost.scheduleLabel}
                       </Label>
                       <p className="text-xs text-muted-foreground">
-                        Publish at a future date and time
+                        {t.newPost.scheduleDescription}
                       </p>
                     </div>
                   </div>
@@ -557,19 +573,19 @@ export default function NewPostPage() {
                 <Icon name="visibility" className="mt-0.5 icon-base text-muted-foreground shrink-0" />
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium text-muted-foreground mb-1">
-                    Post preview
+                    {t.newPost.postPreviewLabel}
                   </p>
                   <div className="flex flex-wrap items-center gap-1.5">
                     <Badge variant={detectedType === "VIDEO" ? "accent" : detectedType === "IMAGE" ? "primary" : "neutral"}>
                       {detectedType}
                     </Badge>
                     <Badge variant={visibility === "PPV" ? "subscriber" : visibility === "SUBSCRIBERS" ? "subscriber" : "neutral"}>
-                      {visibility === "PPV" ? `PPV ${(priceCents / 100).toFixed(2)} EUR` : visibility}
+                      {visibility === "PPV" ? interpolate(t.newPost.previewPpvPrice, { price: (priceCents / 100).toFixed(2) }) : visibility}
                     </Badge>
-                    {nsfw && <Badge variant="nsfw">NSFW</Badge>}
+                    {nsfw && <Badge variant="nsfw">{t.newPost.previewNsfwBadge}</Badge>}
                     {scheduleEnabled && publishAt && (
                       <Badge variant="neutral">
-                        Scheduled
+                        {t.newPost.previewScheduledBadge}
                       </Badge>
                     )}
                   </div>
@@ -581,8 +597,13 @@ export default function NewPostPage() {
                   {hasMedia && (
                     <p className="mt-1 text-xs text-muted-foreground">
                       {detectedType === "VIDEO"
-                        ? "1 video"
-                        : `${uploadedImages.length + vaultSelection.length} image${uploadedImages.length + vaultSelection.length !== 1 ? "s" : ""}`}
+                        ? t.newPost.previewVideoCount
+                        : interpolate(
+                            uploadedImages.length + vaultSelection.length !== 1
+                              ? t.newPost.previewImageCountPlural
+                              : t.newPost.previewImageCount,
+                            { count: uploadedImages.length + vaultSelection.length }
+                          )}
                     </p>
                   )}
                 </div>
@@ -604,16 +625,16 @@ export default function NewPostPage() {
             {status === "loading" ? (
               <>
                 <Spinner className="mr-2 icon-base" />
-                Creating...
+                {t.newPost.creatingButton}
               </>
             ) : scheduleEnabled && publishAt ? (
-              "Schedule post"
+              t.newPost.schedulePostButton
             ) : (
-              "Publish post"
+              t.newPost.publishPostButton
             )}
           </Button>
           <Button variant="outline" asChild>
-            <Link href="/feed">Cancel</Link>
+            <Link href="/feed">{t.newPost.cancelButton}</Link>
           </Button>
         </div>
       </form>

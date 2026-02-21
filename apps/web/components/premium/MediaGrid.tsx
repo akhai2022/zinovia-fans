@@ -4,6 +4,7 @@ import { PostMediaImage } from "@/features/posts/components/PostMediaImage";
 import { PostMediaVideo } from "@/features/posts/components/PostMediaVideo";
 import { LockedOverlay } from "./LockedOverlay";
 import { cn } from "@/lib/utils";
+import { useTranslation, interpolate } from "@/lib/i18n";
 import type { PostItem } from "@/types/creator";
 
 interface MediaGridProps {
@@ -22,23 +23,18 @@ interface MediaGridProps {
   showWatermark?: boolean;
 }
 
-function formatPpvPrice(priceCents: number | undefined | null, currency: string | undefined | null): string {
-  if (!priceCents) return "Unlock";
-  const amount = (priceCents / 100).toFixed(2);
-  const cur = (currency || "eur").toUpperCase();
-  return `Unlock for ${amount} ${cur}`;
-}
-
 function PostCell({
   post,
   locked,
   onUnlockClick,
   showWatermark,
+  t,
 }: {
   post: PostItem;
   locked: boolean;
   onUnlockClick?: () => void;
   showWatermark?: boolean;
+  t: ReturnType<typeof import("@/lib/i18n").useTranslation>["t"];
 }) {
   const hasImageAsset = post.type === "IMAGE" && post.asset_ids?.length;
   const hasVideoAsset = post.type === "VIDEO" && post.asset_ids?.length;
@@ -46,12 +42,20 @@ function PostCell({
   const imagePlaceholder = (
     <div className="h-full w-full bg-muted" aria-hidden />
   );
+
+  function formatPpvLabel(): string {
+    if (!post.price_cents) return t.feed.unlock;
+    const amount = (post.price_cents / 100).toFixed(2);
+    const cur = (post.currency || "eur").toUpperCase();
+    return interpolate(t.feed.unlockForPrice, { price: amount, currency: cur });
+  }
+
   const overlayLabel =
     post.locked_reason === "FOLLOW_REQUIRED"
-      ? "Follow to unlock"
+      ? t.feed.followToUnlock
       : post.locked_reason === "PPV_REQUIRED"
-        ? formatPpvPrice(post.price_cents, post.currency)
-        : "Subscribe to unlock";
+        ? formatPpvLabel()
+        : t.feed.subscribeToUnlock;
 
   const firstAssetId = post.asset_ids?.[0];
   const preview = firstAssetId ? (post as any).media_previews?.[firstAssetId] : undefined;
@@ -102,7 +106,7 @@ function PostCell({
       ) : (
         <div className="flex h-full w-full items-center p-3">
           <p className="line-clamp-4 text-premium-small text-muted-foreground">
-            {post.caption || "Text post"}
+            {post.caption || t.feed.textPost}
           </p>
         </div>
       )}
@@ -120,6 +124,8 @@ export function MediaGrid({
   columns = 2,
   showWatermark = false,
 }: MediaGridProps) {
+  const { t } = useTranslation();
+
   if (posts.length === 0) {
     return (
       <div
@@ -128,14 +134,14 @@ export function MediaGrid({
           className
         )}
         role="status"
-        aria-label="No posts yet"
+        aria-label={t.feed.noPostsAriaLabel}
       >
         <p className="text-premium-body-sm text-muted-foreground">
-          No posts yet.
+          {t.feed.noPostsYet}
         </p>
         {creatorHandle && (
           <p className="mt-1 text-premium-small text-muted-foreground">
-            Subscribe to be first to see new content.
+            {t.feed.subscribeToSeeContent}
           </p>
         )}
       </div>
@@ -151,7 +157,7 @@ export function MediaGrid({
         columns === 4 && "grid-cols-2 sm:grid-cols-3 md:grid-cols-4",
         className
       )}
-      aria-label="Creator posts grid"
+      aria-label={t.feed.postsGridAriaLabel}
     >
       {posts.map((post) => {
         const locked =
@@ -163,6 +169,7 @@ export function MediaGrid({
               locked={locked}
               onUnlockClick={onUnlockClick ? () => onUnlockClick(post) : undefined}
               showWatermark={showWatermark}
+              t={t}
             />
           </li>
         );

@@ -8,8 +8,9 @@ import { BillingService } from "@/features/billing/api";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/errors";
 import { buildBillingReturnUrls } from "@/features/billing/checkoutUrls";
-import { apiFetch } from "@/lib/api/client";
 import { uuidClient } from "@/lib/uuid";
+import { useSession } from "@/lib/hooks/useSession";
+import { useTranslation, interpolate } from "@/lib/i18n";
 import "@/lib/api";
 
 type SubscribeCheckoutButtonProps = {
@@ -29,6 +30,8 @@ export function SubscribeCheckoutButton({
   isSubscriber = false,
 }: SubscribeCheckoutButtonProps) {
   const router = useRouter();
+  const { user: sessionUser } = useSession();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const idempotencyRef = useRef<string | null>(null);
@@ -40,17 +43,11 @@ export function SubscribeCheckoutButton({
     setLoading(true);
     setError(null);
 
-    // Quick auth check: try /auth/me. If 401, redirect to login.
-    try {
-      await apiFetch("/auth/me", { method: "GET" });
-    } catch (authErr) {
-      const parsed = getApiErrorMessage(authErr);
-      if (parsed.kind === "unauthorized") {
-        const returnTo = `/creators/${creatorHandle}`;
-        router.push(`/login?next=${encodeURIComponent(returnTo)}`);
-        return;
-      }
-      // Network/other error — fall through to let the main call fail with a message
+    // Auth check: redirect unauthenticated users to login
+    if (!sessionUser) {
+      const returnTo = `/creators/${creatorHandle}`;
+      router.push(`/login?next=${encodeURIComponent(returnTo)}`);
+      return;
     }
 
     // Generate idempotency key for this click
@@ -70,7 +67,7 @@ export function SubscribeCheckoutButton({
         cancel_url: cancelUrl,
       });
       if (!response.checkout_url) {
-        setError("Unable to start checkout. Please try again.");
+        setError(t.subscribe.errorUnableToStartCheckout);
         setLoading(false);
         idempotencyRef.current = null;
         return;
@@ -90,8 +87,11 @@ export function SubscribeCheckoutButton({
   };
 
   const priceLabel = price
-    ? `Subscribe — ${parseFloat(price).toFixed(2)} ${(currency || "eur").toUpperCase()}/mo`
-    : "Subscribe";
+    ? interpolate(t.subscribe.subscribeWithPrice, {
+        price: parseFloat(price).toFixed(2),
+        currency: (currency || "eur").toUpperCase(),
+      })
+    : t.subscribe.subscribe;
 
   return (
     <div className="flex flex-col items-end gap-1">
@@ -104,7 +104,7 @@ export function SubscribeCheckoutButton({
         {loading ? (
           <>
             <Spinner className="icon-base" />
-            Starting...
+            {t.subscribe.starting}
           </>
         ) : (
           <>

@@ -318,19 +318,19 @@ variable "enable_mock_kyc" {
 
 variable "enable_smart_previews" {
   type        = bool
-  default     = false
+  default     = true
   description = "Enable aspect-ratio crop variants (1:1, 4:5, 16:9) for uploaded images"
 }
 
 variable "enable_promo_generator" {
   type        = bool
-  default     = false
+  default     = true
   description = "Enable template-based promotional copy generator for posts"
 }
 
 variable "enable_translations" {
   type        = bool
-  default     = false
+  default     = true
   description = "Enable CPU-only caption translation (FR, ES) via argostranslate"
 }
 
@@ -338,6 +338,12 @@ variable "enable_ai_safety" {
   type        = bool
   default     = true
   description = "Enable self-hosted AI safety scanning (NSFW + age-range proxy, captioning, semantic search)"
+}
+
+variable "enable_ai_tools" {
+  type        = bool
+  default     = false
+  description = "Enable AI Studio tools (remove-bg, cartoonize). False by default for safe rollout."
 }
 
 variable "default_currency" {
@@ -379,6 +385,7 @@ variable "ccbill_test_mode" {
 
 variable "resend_api_key" {
   type        = string
+  default     = ""
   sensitive   = true
   description = "Resend API key for transactional email delivery"
 }

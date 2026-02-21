@@ -6,6 +6,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { createPpvPostIntent } from "@/lib/api/ppv";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { useTranslation, interpolate } from "@/lib/i18n";
 
 function formatPrice(cents: number, currency: string): string {
   return new Intl.NumberFormat("en-US", {
@@ -28,8 +29,10 @@ export function PostUnlockButton({
   onClose: () => void;
   onUnlocked: () => void;
 }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const formattedPrice = formatPrice(priceCents, currency);
 
   const startPayment = async () => {
     setLoading(true);
@@ -41,43 +44,43 @@ export function PostUnlockButton({
         return;
       }
       if (!intent.checkout_url) {
-        setError("Unable to initialize payment.");
+        setError(t.ppv.errorUnableToInitialize);
         setLoading(false);
         return;
       }
       window.location.assign(intent.checkout_url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to start payment.");
+      setError(err instanceof Error ? err.message : t.ppv.errorFailedToStart);
       setLoading(false);
     }
   };
 
   return (
-    <Modal open onClose={onClose} title={`Unlock for ${formatPrice(priceCents, currency)}`}>
+    <Modal open onClose={onClose} title={interpolate(t.ppv.unlockForPrice, { price: formattedPrice })}>
       {error && (
         <div className="space-y-2">
           <p className="text-sm text-destructive">{error}</p>
           <Button size="sm" variant="outline" onClick={startPayment} className="gap-1.5">
             <Icon name="refresh" className="icon-base" />
-            Retry
+            {t.ppv.retryButton}
           </Button>
         </div>
       )}
       {!error && (
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            You will be redirected to our payment processor to complete the purchase.
+            {t.ppv.paymentRedirectDescription}
           </p>
           <Button size="sm" onClick={startPayment} disabled={loading} className="gap-1.5">
             {loading ? (
               <>
                 <Spinner className="icon-base" />
-                Redirecting...
+                {t.ppv.redirecting}
               </>
             ) : (
               <>
                 <Icon name="lock_open" className="icon-base" />
-                Pay {formatPrice(priceCents, currency)}
+                {interpolate(t.ppv.payButton, { price: formattedPrice })}
               </>
             )}
           </Button>

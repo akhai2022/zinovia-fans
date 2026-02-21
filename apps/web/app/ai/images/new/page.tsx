@@ -11,25 +11,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
+import { useTranslation, interpolate } from "@/lib/i18n";
 import "@/lib/api";
 
-const PRESETS: Record<string, string> = {
-  hero_marketing: "Hero (marketing)",
-  creator_avatar: "Creator avatar",
-  creator_banner: "Creator banner",
-};
-
-const IMAGE_TYPES = [
-  { value: "HERO", label: "Hero" },
-  { value: "AVATAR", label: "Avatar" },
-  { value: "BANNER", label: "Banner" },
-] as const;
+const IMAGE_TYPE_VALUES = ["HERO", "AVATAR", "BANNER"] as const;
 
 function AiImagesNewPageContent() {
   const { authorized } = useRequireRole(["creator", "admin", "super_admin"]);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { addToast } = useToast();
+  const { t } = useTranslation();
   const applyHint = searchParams.get("apply") as "creator.avatar" | "creator.banner" | null;
   const [imageType, setImageType] = useState<"HERO" | "AVATAR" | "BANNER">(
     applyHint === "creator.avatar" ? "AVATAR" : applyHint === "creator.banner" ? "BANNER" : "AVATAR"
@@ -55,10 +47,10 @@ function AiImagesNewPageContent() {
         accent_color: accentColor || undefined,
         count: 1,
       });
-      addToast("Generation started", "success");
+      addToast(t.aiImages.toastGenerationStarted, "success");
       router.push(`/ai/images/${job_id}`);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to start generation";
+      const msg = err instanceof Error ? err.message : t.aiImages.errorFallback;
       setError(msg);
       addToast(msg, "error");
     } finally {
@@ -72,31 +64,30 @@ function AiImagesNewPageContent() {
     <Page>
       <div className="mb-4">
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/ai/images">← Back to AI Studio</Link>
+          <Link href="/ai/images">{t.aiImages.backToAiStudio}</Link>
         </Button>
       </div>
       <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-        Generate AI image
+        {t.aiImages.title}
       </h1>
       {applyHint && (
         <p className="mt-1 text-sm text-muted-foreground">
-          After generating, you can apply this image as your{" "}
-          {applyHint === "creator.avatar" ? "avatar" : "banner"}.
+          {applyHint === "creator.avatar" ? t.aiImages.applyHintAvatar : t.aiImages.applyHintBanner}
         </p>
       )}
       <Card className="mt-4">
         <CardHeader>
-          <CardTitle>Settings</CardTitle>
+          <CardTitle>{t.aiImages.settingsTitle}</CardTitle>
           <CardDescription>
-            Choose preset and optional modifiers. The server builds the final prompt.
+            {t.aiImages.settingsDescription}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label>Image type</Label>
+              <Label>{t.aiImages.imageTypeLabel}</Label>
               <div className="flex gap-2">
-                {IMAGE_TYPES.map(({ value, label }) => (
+                {IMAGE_TYPE_VALUES.map((value) => (
                   <Button
                     key={value}
                     type="button"
@@ -104,37 +95,39 @@ function AiImagesNewPageContent() {
                     size="sm"
                     onClick={() => setImageType(value)}
                   >
-                    {label}
+                    {value === "HERO" ? t.aiImages.imageTypeHero : value === "AVATAR" ? t.aiImages.imageTypeAvatar : t.aiImages.imageTypeBanner}
                   </Button>
                 ))}
               </div>
             </div>
             <p className="text-sm text-muted-foreground">
-              Preset: {PRESETS[presetForType] ?? presetForType}
+              {interpolate(t.aiImages.presetLabel, {
+                presetName: presetForType === "hero_marketing" ? t.aiImages.presetHeroMarketing : presetForType === "creator_banner" ? t.aiImages.presetCreatorBanner : t.aiImages.presetCreatorAvatar,
+              })}
             </p>
             <div className="space-y-2">
-              <Label htmlFor="subject">Subject (optional)</Label>
+              <Label htmlFor="subject">{t.aiImages.subjectLabel}</Label>
               <Input
                 id="subject"
-                placeholder="e.g. modern aesthetic"
+                placeholder={t.aiImages.subjectPlaceholder}
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="vibe">Vibe (optional)</Label>
+              <Label htmlFor="vibe">{t.aiImages.vibeLabel}</Label>
               <Input
                 id="vibe"
-                placeholder="e.g. elegant"
+                placeholder={t.aiImages.vibePlaceholder}
                 value={vibe}
                 onChange={(e) => setVibe(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="accent">Accent color (optional)</Label>
+              <Label htmlFor="accent">{t.aiImages.accentColorLabel}</Label>
               <Input
                 id="accent"
-                placeholder="e.g. soft gold"
+                placeholder={t.aiImages.accentColorPlaceholder}
                 value={accentColor}
                 onChange={(e) => setAccentColor(e.target.value)}
               />
@@ -143,7 +136,7 @@ function AiImagesNewPageContent() {
               <p className="text-sm text-destructive">{error}</p>
             )}
             <Button type="submit" disabled={loading}>
-              {loading ? "Starting…" : "Generate"}
+              {loading ? t.aiImages.generateButtonLoading : t.aiImages.generateButton}
             </Button>
           </form>
         </CardContent>
@@ -153,16 +146,17 @@ function AiImagesNewPageContent() {
 }
 
 export default function AiImagesNewPage() {
+  const { t } = useTranslation();
   return (
     <Suspense
       fallback={
         <Page>
           <div className="mb-4">
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/ai/images">← Back to AI Studio</Link>
+              <Link href="/ai/images">{t.aiImages.backToAiStudio}</Link>
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground">Loading AI Studio…</p>
+          <p className="text-sm text-muted-foreground">{t.aiImages.loadingFallback}</p>
         </Page>
       }
     >

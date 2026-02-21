@@ -19,6 +19,7 @@ celery_app = Celery(
     include=[
         "worker.tasks.ai",
         "worker.tasks.ai_safety",
+        "worker.tasks.ai_tools",
         "worker.tasks.media",
         "worker.tasks.notifications",
         "worker.tasks.posts",

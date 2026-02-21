@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useRequireRole } from "@/lib/hooks/useRequireRole";
+import { useTranslation, interpolate } from "@/lib/i18n";
 import {
   CollectionsService,
   type CollectionOut,
@@ -18,17 +19,18 @@ import { useToast } from "@/components/ui/toast";
 import { ImageUploadField } from "@/features/media/ImageUploadField";
 import "@/lib/api";
 
-const VISIBILITY_OPTIONS = [
-  { value: "PUBLIC", label: "Public" },
-  { value: "FOLLOWERS", label: "Followers only" },
-  { value: "SUBSCRIBERS", label: "Subscribers only" },
-];
-
 export default function EditCollectionPage() {
   const { authorized } = useRequireRole(["creator", "admin", "super_admin"]);
+  const { t } = useTranslation();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { addToast } = useToast();
+
+  const VISIBILITY_OPTIONS = [
+    { value: "PUBLIC", label: t.collections.visibilityPublic },
+    { value: "FOLLOWERS", label: t.collections.visibilityFollowersOnly },
+    { value: "SUBSCRIBERS", label: t.collections.visibilitySubscribersOnly },
+  ];
   const collectionId = params.id;
 
   const [collection, setCollection] = useState<CollectionOut | null>(null);
@@ -62,7 +64,7 @@ export default function EditCollectionPage() {
       setVisibility(col.visibility);
       setCoverAssetId(col.cover_asset_id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load");
+      setError(err instanceof Error ? err.message : t.collections.errorLoadCollection);
     } finally {
       setLoading(false);
     }
@@ -88,10 +90,10 @@ export default function EditCollectionPage() {
         body,
       );
       setCollection(updated);
-      addToast("Collection saved", "success");
+      addToast(t.collections.toastCollectionSaved, "success");
     } catch (err: unknown) {
       addToast(
-        err instanceof Error ? err.message : "Failed to save",
+        err instanceof Error ? err.message : t.collections.errorSaveCollection,
         "error",
       );
     } finally {
@@ -108,10 +110,10 @@ export default function EditCollectionPage() {
       });
       setPosts((prev) => [...prev, added]);
       setAddPostId("");
-      addToast("Post added to collection", "success");
+      addToast(t.collections.toastPostAdded, "success");
     } catch (err: unknown) {
       addToast(
-        err instanceof Error ? err.message : "Failed to add post",
+        err instanceof Error ? err.message : t.collections.errorAddPost,
         "error",
       );
     } finally {
@@ -123,10 +125,10 @@ export default function EditCollectionPage() {
     try {
       await CollectionsService.collectionsRemovePost(collectionId, postId);
       setPosts((prev) => prev.filter((p) => p.post_id !== postId));
-      addToast("Post removed", "success");
+      addToast(t.collections.toastPostRemoved, "success");
     } catch (err: unknown) {
       addToast(
-        err instanceof Error ? err.message : "Failed to remove post",
+        err instanceof Error ? err.message : t.collections.errorRemovePost,
         "error",
       );
     }
@@ -147,10 +149,10 @@ export default function EditCollectionPage() {
     return (
       <div className="mx-auto max-w-2xl space-y-6 px-4 py-8 sm:px-6">
         <Card className="py-10 text-center" role="alert">
-          <p className="font-semibold text-foreground">Failed to load collection</p>
+          <p className="font-semibold text-foreground">{t.collections.failedToLoadCollection}</p>
           <p className="mt-1 text-sm text-muted-foreground">{error}</p>
           <Button variant="secondary" size="sm" className="mt-4" onClick={loadData}>
-            Retry
+            {t.collections.retryButton}
           </Button>
         </Card>
       </div>
@@ -161,10 +163,10 @@ export default function EditCollectionPage() {
     <div className="mx-auto max-w-2xl space-y-6 px-4 py-8 sm:px-6">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-premium-h2 font-semibold text-foreground">
-          Edit Collection
+          {t.collections.editCollectionTitle}
         </h1>
         <Button variant="secondary" size="sm" asChild>
-          <a href="/creator/collections">Back to collections</a>
+          <a href="/creator/collections">{t.collections.backToCollections}</a>
         </Button>
       </div>
 
@@ -172,7 +174,7 @@ export default function EditCollectionPage() {
       <Card className="p-6">
         <form onSubmit={handleSave} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
+            <Label htmlFor="title">{t.collections.titleLabel}</Label>
             <Input
               id="title"
               value={title}
@@ -183,7 +185,7 @@ export default function EditCollectionPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">{t.collections.descriptionLabelEdit}</Label>
             <textarea
               id="description"
               value={description}
@@ -195,7 +197,7 @@ export default function EditCollectionPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="visibility">Visibility</Label>
+            <Label htmlFor="visibility">{t.collections.visibilityLabel}</Label>
             <select
               id="visibility"
               value={visibility}
@@ -215,7 +217,7 @@ export default function EditCollectionPage() {
           />
           {coverAssetId && (
             <p className="text-xs text-muted-foreground">
-              Cover image set (ID: {coverAssetId.slice(0, 8)}...)
+              {interpolate(t.collections.coverImageSet, { id: coverAssetId.slice(0, 8) })}
             </p>
           )}
 
@@ -225,7 +227,7 @@ export default function EditCollectionPage() {
               size="sm"
               disabled={!title.trim() || saving}
             >
-              {saving ? "Saving..." : "Save changes"}
+              {saving ? t.collections.savingButton : t.collections.saveChangesButton}
             </Button>
           </div>
         </form>
@@ -234,7 +236,7 @@ export default function EditCollectionPage() {
       {/* Posts in collection */}
       <Card className="p-6">
         <h2 className="mb-4 font-display text-lg font-semibold text-foreground">
-          Posts in this collection
+          {t.collections.postsInCollectionTitle}
         </h2>
 
         {/* Add post */}
@@ -242,7 +244,7 @@ export default function EditCollectionPage() {
           <Input
             value={addPostId}
             onChange={(e) => setAddPostId(e.target.value)}
-            placeholder="Post ID"
+            placeholder={t.collections.addPostPlaceholder}
             className="flex-1"
           />
           <Button
@@ -250,14 +252,13 @@ export default function EditCollectionPage() {
             onClick={handleAddPost}
             disabled={!addPostId.trim() || addingPost}
           >
-            {addingPost ? "Adding..." : "Add post"}
+            {addingPost ? t.collections.addingPostButton : t.collections.addPostButton}
           </Button>
         </div>
 
         {posts.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No posts in this collection yet. Add a post by entering its ID
-            above.
+            {t.collections.noPostsInCollection}
           </p>
         ) : (
           <ul className="space-y-2">
@@ -268,10 +269,10 @@ export default function EditCollectionPage() {
               >
                 <div className="text-sm">
                   <span className="font-medium text-foreground">
-                    Post {p.post_id.slice(0, 8)}...
+                    {interpolate(t.collections.postIdLabel, { id: p.post_id.slice(0, 8) })}
                   </span>
                   <span className="ml-2 text-xs text-muted-foreground">
-                    Position: {p.position}
+                    {interpolate(t.collections.positionLabel, { position: String(p.position) })}
                   </span>
                 </div>
                 <Button
@@ -279,7 +280,7 @@ export default function EditCollectionPage() {
                   size="sm"
                   onClick={() => handleRemovePost(p.post_id)}
                 >
-                  Remove
+                  {t.collections.removeButton}
                 </Button>
               </li>
             ))}

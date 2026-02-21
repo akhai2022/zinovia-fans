@@ -3,7 +3,7 @@ aws_region   = "us-east-1"
 project_name = "zinovia-fans"
 
 # HA toggle: set true for production launch (2 NATs, Multi-AZ RDS, ECS min 2, WAF)
-enable_ha = false  # Pre-launch: saves ~$58/mo. Flip to true before launch.
+enable_ha = false # Pre-launch: saves ~$58/mo. Flip to true before launch.
 
 vpc_cidr          = "10.0.0.0/16"
 use_existing_vpc  = false
@@ -32,17 +32,18 @@ worker_scaling_min = 1
 worker_scaling_max = 5
 
 # Networking
-enable_alb   = true
-enable_acm   = true
-enable_route53 = true
-enable_custom_domain = true
-dns_delegated = true
-enable_cloudfront = false  # Blocked: AWS account not verified for CloudFront
-web_use_apex = true
+enable_alb             = true
+enable_acm             = true
+enable_route53         = true
+enable_custom_domain   = true
+dns_delegated          = true
+enable_cloudfront      = true # CloudFront CDN for web (zinovia.ai) + media (media.zinovia.ai)
+web_use_apex           = true
 enable_apex_cloudfront = false
+enable_waf             = true # WAF for ALB + CloudFront distributions
 
 # HTTPS
-force_http_forwarding = false
+force_http_forwarding           = false
 wait_for_certificate_validation = true
 
 # Media
@@ -54,13 +55,13 @@ enable_likes           = true
 enable_comments        = true
 enable_notifications   = true
 enable_vault           = true
-enable_scheduled_posts = false
-enable_promotions      = false
-enable_dm_broadcast    = false
-enable_ppv_posts       = false
+enable_scheduled_posts = true
+enable_promotions      = true
+enable_dm_broadcast    = true
+enable_ppv_posts       = true
 enable_ppvm            = true
-enable_moderation      = false
-enable_analytics       = false
+enable_moderation      = true
+enable_analytics       = true
 enable_mock_kyc        = true
 
 # Currency

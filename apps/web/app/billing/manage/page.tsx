@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api/client";
 import { getApiErrorMessage } from "@/lib/errors";
+import { useTranslation, interpolate } from "@/lib/i18n";
 import "@/lib/api";
 
 type SubscriptionItem = {
@@ -35,6 +36,7 @@ type BillingStatus = {
 
 export default function BillingManagePage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [status, setStatus] = useState<BillingStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
@@ -81,7 +83,7 @@ export default function BillingManagePage() {
     return (
       <Page className="max-w-2xl space-y-4">
         <h1 className="font-display text-premium-h2 font-semibold text-foreground">
-          Manage Subscriptions
+          {t.billing.title}
         </h1>
         <Card>
           <CardContent className="space-y-3 p-6">
@@ -102,7 +104,7 @@ export default function BillingManagePage() {
   return (
     <Page className="max-w-2xl space-y-6">
       <h1 className="font-display text-premium-h2 font-semibold text-foreground">
-        Manage Subscriptions
+        {t.billing.title}
       </h1>
 
       {error && (
@@ -114,13 +116,13 @@ export default function BillingManagePage() {
       {subscriptions.length === 0 && (
         <Card className="py-12 text-center">
           <p className="font-display text-lg font-semibold text-foreground">
-            No subscriptions yet
+            {t.billing.noSubscriptionsTitle}
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Subscribe to creators to see your subscriptions here.
+            {t.billing.noSubscriptionsDescription}
           </p>
           <Button size="sm" className="mt-4" asChild>
-            <Link href="/creators">Discover creators</Link>
+            <Link href="/creators">{t.billing.discoverCreators}</Link>
           </Button>
         </Card>
       )}
@@ -128,10 +130,9 @@ export default function BillingManagePage() {
       {activeSubscriptions.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Active Subscriptions</CardTitle>
+            <CardTitle>{t.billing.activeSubscriptionsTitle}</CardTitle>
             <CardDescription>
-              You have {activeSubscriptions.length} active subscription
-              {activeSubscriptions.length !== 1 ? "s" : ""}.
+              {interpolate(t.billing.activeSubscriptionsDescription, { count: activeSubscriptions.length })}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -142,15 +143,15 @@ export default function BillingManagePage() {
               >
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    Creator: {sub.creator_user_id.slice(0, 8)}...
+                    {interpolate(t.billing.creatorLabel, { creatorId: sub.creator_user_id.slice(0, 8) })}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Status: {sub.status}
+                    {interpolate(t.billing.statusLabel, { status: sub.status })}
                     {sub.current_period_end && (
-                      <> · Renews: {new Date(sub.current_period_end).toLocaleDateString()}</>
+                      <> · {interpolate(t.billing.renewsLabel, { date: new Date(sub.current_period_end).toLocaleDateString() })}</>
                     )}
                     {sub.cancel_at_period_end && (
-                      <span className="ml-2 text-amber-600"> (cancels at period end)</span>
+                      <span className="ml-2 text-amber-600"> {t.billing.cancelsAtPeriodEnd}</span>
                     )}
                   </p>
                 </div>
@@ -161,7 +162,7 @@ export default function BillingManagePage() {
                     onClick={() => cancelSubscription(sub.subscription_id)}
                     disabled={cancellingId === sub.subscription_id}
                   >
-                    {cancellingId === sub.subscription_id ? "Cancelling..." : "Cancel"}
+                    {cancellingId === sub.subscription_id ? t.billing.cancellingButton : t.billing.cancelButton}
                   </Button>
                 )}
               </div>
@@ -173,7 +174,7 @@ export default function BillingManagePage() {
       {subscriptions.filter((s) => s.status !== "active" && s.status !== "trialing").length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Past Subscriptions</CardTitle>
+            <CardTitle>{t.billing.pastSubscriptionsTitle}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {subscriptions
@@ -185,10 +186,10 @@ export default function BillingManagePage() {
                 >
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      Creator: {sub.creator_user_id.slice(0, 8)}...
+                      {interpolate(t.billing.creatorLabel, { creatorId: sub.creator_user_id.slice(0, 8) })}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Status: {sub.status}
+                      {interpolate(t.billing.statusLabel, { status: sub.status })}
                     </p>
                   </div>
                 </div>
@@ -198,7 +199,7 @@ export default function BillingManagePage() {
       )}
 
       <Button variant="ghost" size="sm" asChild>
-        <Link href="/feed">Back to feed</Link>
+        <Link href="/feed">{t.billing.backToFeed}</Link>
       </Button>
     </Page>
   );

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRequireRole } from "@/lib/hooks/useRequireRole";
+import { useTranslation } from "@/lib/i18n";
 import { CollectionsService, type CollectionCreate } from "@zinovia/contracts";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,16 +13,17 @@ import { useToast } from "@/components/ui/toast";
 import { ImageUploadField } from "@/features/media/ImageUploadField";
 import "@/lib/api";
 
-const VISIBILITY_OPTIONS = [
-  { value: "PUBLIC", label: "Public" },
-  { value: "FOLLOWERS", label: "Followers only" },
-  { value: "SUBSCRIBERS", label: "Subscribers only" },
-];
-
 export default function NewCollectionPage() {
   const { authorized } = useRequireRole(["creator", "admin", "super_admin"]);
+  const { t } = useTranslation();
   const router = useRouter();
   const { addToast } = useToast();
+
+  const VISIBILITY_OPTIONS = [
+    { value: "PUBLIC", label: t.collections.visibilityPublic },
+    { value: "FOLLOWERS", label: t.collections.visibilityFollowersOnly },
+    { value: "SUBSCRIBERS", label: t.collections.visibilitySubscribersOnly },
+  ];
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState("PUBLIC");
@@ -45,12 +47,12 @@ export default function NewCollectionPage() {
 
     try {
       const created = await CollectionsService.collectionsCreate(body);
-      addToast("Collection created", "success");
+      addToast(t.collections.toastCollectionCreated, "success");
       router.push(`/creator/collections/${created.id}`);
     } catch (err: unknown) {
       setStatus("error");
       setErrorMsg(
-        err instanceof Error ? err.message : "Failed to create collection",
+        err instanceof Error ? err.message : t.collections.errorCreateCollection,
       );
     }
   };
@@ -60,30 +62,30 @@ export default function NewCollectionPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-4 py-8 sm:px-6">
       <h1 className="font-display text-premium-h2 font-semibold text-foreground">
-        New Collection
+        {t.collections.newCollectionTitle}
       </h1>
 
       <Card className="p-6">
         <form onSubmit={onSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
+            <Label htmlFor="title">{t.collections.titleLabel}</Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Behind the Scenes"
+              placeholder={t.collections.titlePlaceholder}
               required
               maxLength={120}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description (optional)</Label>
+            <Label htmlFor="description">{t.collections.descriptionLabel}</Label>
             <textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="What is this collection about?"
+              placeholder={t.collections.descriptionPlaceholder}
               rows={3}
               maxLength={500}
               className="flex w-full rounded-brand border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -91,7 +93,7 @@ export default function NewCollectionPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="visibility">Visibility</Label>
+            <Label htmlFor="visibility">{t.collections.visibilityLabel}</Label>
             <select
               id="visibility"
               value={visibility}
@@ -123,14 +125,14 @@ export default function NewCollectionPage() {
               size="sm"
               onClick={() => router.push("/creator/collections")}
             >
-              Cancel
+              {t.collections.cancelButton}
             </Button>
             <Button
               type="submit"
               size="sm"
               disabled={!title.trim() || status === "loading"}
             >
-              {status === "loading" ? "Creating..." : "Create Collection"}
+              {status === "loading" ? t.collections.creatingButton : t.collections.createCollectionButton}
             </Button>
           </div>
         </form>

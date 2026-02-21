@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api/client";
 import { getApiErrorMessage } from "@/lib/errors";
+import { useTranslation } from "@/lib/i18n";
 import "@/lib/api";
 import type { FeedItem, FeedPageData } from "./page";
 
@@ -18,6 +19,7 @@ interface FeedContentProps {
 }
 
 export function FeedContent({ initialData, initialError }: FeedContentProps) {
+  const { t } = useTranslation();
   const [items, setItems] = useState<FeedItem[]>(initialData?.items ?? []);
   const [nextCursor, setNextCursor] = useState<string | null>(
     initialData?.next_cursor ?? null,
@@ -72,10 +74,10 @@ export function FeedContent({ initialData, initialError }: FeedContentProps) {
     <>
       <div className="flex items-center justify-between gap-4">
         <h1 className="font-display text-premium-h2 font-semibold text-foreground">
-          Feed
+          {t.feed.feedTitle}
         </h1>
         <Button variant="secondary" size="sm" asChild>
-          <Link href="/creators">Discover creators</Link>
+          <Link href="/creators">{t.feed.discoverCreatorsButton}</Link>
         </Button>
       </div>
 
@@ -86,13 +88,13 @@ export function FeedContent({ initialData, initialError }: FeedContentProps) {
           role="alert"
         >
           <p className="font-display text-premium-h3 font-semibold text-foreground">
-            Something went wrong
+            {t.feed.errorTitle}
           </p>
           <p className="mt-2 text-premium-body text-muted-foreground">
             {error}
           </p>
           <Button variant="secondary" size="sm" className="mt-6" asChild>
-            <Link href="/feed">Retry</Link>
+            <Link href="/feed">{t.feed.retryButton}</Link>
           </Button>
         </Card>
       )}
@@ -102,23 +104,23 @@ export function FeedContent({ initialData, initialError }: FeedContentProps) {
         <Card
           className="py-16 text-center"
           role="status"
-          aria-label="No posts yet"
+          aria-label={t.feed.noPostsAriaLabel}
         >
           <p className="font-display text-premium-h3 font-semibold text-foreground">
-            Your feed is empty
+            {t.feed.emptyTitle}
           </p>
           <p className="mt-2 text-premium-body text-muted-foreground">
-            Follow or subscribe to creators to see posts here.
+            {t.feed.emptyDescription}
           </p>
           <Button size="sm" className="mt-6" asChild>
-            <Link href="/creators">Discover creators</Link>
+            <Link href="/creators">{t.feed.emptyDiscoverCreators}</Link>
           </Button>
         </Card>
       )}
 
       {/* Feed list */}
       {items.length > 0 && (
-        <ul className="space-y-4" aria-label="Feed">
+        <ul className="space-y-4" aria-label={t.feed.feedTitle}>
           {items.map((post) => (
             <li key={post.id}>
               <FeedCard
@@ -134,7 +136,7 @@ export function FeedContent({ initialData, initialError }: FeedContentProps) {
 
       {/* Loading more skeleton */}
       {loadingMore && (
-        <div className="space-y-4" aria-label="Loading more posts">
+        <div className="space-y-4" aria-label={t.feed.loadingMoreAriaLabel}>
           {[1, 2].map((i) => (
             <Card key={i} className="overflow-hidden rounded-premium-lg p-4">
               <div className="flex items-center gap-3">
@@ -164,7 +166,7 @@ export function FeedContent({ initialData, initialError }: FeedContentProps) {
               loadMore();
             }}
           >
-            Retry
+            {t.feed.retryButton}
           </Button>
         </div>
       )}
@@ -177,7 +179,7 @@ export function FeedContent({ initialData, initialError }: FeedContentProps) {
       {/* End of feed indicator */}
       {items.length > 0 && !nextCursor && !loadingMore && (
         <p className="py-4 text-center text-sm text-muted-foreground">
-          You&apos;re all caught up.
+          {t.feed.allCaughtUp}
         </p>
       )}
     </>

@@ -14,6 +14,8 @@ import { BioExpand } from "@/components/premium";
 import type { PostItem } from "@/types/creator";
 import { ApiClientError, apiFetchServer } from "@/lib/api/client";
 import { getServerApiBaseUrl } from "@/lib/env";
+import { getServerDictionary } from "@/lib/i18n/server";
+import { interpolate } from "@/lib/i18n";
 import { SubscribeCheckoutButton } from "@/features/billing/components/SubscribeCheckoutButton";
 import { MessageButton } from "@/features/messaging/MessageButton";
 import { CreatorPostsSection } from "./CreatorPostsSection";
@@ -40,9 +42,10 @@ export async function generateMetadata({
     if (!res.ok) return { title: `@${handle} | Zinovia` };
     const creator = await res.json();
     const title = `${creator.display_name} (@${creator.handle}) | Zinovia`;
+    const { dictionary: metaT } = await getServerDictionary();
     const description = creator.bio
       ? creator.bio.slice(0, 160)
-      : `Subscribe to ${creator.display_name}'s exclusive content on Zinovia.`;
+      : interpolate(metaT.creatorProfile.metaFallbackDescription, { displayName: creator.display_name });
     const url = `${SITE_URL}/creators/${creator.handle}`;
     return {
       title,
@@ -108,6 +111,7 @@ export default async function CreatorProfilePage({
     typeof params.handle === "string" ? params.handle : params.handle[0];
   const handle = normalizeHandle(rawHandle);
   const cookieHeader = cookies().toString();
+  const { dictionary: t } = await getServerDictionary();
   let creator: CreatorProfile;
   try {
     creator = await apiFetchServer<CreatorProfile>(`/creators/${encodeURIComponent(handle)}`, {
@@ -121,12 +125,12 @@ export default async function CreatorProfilePage({
     return (
       <Page className="max-w-3xl space-y-4">
         <Card className="rounded-2xl border border-border p-8 text-center shadow-sm">
-          <p className="text-sm font-medium text-foreground">Unable to load creator profile.</p>
+          <p className="text-sm font-medium text-foreground">{t.creatorProfile.errorTitle}</p>
           <p className="mt-2 text-sm text-muted-foreground">
-            {error instanceof ApiClientError ? error.detail || error.message : "Please try again."}
+            {error instanceof ApiClientError ? error.detail || error.message : t.creatorProfile.errorFallback}
           </p>
           <Button className="mt-4" variant="secondary" asChild>
-            <Link href={`/creators/${handle}`}>Retry</Link>
+            <Link href={`/creators/${handle}`}>{t.creatorProfile.retryButton}</Link>
           </Button>
         </Card>
       </Page>
@@ -157,7 +161,7 @@ export default async function CreatorProfilePage({
         name: creator.display_name,
         alternateName: `@${creator.handle}`,
         url: `${SITE_URL}/creators/${creator.handle}`,
-        description: creator.bio ?? `Subscribe to ${creator.display_name} on Zinovia Fans.`,
+        description: creator.bio ?? interpolate(t.creatorProfile.jsonLdFallbackDescription, { displayName: creator.display_name }),
       },
     },
     {
@@ -203,10 +207,10 @@ export default async function CreatorProfilePage({
             <h1 className="font-display text-2xl font-semibold text-foreground">{creator.display_name}</h1>
             <p className="text-sm text-muted-foreground">@{creator.handle}</p>
             <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-              <span>{creator.followers_count} followers</span>
+              <span>{interpolate(t.creatorProfile.followersCount, { count: creator.followers_count })}</span>
               <span>·</span>
-              <span>{creator.posts_count} posts</span>
-              {creator.verified && <Badge variant="verified">Verified</Badge>}
+              <span>{interpolate(t.creatorProfile.postsCount, { count: creator.posts_count })}</span>
+              {creator.verified && <Badge variant="verified">{t.creatorProfile.verifiedBadge}</Badge>}
             </div>
           </div>
           <div className="flex flex-col items-stretch gap-3 sm:items-end">
@@ -216,7 +220,7 @@ export default async function CreatorProfilePage({
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
-                Subscribed
+                {t.creatorProfile.subscribedBadge}
               </Badge>
             ) : (
               <div className="flex flex-col items-stretch gap-1 sm:items-end">
@@ -229,7 +233,7 @@ export default async function CreatorProfilePage({
                 />
                 {creator.subscription_price && (
                   <p className="text-center text-xs text-muted-foreground sm:text-right">
-                    Cancel anytime
+                    {t.creatorProfile.cancelAnytime}
                   </p>
                 )}
               </div>
@@ -249,32 +253,32 @@ export default async function CreatorProfilePage({
         {!creator.is_subscriber && creator.subscription_price && (
           <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
             <p className="text-sm font-semibold text-foreground">
-              Subscribe for {parseFloat(creator.subscription_price).toFixed(2)} {(creator.subscription_currency || "EUR").toUpperCase()}/month
+              {interpolate(t.creatorProfile.subscriptionPricePerMonth, { price: parseFloat(creator.subscription_price).toFixed(2), currency: (creator.subscription_currency || "EUR").toUpperCase() })}
             </p>
             <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
               <li className="flex items-center gap-2">
                 <svg className="h-3.5 w-3.5 shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                Full access to subscriber-only posts
+                {t.creatorProfile.benefitFullAccess}
               </li>
               <li className="flex items-center gap-2">
                 <svg className="h-3.5 w-3.5 shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                Direct messages with {creator.display_name}
+                {interpolate(t.creatorProfile.benefitDirectMessages, { creatorName: creator.display_name })}
               </li>
               <li className="flex items-center gap-2">
                 <svg className="h-3.5 w-3.5 shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                Cancel anytime — no commitment
+                {t.creatorProfile.benefitCancelAnytime}
               </li>
             </ul>
           </div>
         )}
       </div>
       <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-        <h2 className="font-display text-xl font-semibold text-foreground">Posts</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Subscriber posts remain blurred until unlocked.</p>
+        <h2 className="font-display text-xl font-semibold text-foreground">{t.creatorProfile.postsHeading}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t.creatorProfile.postsBlurredHint}</p>
         {postsError ? (
           <div className="mt-4 rounded-xl border border-border p-4 text-sm text-muted-foreground">
-            Failed to load posts: {postsError}{" "}
-            <Link href={`/creators/${handle}`} className="underline underline-offset-2">Retry</Link>
+            {interpolate(t.creatorProfile.failedToLoadPosts, { error: postsError ?? "" })}{" "}
+            <Link href={`/creators/${handle}`} className="underline underline-offset-2">{t.creatorProfile.retryButton}</Link>
           </div>
         ) : (
           <CreatorPostsSection
@@ -288,7 +292,7 @@ export default async function CreatorProfilePage({
       </div>
       <div className="flex gap-2">
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/creators">Back to creators</Link>
+          <Link href="/creators">{t.creatorProfile.backToCreators}</Link>
         </Button>
       </div>
     </Page>

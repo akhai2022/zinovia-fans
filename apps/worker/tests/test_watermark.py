@@ -1,10 +1,10 @@
-"""Unit tests for footer watermark overlay. No DB or storage."""
+"""Unit tests for watermark overlays. No DB or storage."""
 
 from __future__ import annotations
 
 from PIL import Image
 
-from worker.watermark import apply_footer_watermark, should_watermark_variant
+from worker.watermark import apply_centered_watermark, apply_footer_watermark, should_watermark_variant
 
 
 def test_watermark_footer_region_differs_from_original() -> None:
@@ -62,3 +62,56 @@ def test_should_watermark_variant_only_when_enabled_and_in_list() -> None:
     assert should_watermark_variant("grid", False, ["grid", "full"]) is False
     assert should_watermark_variant("grid", True, []) is False
     assert should_watermark_variant("poster", True, ["grid", "full"]) is False
+
+
+# ---------------------------------------------------------------------------
+# Centered watermark tests
+# ---------------------------------------------------------------------------
+
+
+def test_centered_watermark_modifies_image() -> None:
+    """Centered watermark changes pixels of a solid-color image."""
+    img = Image.new("RGB", (400, 300), color=(80, 80, 80))
+    original_pixels = img.tobytes()
+    out = apply_centered_watermark(img, "zinovia-fans", opacity=0.30, stroke_px=2)
+    assert out.size == img.size
+    assert out.tobytes() != original_pixels, "watermark should change some pixels"
+
+
+def test_centered_watermark_deterministic() -> None:
+    """Same input + params → identical output bytes."""
+    img1 = Image.new("RGB", (400, 300), color=(60, 60, 60))
+    img2 = Image.new("RGB", (400, 300), color=(60, 60, 60))
+    out1 = apply_centered_watermark(img1, "zinovia-fans", opacity=0.30, stroke_px=2)
+    out2 = apply_centered_watermark(img2, "zinovia-fans", opacity=0.30, stroke_px=2)
+    assert out1.tobytes() == out2.tobytes()
+
+
+def test_centered_watermark_zero_opacity() -> None:
+    """With opacity=0 the image should be unchanged (transparent overlay)."""
+    img = Image.new("RGB", (400, 300), color=(120, 120, 120))
+    original_pixels = img.tobytes()
+    out = apply_centered_watermark(img, "zinovia-fans", opacity=0.0, stroke_px=0)
+    assert out.tobytes() == original_pixels, "zero opacity should not change pixels"
+
+
+def test_centered_watermark_stroke_differs() -> None:
+    """Different stroke widths produce different outputs."""
+    img1 = Image.new("RGB", (400, 300), color=(50, 50, 50))
+    img2 = Image.new("RGB", (400, 300), color=(50, 50, 50))
+    out_no_stroke = apply_centered_watermark(img1, "test", opacity=0.5, stroke_px=0)
+    out_stroke = apply_centered_watermark(img2, "test", opacity=0.5, stroke_px=4)
+    assert out_no_stroke.tobytes() != out_stroke.tobytes()
+
+
+def test_centered_watermark_scales_with_image() -> None:
+    """Larger image → larger font → different pixel pattern even with same text."""
+    small = Image.new("RGB", (200, 150), color=(70, 70, 70))
+    large = Image.new("RGB", (1000, 750), color=(70, 70, 70))
+    out_small = apply_centered_watermark(small, "zinovia-fans", font_size_pct=0.05)
+    out_large = apply_centered_watermark(large, "zinovia-fans", font_size_pct=0.05)
+    # Both should be modified
+    assert out_small.tobytes() != small.tobytes()
+    assert out_large.tobytes() != large.tobytes()
+    # They should differ from each other (different sizes)
+    assert out_small.size != out_large.size

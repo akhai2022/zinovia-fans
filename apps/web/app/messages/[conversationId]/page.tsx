@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { LockedMediaCard } from "@/components/media/LockedMediaCard";
+import { useTranslation } from "@/lib/i18n";
 
 const DEFAULT_CURRENCY = "eur";
 const MIN_PPV_CENTS = 100;
@@ -24,6 +25,7 @@ const lockSchema = z.object({
 });
 
 export default function ConversationPage() {
+  const { t } = useTranslation();
   const { conversationId } = useParams<{ conversationId: string }>();
   const [messages, setMessages] = useState<MessageOut[]>([]);
   const [text, setText] = useState("");
@@ -82,12 +84,12 @@ export default function ConversationPage() {
     if (lockEnabled && isCreator && ENABLE_PPVM) {
       const parsed = lockSchema.safeParse({ priceDollars: priceInput });
       if (!parsed.success) {
-        setComposerError("Invalid PPV price.");
+        setComposerError(t.messages.invalidPpvPrice);
         return;
       }
       const cents = Math.round(parsed.data.priceDollars * 100);
       if (cents < MIN_PPV_CENTS || cents > MAX_PPV_CENTS) {
-        setComposerError("PPV price out of bounds.");
+        setComposerError(t.messages.ppvPriceOutOfBounds);
         return;
       }
       body = {
@@ -112,7 +114,7 @@ export default function ConversationPage() {
       return;
     }
     if (!intent.checkout_url) {
-      setComposerError("Unable to initialize payment.");
+      setComposerError(t.messages.unableToInitPayment);
       return;
     }
     window.location.assign(intent.checkout_url);
@@ -120,9 +122,9 @@ export default function ConversationPage() {
 
   return (
     <Page>
-      <h1 className="font-display text-premium-h2 font-semibold text-foreground">Conversation</h1>
-      {status === "loading" && <p className="mt-3 text-muted-foreground">Loading…</p>}
-      {status === "error" && <p className="mt-3 text-destructive">Unable to load messages.</p>}
+      <h1 className="font-display text-premium-h2 font-semibold text-foreground">{t.messages.conversationTitle}</h1>
+      {status === "loading" && <p className="mt-3 text-muted-foreground">{t.messages.loading}</p>}
+      {status === "error" && <p className="mt-3 text-destructive">{t.messages.errorLoadMessages}</p>}
       {status === "ready" && (
         <>
           <ul className="mt-4 space-y-3">
@@ -136,7 +138,7 @@ export default function ConversationPage() {
                       if (!media.is_locked || unlocked) {
                         return (
                           <Button key={media.id} size="sm" variant="secondary" onClick={() => viewMedia(media.id)}>
-                            View media
+                            {t.messages.viewMediaButton}
                           </Button>
                         );
                       }
@@ -150,7 +152,7 @@ export default function ConversationPage() {
                       return (
                         <div key={media.id} className="w-full max-w-[260px]">
                           <LockedMediaCard
-                            title="Locked media"
+                            title={t.messages.lockedMediaTitle}
                             priceCents={media.price_cents}
                             currency={media.currency || "eur"}
                             onUnlock={() => startUnlock(media.id)}
@@ -167,13 +169,13 @@ export default function ConversationPage() {
             <Input
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Type a message"
+              placeholder={t.messages.messageInputPlaceholder}
             />
             <div className="flex gap-2">
-              <Button size="sm" onClick={sendText}>Send text</Button>
-              <Button size="sm" variant="secondary" onClick={loadVault}>Choose from Vault</Button>
+              <Button size="sm" onClick={sendText}>{t.messages.sendTextButton}</Button>
+              <Button size="sm" variant="secondary" onClick={loadVault}>{t.messages.chooseFromVault}</Button>
               <Button size="sm" variant="secondary" onClick={sendMedia} disabled={selectedVault.length === 0}>
-                Send selected media
+                {t.messages.sendSelectedMedia}
               </Button>
             </div>
             {isCreator && ENABLE_PPVM && (
@@ -184,13 +186,13 @@ export default function ConversationPage() {
                     checked={lockEnabled}
                     onChange={(e) => setLockEnabled(e.target.checked)}
                   />
-                  Lock media (PPV)
+                  {t.messages.lockMediaLabel}
                 </label>
                 {lockEnabled && (
                   <Input
                     value={priceInput}
                     onChange={(e) => setPriceInput(e.target.value)}
-                    placeholder="Price in euros (e.g. 5)"
+                    placeholder={t.messages.ppvPricePlaceholder}
                   />
                 )}
               </div>
@@ -218,7 +220,7 @@ export default function ConversationPage() {
         </>
       )}
       <Button variant="ghost" size="sm" className="mt-4" asChild>
-        <Link href="/messages">Back</Link>
+        <Link href="/messages">{t.messages.backButton}</Link>
       </Button>
     </Page>
   );

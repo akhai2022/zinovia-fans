@@ -32,6 +32,9 @@ ACTION_ENTITLEMENT_GRANTED = "entitlement_granted"
 ACTION_ENTITLEMENT_REVOKED = "entitlement_revoked"
 ACTION_PASSWORD_CHANGE = "password_change"
 ACTION_MEDIA_DELETED = "media_deleted"
+ACTION_AI_TOOL_REMOVE_BG = "ai_tool_remove_bg"
+ACTION_AI_TOOL_CARTOONIZE = "ai_tool_cartoonize"
+ACTION_AI_IMAGE_REF_CREATE = "ai_image_ref_create"
 
 
 async def log_audit_event(

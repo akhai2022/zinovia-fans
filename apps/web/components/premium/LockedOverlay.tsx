@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/ui/icon";
+import { useTranslation } from "@/lib/i18n";
 
 interface LockedOverlayProps {
   className?: string;
@@ -16,11 +17,14 @@ interface LockedOverlayProps {
 
 export function LockedOverlay({
   className,
-  label = "Subscribe to unlock",
+  label,
   locked,
   children,
   onUnlockClick,
 }: LockedOverlayProps) {
+  const { t } = useTranslation();
+  const displayLabel = label ?? t.feed.subscribeToUnlock;
+
   return (
     <div className={cn("relative overflow-hidden", className)}>
       {children}
@@ -28,9 +32,9 @@ export function LockedOverlay({
         <div
           className="absolute inset-0 flex flex-col items-center justify-center bg-card/70 backdrop-blur-[2px] transition-opacity duration-fast ease-premium-out"
         >
-          <span className="sr-only">{label}</span>
+          <span className="sr-only">{displayLabel}</span>
           <Icon name="lock" className="icon-xl text-foreground" />
-          <p className="mt-2 text-premium-small font-medium text-foreground">{label}</p>
+          <p className="mt-2 text-premium-small font-medium text-foreground">{displayLabel}</p>
           {onUnlockClick && (
             <button
               type="button"
@@ -40,10 +44,10 @@ export function LockedOverlay({
                 onUnlockClick();
               }}
               className="mt-3 inline-flex items-center gap-1.5 rounded-premium-sm bg-primary px-3 py-1.5 text-premium-small font-medium text-white hover:bg-primary/90 focus-visible:outline focus-visible:ring-2 focus-visible:ring-primary/35"
-              aria-label="Subscribe to unlock this content"
+              aria-label={t.feed.subscribeToUnlockAriaLabel}
             >
               <Icon name="lock" className="icon-sm" />
-              Unlock
+              {t.feed.unlock}
             </button>
           )}
         </div>

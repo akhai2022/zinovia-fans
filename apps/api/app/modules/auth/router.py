@@ -469,6 +469,9 @@ async def me(user: User = Depends(get_current_user)) -> UserOut:
         is_active=user.is_active,
         profile=ProfileOut.model_validate(user.profile) if user.profile else None,
         last_login_at=user.last_login_at,
+        onboarding_state=user.onboarding_state,
+        country=user.country,
+        phone=user.phone,
         created_at=user.created_at,
         updated_at=user.updated_at,
     )

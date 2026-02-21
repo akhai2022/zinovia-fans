@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useTranslation, interpolate, formatRelativeTime, type Dictionary } from "@/lib/i18n";
 
 const NOTIFICATION_META: Record<string, { icon: string; color: string }> = {
   COMMENT_ON_POST: { icon: "chat_bubble", color: "text-blue-400 bg-blue-500/10" },
@@ -25,24 +26,24 @@ const NOTIFICATION_META: Record<string, { icon: string; color: string }> = {
 
 const DEFAULT_META = { icon: "notifications", color: "text-muted-foreground bg-muted" };
 
-function formatNotification(type: string, payload: Record<string, unknown>): string {
+function formatNotification(type: string, payload: Record<string, unknown>, notifications: Dictionary["notifications"]): string {
   switch (type) {
     case "COMMENT_ON_POST":
-      return "Someone commented on your post.";
+      return notifications.typeCommentOnPost;
     case "LIKE_ON_POST":
-      return "Someone liked your post.";
+      return notifications.typeLikeOnPost;
     case "NEW_FOLLOWER":
-      return "You have a new follower.";
+      return notifications.typeNewFollower;
     case "NEW_SUBSCRIBER":
-      return "You have a new subscriber.";
+      return notifications.typeNewSubscriber;
     case "POST_PUBLISHED":
-      return "Your scheduled post has been published.";
+      return notifications.typePostPublished;
     case "MESSAGE_RECEIVED":
-      return "You received a new message.";
+      return notifications.typeMessageReceived;
     case "TIP_RECEIVED":
-      return "You received a tip.";
+      return notifications.typeTipReceived;
     case "PPV_UNLOCKED":
-      return "Your content was unlocked.";
+      return notifications.typePpvUnlocked;
     case "ADMIN_MESSAGE": {
       const title = payload?.title;
       const msg = payload?.message;
@@ -50,7 +51,7 @@ function formatNotification(type: string, payload: Record<string, unknown>): str
         return `${title}: ${msg}`;
       if (typeof title === "string") return title;
       if (typeof msg === "string") return msg;
-      return "Message from Zinovia team.";
+      return notifications.typeAdminMessageFallback;
     }
     default: {
       const msg = payload?.message;
@@ -60,22 +61,9 @@ function formatNotification(type: string, payload: Record<string, unknown>): str
   }
 }
 
-function formatRelativeTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60_000);
-  if (diffMin < 1) return "Just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHours = Math.floor(diffMin / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
 export default function NotificationsPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [items, setItems] = useState<NotificationOut[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -104,12 +92,12 @@ export default function NotificationsPage() {
         router.replace("/login?next=/notifications");
         return;
       }
-      setError("Unable to load notifications.");
+      setError(t.notifications.errorLoadNotifications);
     } finally {
       if (isInitial) setLoading(false);
       else setLoadingMore(false);
     }
-  }, [router]);
+  }, [router, t]);
 
   useEffect(() => {
     load();
@@ -131,15 +119,15 @@ export default function NotificationsPage() {
     <Page className="max-w-2xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-premium-h2 font-semibold text-foreground">Notifications</h1>
+          <h1 className="font-display text-premium-h2 font-semibold text-foreground">{t.notifications.title}</h1>
           {unreadCount > 0 && (
-            <p className="mt-1 text-sm text-muted-foreground">{unreadCount} unread</p>
+            <p className="mt-1 text-sm text-muted-foreground">{interpolate(t.notifications.unreadCount, { count: unreadCount })}</p>
           )}
         </div>
         {items.length > 0 && (
           <Button size="sm" variant="outline" onClick={markAll} className="gap-1.5">
             <Icon name="check_circle" className="icon-sm" />
-            Mark all read
+            {t.notifications.markAllReadButton}
           </Button>
         )}
       </div>
@@ -171,9 +159,9 @@ export default function NotificationsPage() {
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
             <Icon name="notifications" className="icon-lg text-muted-foreground" />
           </div>
-          <p className="font-display text-lg font-semibold text-foreground">No notifications yet</p>
+          <p className="font-display text-lg font-semibold text-foreground">{t.notifications.emptyTitle}</p>
           <p className="mt-2 text-sm text-muted-foreground">
-            When someone interacts with your content, you&apos;ll see it here.
+            {t.notifications.emptyDescription}
           </p>
         </Card>
       )}
@@ -200,10 +188,10 @@ export default function NotificationsPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className={cn("text-sm", isUnread ? "font-medium text-foreground" : "text-foreground/80")}>
-                    {formatNotification(item.type, item.payload_json as Record<string, unknown>)}
+                    {formatNotification(item.type, item.payload_json as Record<string, unknown>, t.notifications)}
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    {formatRelativeTime(item.created_at)}
+                    {formatRelativeTime(item.created_at, t.common)}
                   </p>
                 </div>
                 {isUnread && (
@@ -218,20 +206,20 @@ export default function NotificationsPage() {
       {nextCursor && !loadingMore && (
         <div className="flex justify-center">
           <Button variant="secondary" size="sm" onClick={() => load(nextCursor)}>
-            Load more
+            {t.notifications.loadMoreButton}
           </Button>
         </div>
       )}
       {loadingMore && (
         <div className="flex justify-center">
           <Button variant="secondary" size="sm" disabled>
-            Loading...
+            {t.notifications.loadingMoreButton}
           </Button>
         </div>
       )}
 
       <Button variant="ghost" size="sm" asChild>
-        <Link href="/">Back to home</Link>
+        <Link href="/">{t.notifications.backToHomeLink}</Link>
       </Button>
     </Page>
   );

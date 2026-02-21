@@ -251,6 +251,10 @@ class Settings(BaseSettings):
     ai_safety_minor_med_threshold: float = Field(
         default=0.3, ge=0.0, le=1.0, alias="AI_SAFETY_MINOR_MED_THRESHOLD"
     )
+    enable_ai_tools: bool = Field(default=False, alias="ENABLE_AI_TOOLS")
+    enable_cartoon_avatar: bool = Field(default=False, alias="ENABLE_CARTOON_AVATAR")
+    ai_tool_rmbg_daily_limit: int = Field(default=30, alias="AI_TOOL_RMBG_DAILY_LIMIT", ge=1)
+    ai_tool_cartoon_daily_limit: int = Field(default=5, alias="AI_TOOL_CARTOON_DAILY_LIMIT", ge=1)
     enable_smart_previews: bool = Field(default=False, alias="ENABLE_SMART_PREVIEWS")
     enable_promo_generator: bool = Field(default=False, alias="ENABLE_PROMO_GENERATOR")
     enable_translations: bool = Field(default=False, alias="ENABLE_TRANSLATIONS")

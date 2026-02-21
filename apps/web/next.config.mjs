@@ -3,11 +3,17 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// Unique build ID — changes on every build so clients can detect stale versions.
+const BUILD_TIMESTAMP = Date.now().toString(36);
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   output: "standalone",
   transpilePackages: ["@zinovia/contracts"],
+  env: {
+    BUILD_ID: BUILD_TIMESTAMP,
+  },
   images: {
     formats: ["image/avif", "image/webp"],
     deviceSizes: [360, 414, 640, 750, 828, 1080, 1200, 1440, 1920, 2560],

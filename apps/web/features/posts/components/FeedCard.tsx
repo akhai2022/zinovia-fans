@@ -13,6 +13,7 @@ import { PostMediaImage } from "./PostMediaImage";
 import { PostMediaVideo } from "./PostMediaVideo";
 import { RichCaption } from "./RichCaption";
 import { Icon } from "@/components/ui/icon";
+import { useTranslation } from "@/lib/i18n";
 
 type FeedCardProps = {
   post: PostOut | PostWithCreator | PostItem;
@@ -32,6 +33,7 @@ export function FeedCard({
   className,
 }: FeedCardProps) {
   const { addToast } = useToast();
+  const { t } = useTranslation();
   const isWithCreator = "creator" in post && post.creator;
   const creatorInfo = creator ?? (isWithCreator ? (post as PostWithCreator).creator : null);
   const [likeCount, setLikeCount] = useState(0);
@@ -54,7 +56,7 @@ export function FeedCard({
       }
     } else {
       await navigator.clipboard.writeText(url);
-      addToast("Link copied", "success");
+      addToast(t.feed.toastLinkCopied, "success");
     }
   };
 
@@ -86,7 +88,7 @@ export function FeedCard({
     } catch {
       setViewerLiked(!nextLiked);
       setLikeCount((prev) => Math.max(0, prev + (nextLiked ? -1 : 1)));
-      addToast("Unable to update like", "error");
+      addToast(t.feed.toastUnableToLike, "error");
     }
   };
 
@@ -98,7 +100,7 @@ export function FeedCard({
       setCommentCount((prev) => prev + 1);
       setCommentInput("");
     } catch {
-      addToast("Unable to send comment", "error");
+      addToast(t.feed.toastUnableToComment, "error");
     }
   };
 
@@ -125,7 +127,7 @@ export function FeedCard({
       <CardContent className="p-0">
         <LockedOverlay
           locked={locked}
-          label="Subscribe to unlock"
+          label={t.feed.subscribeToUnlock}
           onUnlockClick={onUnlockClick}
           className="min-h-[120px]"
         >
@@ -167,36 +169,36 @@ export function FeedCard({
             <div
               className="mt-3 flex items-center gap-4 text-premium-small"
               role="group"
-              aria-label="Post actions"
+              aria-label={t.feed.postActionsAriaLabel}
             >
               <button
                 type="button"
                 onClick={onToggleLike}
                 className="inline-flex items-center gap-1 font-medium text-brand hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring focus-visible:ring-offset-2 rounded cursor-pointer"
-                aria-label="Like"
+                aria-label={t.feed.likeAriaLabel}
               >
                 <Icon name="favorite" filled={viewerLiked} className="icon-base" />
-                {viewerLiked ? "Liked" : "Like"} ({likeCount})
+                {viewerLiked ? t.feed.liked : t.feed.like} ({likeCount})
               </button>
               <span className="text-muted-foreground" aria-hidden>·</span>
               <button
                 type="button"
                 onClick={() => setCommentsOpen((v) => !v)}
                 className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring focus-visible:ring-offset-2 rounded cursor-pointer"
-                aria-label="Comment"
+                aria-label={t.feed.commentAriaLabel}
               >
                 <Icon name="chat_bubble" className="icon-base" />
-                Comment ({commentCount})
+                {t.feed.commentLabel} ({commentCount})
               </button>
               <span className="text-muted-foreground" aria-hidden>·</span>
               <button
                 type="button"
                 onClick={onShare}
                 className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring focus-visible:ring-offset-2 rounded cursor-pointer"
-                aria-label="Share"
+                aria-label={t.feed.shareAriaLabel}
               >
                 <Icon name="share" className="icon-base" />
-                Share
+                {t.feed.shareLabel}
               </button>
             </div>
             {commentsOpen && (
@@ -205,7 +207,7 @@ export function FeedCard({
                   <input
                     value={commentInput}
                     onChange={(e) => setCommentInput(e.target.value)}
-                    placeholder="Write a comment..."
+                    placeholder={t.feed.commentPlaceholder}
                     className="h-9 flex-1 rounded border border-input bg-background px-2 text-sm"
                   />
                   <button
@@ -214,7 +216,7 @@ export function FeedCard({
                     className="inline-flex items-center gap-1 rounded bg-primary px-3 text-xs text-primary-foreground"
                   >
                     <Icon name="send" className="icon-sm" />
-                    Send
+                    {t.feed.sendButton}
                   </button>
                 </div>
                 {comments.length > 0 && (

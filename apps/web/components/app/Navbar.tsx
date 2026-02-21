@@ -11,29 +11,16 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Drawer } from "@/components/ui/drawer";
 import { listNotifications } from "@/features/engagement/api";
 import { logout } from "@/lib/api/auth";
 import { cn } from "@/lib/utils";
-import { useTranslation } from "@/lib/i18n";
+import { useTranslation, formatRelativeTime } from "@/lib/i18n";
 import "@/lib/api";
-
-function formatRelativeTime(dateStr: string | null | undefined): string {
-  if (!dateStr) return "Never";
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60_000);
-  if (diffMin < 1) return "Just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHours = Math.floor(diffMin / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString();
-}
 
 export function Navbar({
   initialSession,
@@ -49,15 +36,15 @@ export function Navbar({
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const NAV_LINKS_PUBLIC = [
+  const NAV_LINKS_PUBLIC: { href: string; label: string; icon: string; ai?: boolean }[] = [
     { href: "/", label: t.nav.home, icon: "home" },
     { href: "/creators", label: t.nav.creators, icon: "group" },
-    { href: "/search", label: "Search", icon: "search" },
+    { href: "/search", label: t.common.search, icon: "search" },
   ];
 
   const isCreator = user?.role === "creator" || user?.role === "admin" || user?.role === "super_admin";
 
-  const NAV_LINKS_AUTH = [
+  const NAV_LINKS_AUTH: { href: string; label: string; icon: string; ai?: boolean }[] = [
     { href: "/feed", label: t.nav.feed, icon: "rss_feed" },
     { href: "/messages", label: t.nav.messages, icon: "chat_bubble" },
     ...(isCreator
@@ -65,6 +52,7 @@ export function Navbar({
           { href: "/creator/post/new", label: t.nav.newPost, icon: "edit_square" },
           { href: "/creator/vault", label: t.nav.vault, icon: "folder_open" },
           { href: "/creator/collections", label: t.nav.collections, icon: "grid_view" },
+          { href: "/ai/images", label: t.nav.aiStudio, icon: "auto_awesome", ai: true },
         ]
       : []),
     { href: "/settings/profile", label: t.nav.settings, icon: "settings" },
@@ -146,6 +134,77 @@ export function Navbar({
                 );
               })}
 
+              {/* AI Studio dropdown — creator only */}
+              {isCreator && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        "flex items-center gap-1.5",
+                        pathname.startsWith("/ai/") && "bg-white/10 text-foreground"
+                      )}
+                    >
+                      <Icon name="auto_awesome" className="icon-base text-primary/70" />
+                      <span>{t.nav.aiStudio}</span>
+                      <Icon name="expand_more" className="icon-xs text-muted-foreground" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    <DropdownMenuLabel>{t.nav.aiImagesGroup}</DropdownMenuLabel>
+                    <DropdownMenuItem asChild>
+                      <Link href="/ai/images/new" className="flex items-center gap-2">
+                        <Icon name="add_photo_alternate" className="icon-base text-muted-foreground" />
+                        {t.nav.aiGenerateImages}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/ai/images" className="flex items-center gap-2">
+                        <Icon name="photo_library" className="icon-base text-muted-foreground" />
+                        {t.nav.aiImageLibrary}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/ai/tools/remove-bg" className="flex items-center gap-2">
+                        <Icon name="content_cut" className="icon-base text-muted-foreground" />
+                        {t.nav.aiRemoveBg}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>{t.nav.aiPostToolsGroup}</DropdownMenuLabel>
+                    <DropdownMenuItem asChild>
+                      <Link href="/creator/post/new" className="flex items-center gap-2">
+                        <Icon name="subtitles" className="icon-base text-muted-foreground" />
+                        {t.nav.aiSmartCaptions}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/creator/post/new" className="flex items-center gap-2">
+                        <Icon name="campaign" className="icon-base text-muted-foreground" />
+                        {t.nav.aiPromoCopy}
+                        <span className="ml-auto rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{t.nav.comingSoon}</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/creator/post/new" className="flex items-center gap-2">
+                        <Icon name="translate" className="icon-base text-muted-foreground" />
+                        {t.nav.aiAutoTranslate}
+                        <span className="ml-auto rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{t.nav.comingSoon}</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>{t.nav.aiVaultGroup}</DropdownMenuLabel>
+                    <DropdownMenuItem asChild>
+                      <Link href="/creator/vault" className="flex items-center gap-2">
+                        <Icon name="image_search" className="icon-base text-muted-foreground" />
+                        {t.nav.aiSemanticSearch}
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+
               {/* Notifications */}
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/notifications" className="relative flex items-center gap-1.5">
@@ -204,7 +263,7 @@ export function Navbar({
                   {user.last_login_at && (
                     <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
                       <Icon name="schedule" className="icon-xs" />
-                      Last login: {formatRelativeTime(user.last_login_at)}
+                      Last login: {formatRelativeTime(user.last_login_at, t.common)}
                     </p>
                   )}
                 </div>
@@ -309,6 +368,43 @@ export function Navbar({
               </Link>
             );
           })}
+
+          {/* AI Studio section — mobile drawer, creator only */}
+          {user && isCreator && (
+            <>
+              <div className="flex items-center gap-2 px-3 pt-3 pb-1">
+                <Icon name="auto_awesome" className="icon-sm text-primary/70" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t.nav.aiStudio}</span>
+              </div>
+              {([
+                { href: "/ai/images/new", label: t.nav.aiGenerateImages, icon: "add_photo_alternate" },
+                { href: "/ai/images", label: t.nav.aiImageLibrary, icon: "photo_library" },
+                { href: "/ai/tools/remove-bg", label: t.nav.aiRemoveBg, icon: "content_cut" },
+                { href: "/creator/post/new", label: t.nav.aiSmartCaptions, icon: "subtitles" },
+                { href: "/creator/post/new#promo", label: t.nav.aiPromoCopy, icon: "campaign", comingSoon: true },
+                { href: "/creator/post/new#translate", label: t.nav.aiAutoTranslate, icon: "translate", comingSoon: true },
+                { href: "/creator/vault", label: t.nav.aiSemanticSearch, icon: "image_search" },
+              ] as { href: string; label: string; icon: string; comingSoon?: boolean }[]).map((item) => (
+                <Link
+                  key={item.href + item.icon}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-brand border border-border px-3 py-2.5 text-sm font-medium text-foreground transition-colors",
+                    pathname === item.href || pathname.startsWith(item.href + "/")
+                      ? "bg-white/10 border-primary/30"
+                      : "bg-card hover:bg-white/5"
+                  )}
+                >
+                  <Icon name={item.icon} className="icon-base text-muted-foreground" />
+                  {item.label}
+                  {item.comingSoon && (
+                    <span className="ml-auto rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{t.nav.comingSoon}</span>
+                  )}
+                </Link>
+              ))}
+            </>
+          )}
 
           {user && (
             <>

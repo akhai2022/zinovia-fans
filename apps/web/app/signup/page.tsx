@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { z } from "zod";
+import { useTranslation } from "@/lib/i18n";
 import { Page } from "@/components/brand/Page";
 import {
   Card,
@@ -14,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Icon } from "@/components/ui/icon";
 import { apiFetch } from "@/lib/api/client";
 import { registerCreator } from "@/lib/onboardingApi";
 import { getApiErrorMessage } from "@/lib/errors";
@@ -21,12 +23,6 @@ import { uuidClient } from "@/lib/uuid";
 import "@/lib/api";
 
 type AccountType = "fan" | "creator";
-
-const schema = z.object({
-  email: z.string().email("Invalid email"),
-  password: z.string().min(10, "Password must be at least 10 characters"),
-  displayName: z.string().min(1, "Display name is required"),
-});
 
 /** Collect device info from browser APIs. */
 async function collectDeviceInfo(): Promise<Record<string, unknown>> {
@@ -88,6 +84,14 @@ async function collectDeviceInfo(): Promise<Record<string, unknown>> {
 }
 
 export default function SignupPage() {
+  const { t } = useTranslation();
+
+  const schema = z.object({
+    email: z.string().email(t.signup.validationInvalidEmail),
+    password: z.string().min(10, t.signup.validationPasswordMinLength),
+    displayName: z.string().min(1, t.signup.validationDisplayNameRequired),
+  });
+
   const [accountType, setAccountType] = useState<AccountType>("fan");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -144,54 +148,77 @@ export default function SignupPage() {
       <Card className="w-full max-w-md border-border shadow-premium-md">
         <CardHeader>
           <CardTitle className="font-display text-premium-h3">
-            Create your account
+            {t.signup.title}
           </CardTitle>
           <CardDescription>
-            Join Zinovia as a fan or creator.
+            {t.signup.subtitle}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {/* Account type selector */}
-          <div className="mb-6 flex gap-2 rounded-xl border border-border bg-muted/50 p-1">
-            <button
-              type="button"
-              data-testid="signup-type-fan"
-              onClick={() => setAccountType("fan")}
-              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                accountType === "fan"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Fan
-            </button>
-            <button
-              type="button"
-              data-testid="signup-type-creator"
-              onClick={() => setAccountType("creator")}
-              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                accountType === "creator"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Creator
-            </button>
-          </div>
-
-          <p className="mb-4 text-xs text-muted-foreground">
-            {accountType === "fan"
-              ? "Follow creators, subscribe to exclusive content, and support your favorites."
-              : "Share your content, build your audience, and earn from subscriptions."}
-          </p>
+          <fieldset className="mb-6">
+            <legend className="mb-3 text-sm font-medium text-foreground">{t.signup.joinAs}</legend>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                data-testid="signup-type-fan"
+                onClick={() => setAccountType("fan")}
+                className={`group relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 text-center transition-all ${
+                  accountType === "fan"
+                    ? "border-primary bg-primary/5 shadow-sm"
+                    : "border-border hover:border-muted-foreground/30"
+                }`}
+              >
+                <div className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
+                  accountType === "fan" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                }`}>
+                  <Icon name="favorite" className="icon-lg" />
+                </div>
+                <span className="text-sm font-semibold text-foreground">{t.signup.fan}</span>
+                <span className="text-xs leading-tight text-muted-foreground">
+                  {t.signup.fanDescription}
+                </span>
+                {accountType === "fan" && (
+                  <div className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    <Icon name="check" className="icon-xs" />
+                  </div>
+                )}
+              </button>
+              <button
+                type="button"
+                data-testid="signup-type-creator"
+                onClick={() => setAccountType("creator")}
+                className={`group relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 text-center transition-all ${
+                  accountType === "creator"
+                    ? "border-primary bg-primary/5 shadow-sm"
+                    : "border-border hover:border-muted-foreground/30"
+                }`}
+              >
+                <div className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
+                  accountType === "creator" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                }`}>
+                  <Icon name="auto_awesome" className="icon-lg" />
+                </div>
+                <span className="text-sm font-semibold text-foreground">{t.signup.creator}</span>
+                <span className="text-xs leading-tight text-muted-foreground">
+                  {t.signup.creatorDescription}
+                </span>
+                {accountType === "creator" && (
+                  <div className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    <Icon name="check" className="icon-xs" />
+                  </div>
+                )}
+              </button>
+            </div>
+          </fieldset>
 
           <form className="space-y-4" onSubmit={onSubmit}>
             <div className="space-y-2">
-              <Label htmlFor="displayName">Display name</Label>
+              <Label htmlFor="displayName">{t.signup.displayNameLabel}</Label>
               <Input
                 id="displayName"
                 type="text"
-                placeholder="Your name"
+                placeholder={t.signup.displayNamePlaceholder}
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 required
@@ -199,7 +226,7 @@ export default function SignupPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dob">Date of birth</Label>
+              <Label htmlFor="dob">{t.signup.dateOfBirthLabel}</Label>
               <Input
                 id="dob"
                 type="date"
@@ -209,14 +236,14 @@ export default function SignupPage() {
                 max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split("T")[0]}
                 autoComplete="bday"
               />
-              <p className="text-xs text-muted-foreground">You must be at least 18 years old</p>
+              <p className="text-xs text-muted-foreground">{t.signup.dateOfBirthMinAge}</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t.signup.emailLabel}</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder={t.signup.emailPlaceholder}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -224,11 +251,11 @@ export default function SignupPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t.signup.passwordLabel}</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder={t.signup.passwordPlaceholder}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -236,7 +263,7 @@ export default function SignupPage() {
                 autoComplete="new-password"
               />
               <p className="text-xs text-muted-foreground">
-                At least 10 characters
+                {t.signup.passwordHint}
               </p>
             </div>
             {error && (
@@ -244,21 +271,29 @@ export default function SignupPage() {
                 {error}
               </p>
             )}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading
-                ? "Creating…"
-                : accountType === "creator"
-                  ? "Create creator account"
-                  : "Create account"}
+            <Button type="submit" className="btn-cta-primary w-full" disabled={loading}>
+              {loading ? (
+                t.signup.submitCreating
+              ) : accountType === "creator" ? (
+                <>
+                  <Icon name="auto_awesome" className="mr-2 icon-base" />
+                  {t.signup.submitCreator}
+                </>
+              ) : (
+                <>
+                  <Icon name="person_add" className="mr-2 icon-base" />
+                  {t.signup.submitFan}
+                </>
+              )}
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
+            {t.signup.alreadyHaveAccount}{" "}
             <Link
               href="/login"
               className="text-primary underline-offset-4 hover:underline"
             >
-              Sign in
+              {t.signup.signIn}
             </Link>
           </p>
         </CardContent>

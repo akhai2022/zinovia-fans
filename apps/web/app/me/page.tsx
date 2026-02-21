@@ -8,12 +8,14 @@ import { Page } from "@/components/brand/Page";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/i18n";
 import "@/lib/api";
 
 function MePageSkeleton() {
+  const { t } = useTranslation();
   return (
     <Page>
-      <h1 className="text-2xl font-semibold tracking-tight text-foreground">Me</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-foreground">{t.mePage.title}</h1>
       <Card className="mt-4">
         <CardHeader>
           <Skeleton className="h-6 w-32" />
@@ -29,6 +31,7 @@ function MePageSkeleton() {
 }
 
 function MePageContent() {
+  const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [user, setUser] = useState<UserOut | null>(null);
@@ -56,7 +59,7 @@ function MePageContent() {
 
   return (
     <Page>
-      <h1 className="text-2xl font-semibold tracking-tight text-foreground">Me</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-foreground">{t.mePage.title}</h1>
       {status === "loading" && (
         <Card className="mt-4">
           <CardHeader>
@@ -73,17 +76,17 @@ function MePageContent() {
       {status === "loaded" && user && (
         <Card className="mt-4">
           <CardHeader>
-            <CardTitle>Account</CardTitle>
+            <CardTitle>{t.mePage.accountTitle}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <div>
-              <span className="text-muted-foreground">Email:</span> {user.email}
+              <span className="text-muted-foreground">{t.mePage.emailLabel}</span> {user.email}
             </div>
             <div>
-              <span className="text-muted-foreground">Role:</span> {user.role}
+              <span className="text-muted-foreground">{t.mePage.roleLabel}</span> {user.role}
             </div>
             <Button variant="outline" size="sm" className="mt-4" asChild>
-              <Link href="/settings/profile">Edit profile</Link>
+              <Link href="/settings/profile">{t.mePage.editProfileLink}</Link>
             </Button>
           </CardContent>
         </Card>

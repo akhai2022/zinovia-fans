@@ -468,7 +468,7 @@ async def list_user_subscribers_admin(
 async def _hard_delete_user(session: AsyncSession, user_id: UUID) -> None:
     """Permanently delete a user and ALL related data. Irreversible."""
     from app.modules.ai.models import AiImageJob, BrandAsset
-    from app.modules.ai_safety.models import ImageSafetyScan
+    from app.modules.ai_safety.models import ImageCaption, ImageSafetyScan, ImageTag
     from app.modules.audit.models import AuditEvent
     from app.modules.billing.models import CreatorPlan
     from app.modules.collections.models import Collection, CollectionPost
@@ -483,7 +483,7 @@ async def _hard_delete_user(session: AsyncSession, user_id: UUID) -> None:
         OnboardingAuditEvent,
     )
     from app.modules.payments.models import PostPurchase, PpvPurchase, Tip
-    from app.modules.posts.models import PostComment, PostLike
+    from app.modules.posts.models import PostComment, PostLike, PostMedia
 
     # Delete derived assets for media owned by this user
     owned_media_ids = select(MediaObject.id).where(MediaObject.owner_user_id == user_id)
@@ -526,7 +526,7 @@ async def _hard_delete_user(session: AsyncSession, user_id: UUID) -> None:
     )
     await session.execute(delete(Collection).where(Collection.creator_user_id == user_id))
 
-    # Delete posts and related (purchases → likes → comments → posts)
+    # Delete posts and related (purchases → likes → comments → post_media → posts)
     user_posts = select(Post.id).where(Post.creator_user_id == user_id)
     await session.execute(delete(PostPurchase).where(
         or_(PostPurchase.purchaser_id == user_id, PostPurchase.creator_id == user_id)
@@ -537,6 +537,7 @@ async def _hard_delete_user(session: AsyncSession, user_id: UUID) -> None:
     await session.execute(delete(PostComment).where(
         or_(PostComment.post_id.in_(user_posts), PostComment.user_id == user_id)
     ))
+    await session.execute(delete(PostMedia).where(PostMedia.post_id.in_(user_posts)))
     await session.execute(delete(Post).where(Post.creator_user_id == user_id))
 
     # Billing
@@ -587,6 +588,24 @@ async def _hard_delete_user(session: AsyncSession, user_id: UUID) -> None:
         .where(Profile.user_id == user_id)
         .values(avatar_asset_id=None, banner_asset_id=None)
     )
+    # Nullify cross-user FK refs to this user's media (no CASCADE on these FKs)
+    await session.execute(
+        PostMedia.__table__.delete()
+        .where(PostMedia.media_asset_id.in_(owned_media_ids))
+    )
+    await session.execute(
+        MessageMedia.__table__.delete()
+        .where(MessageMedia.media_asset_id.in_(owned_media_ids))
+    )
+    await session.execute(
+        Collection.__table__.update()
+        .where(Collection.cover_asset_id.in_(owned_media_ids))
+        .values(cover_asset_id=None)
+    )
+    # Explicitly delete AI safety data (DB CASCADE should handle this, but belt-and-suspenders)
+    await session.execute(delete(ImageSafetyScan).where(ImageSafetyScan.media_asset_id.in_(owned_media_ids)))
+    await session.execute(delete(ImageCaption).where(ImageCaption.media_asset_id.in_(owned_media_ids)))
+    await session.execute(delete(ImageTag).where(ImageTag.media_asset_id.in_(owned_media_ids)))
     await session.execute(delete(MediaObject).where(MediaObject.owner_user_id == user_id))
 
     # Profile + User
@@ -613,8 +632,16 @@ async def admin_action_user(
 
     if action == "hard_delete":
         logger.info("admin_hard_delete user_id=%s reason=%s", target_user_id, reason)
-        await _hard_delete_user(session, target_user_id)
-        await session.commit()
+        try:
+            await _hard_delete_user(session, target_user_id)
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            logger.exception("hard_delete FAILED for user_id=%s", target_user_id)
+            raise AppError(
+                status_code=500,
+                detail="hard_delete_failed — check server logs for FK constraint details",
+            )
         return {"status": "ok", "action": action, "user_id": str(target_user_id)}
 
     if action == "delete":

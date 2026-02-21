@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Icon } from "@/components/ui/icon";
 import { apiFetch } from "@/lib/api/client";
 
 type CaptionData = {
@@ -42,6 +43,10 @@ export function CaptionSuggestions({ mediaAssetId, onSelect }: Props) {
 
   return (
     <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Icon name="auto_awesome" className="icon-base text-primary" />
+        <span className="text-sm font-medium text-foreground">AI Captions</span>
+      </div>
       {!captions && !loading && (
         <Button
           type="button"
@@ -49,6 +54,7 @@ export function CaptionSuggestions({ mediaAssetId, onSelect }: Props) {
           size="sm"
           onClick={fetchCaptions}
         >
+          <Icon name="auto_awesome" className="mr-1.5 icon-sm" />
           Suggest Caption
         </Button>
       )}
