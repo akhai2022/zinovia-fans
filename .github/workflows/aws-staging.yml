@@ -1,8 +1,8 @@
-# Deploy to AWS staging (ECS Fargate, zinovia.ai)
-# Requires: GitHub OIDC provider in AWS and IAM role with trust policy for this repo.
-# See docs/runbook/aws-deploy.md for setup.
+# Auto-deploy to AWS production on push to main.
+# Tests run first; deploy only proceeds if tests pass.
+# Requires: GitHub OIDC provider in AWS and AWS_ROLE_ARN_PROD secret.
 
-name: AWS Staging Deploy
+name: AWS Deploy
 
 on:
   workflow_dispatch:
@@ -17,11 +17,10 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  ECR_REGISTRY: '' # set from AWS account id
-  CLUSTER: zinovia-fans-staging-cluster
-  API_SERVICE: zinovia-fans-staging-api
-  WEB_SERVICE: zinovia-fans-staging-web
-  WORKER_SERVICE: zinovia-fans-staging-worker
+  CLUSTER: zinovia-fans-prod-cluster
+  API_SERVICE: zinovia-fans-prod-api
+  WEB_SERVICE: zinovia-fans-prod-web
+  WORKER_SERVICE: zinovia-fans-prod-worker
 
 jobs:
   test:
@@ -89,39 +88,41 @@ jobs:
       - name: Configure AWS (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN_STAGING }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_PROD }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Get ECR login
-        id: ecr
+      - name: ECR login
         run: |
           AWS_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
-          echo "registry=${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com" >> $GITHUB_OUTPUT
           aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com
 
       - name: Build and push API
         run: |
           AWS_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
-          API_ECR="${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/zinovia-fans-staging-api"
-          docker build -f infra/docker/api/Dockerfile -t $API_ECR:$GITHUB_SHA -t $API_ECR:latest .
-          docker push $API_ECR:$GITHUB_SHA
-          docker push $API_ECR:latest
+          REG="${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          docker build -f infra/docker/api/Dockerfile -t $REG/zinovia-fans-prod-api:$GITHUB_SHA -t $REG/zinovia-fans-prod-api:latest .
+          docker push $REG/zinovia-fans-prod-api:$GITHUB_SHA
+          docker push $REG/zinovia-fans-prod-api:latest
 
       - name: Build and push Web
         run: |
           AWS_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
-          WEB_ECR="${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/zinovia-fans-staging-web"
-          docker build -f infra/docker/web/Dockerfile --build-arg NEXT_PUBLIC_API_BASE_URL=https://stg-api.zinovia.ai -t $WEB_ECR:$GITHUB_SHA -t $WEB_ECR:latest .
-          docker push $WEB_ECR:$GITHUB_SHA
-          docker push $WEB_ECR:latest
+          REG="${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          docker build -f infra/docker/web/Dockerfile \
+            --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.zinovia.ai \
+            --build-arg NEXT_PUBLIC_API_SAME_ORIGIN_PROXY=true \
+            --build-arg NEXT_PUBLIC_APP_URL=https://zinovia.ai \
+            -t $REG/zinovia-fans-prod-web:$GITHUB_SHA -t $REG/zinovia-fans-prod-web:latest .
+          docker push $REG/zinovia-fans-prod-web:$GITHUB_SHA
+          docker push $REG/zinovia-fans-prod-web:latest
 
       - name: Build and push Worker
         run: |
           AWS_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
-          WORKER_ECR="${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/zinovia-fans-staging-worker"
-          docker build -f infra/docker/worker/Dockerfile -t $WORKER_ECR:$GITHUB_SHA -t $WORKER_ECR:latest .
-          docker push $WORKER_ECR:$GITHUB_SHA
-          docker push $WORKER_ECR:latest
+          REG="${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          docker build -f infra/docker/worker/Dockerfile -t $REG/zinovia-fans-prod-worker:$GITHUB_SHA -t $REG/zinovia-fans-prod-worker:latest .
+          docker push $REG/zinovia-fans-prod-worker:$GITHUB_SHA
+          docker push $REG/zinovia-fans-prod-worker:latest
 
       - name: Force ECS deployment
         run: |
@@ -133,19 +134,8 @@ jobs:
         run: |
           SUBNETS=$(aws ecs describe-services --cluster ${{ env.CLUSTER }} --services ${{ env.API_SERVICE }} --query 'services[0].networkConfiguration.awsvpcConfiguration.subnets' --output text --region ${{ env.AWS_REGION }} | tr '\t' ',')
           SG=$(aws ecs describe-services --cluster ${{ env.CLUSTER }} --services ${{ env.API_SERVICE }} --query 'services[0].networkConfiguration.awsvpcConfiguration.securityGroups[0]' --output text --region ${{ env.AWS_REGION }})
-          aws ecs run-task --cluster ${{ env.CLUSTER }} --task-definition zinovia-fans-staging-api --launch-type FARGATE \
+          aws ecs run-task --cluster ${{ env.CLUSTER }} --task-definition zinovia-fans-prod-api --launch-type FARGATE \
             --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SG],assignPublicIp=DISABLED}" \
             --overrides '{"containerOverrides":[{"name":"api","command":["sh","-c","cd /app/apps/api && alembic upgrade head"]}]}' \
             --region ${{ env.AWS_REGION }}
-        continue-on-error: true
-
-  e2e:
-    runs-on: ubuntu-latest
-    needs: deploy
-    steps:
-      - uses: actions/checkout@v4
-      - name: Playwright E2E (staging)
-        run: |
-          # Optional: run Playwright against https://stg-app.zinovia.ai
-          echo "E2E against stg-app.zinovia.ai can be added here (npm run test:e2e)"
         continue-on-error: true
