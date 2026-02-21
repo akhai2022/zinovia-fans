@@ -23,11 +23,14 @@ jobs:
       - name: Prepare env
         run: cp .env.example .env
 
-      - name: Build images
-        run: docker compose --env-file .env -f infra/compose/docker-compose.yml build --parallel
+      - name: Build backend images
+        run: docker compose --env-file .env -f infra/compose/docker-compose.yml build api worker
 
-      - name: Start stack
-        run: docker compose --env-file .env -f infra/compose/docker-compose.yml up -d --wait --wait-timeout 180
+      - name: Start backend stack
+        run: |
+          docker compose --env-file .env -f infra/compose/docker-compose.yml up -d \
+            postgres redis minio mailpit minio-init api worker \
+            --wait --wait-timeout 180
 
       - name: Show logs on failure
         if: failure()

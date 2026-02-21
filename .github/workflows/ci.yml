@@ -8,22 +8,23 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      COMPOSE: docker compose --env-file .env -f infra/compose/docker-compose.yml
     steps:
       - uses: actions/checkout@v4
 
       - name: Prepare env
         run: cp .env.example .env
 
-      - name: Build images
-        run: docker compose --env-file .env -f infra/compose/docker-compose.yml build --parallel
-
-      - name: Start stack
+      - name: Build backend images
         run: |
-          # Start everything — compose handles dependency ordering via healthchecks.
-          # Use --wait to block until all services are healthy (or timeout).
-          docker compose --env-file .env -f infra/compose/docker-compose.yml up -d --wait --wait-timeout 180
+          docker compose --env-file .env -f infra/compose/docker-compose.yml build api worker
+
+      - name: Start backend stack
+        run: |
+          # Start only backend services (not web — it needs npm install which CI skips).
+          # Compose handles dependency ordering: postgres/redis/minio start first.
+          docker compose --env-file .env -f infra/compose/docker-compose.yml up -d \
+            postgres redis minio mailpit minio-init api worker \
+            --wait --wait-timeout 180
 
       - name: Show logs on failure
         if: failure()
