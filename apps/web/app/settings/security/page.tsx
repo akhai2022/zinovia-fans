@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
 import { ApiClientError, apiFetch } from "@/lib/api/client";
 import { getApiErrorCode } from "@/lib/errors";
+import { Icon } from "@/components/ui/icon";
 import { useTranslation, interpolate } from "@/lib/i18n";
 import "@/lib/api";
 
@@ -151,6 +152,7 @@ export default function SecuritySettingsPage() {
               )}
             </div>
             <Button type="submit" disabled={!canSubmit}>
+              <Icon name="lock" className="mr-1.5 icon-sm" />
               {loading ? t.security.submitChanging : t.security.submitChangePassword}
             </Button>
           </form>
@@ -158,7 +160,7 @@ export default function SecuritySettingsPage() {
       </Card>
       <div className="flex gap-2">
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/settings/profile">{t.security.backToProfile}</Link>
+          <Link href="/settings/profile"><Icon name="arrow_back" className="mr-1.5 icon-sm" />{t.security.backToProfile}</Link>
         </Button>
       </div>
     </Page>

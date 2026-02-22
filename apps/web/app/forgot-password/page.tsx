@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiFetch } from "@/lib/api/client";
 import { getApiErrorMessage } from "@/lib/errors";
+import { Icon } from "@/components/ui/icon";
 import "@/lib/api";
 
 export default function ForgotPasswordPage() {
@@ -46,7 +47,7 @@ export default function ForgotPasswordPage() {
           </CardHeader>
           <CardContent>
             <Button variant="secondary" className="w-full" asChild>
-              <Link href="/login">Back to sign in</Link>
+              <Link href="/login"><Icon name="arrow_back" className="mr-1.5 icon-sm" />Back to sign in</Link>
             </Button>
           </CardContent>
         </Card>
@@ -81,7 +82,7 @@ export default function ForgotPasswordPage() {
               <p className="text-sm text-destructive" role="alert">{error}</p>
             )}
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Sending..." : "Send reset link"}
+              <Icon name="send" className="mr-1.5 icon-sm" />{loading ? "Sending..." : "Send reset link"}
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">

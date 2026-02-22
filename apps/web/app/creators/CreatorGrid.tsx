@@ -10,6 +10,7 @@ import { CreatorAvatarAsset } from "@/features/creators/components/CreatorAvatar
 import { FollowButton } from "@/features/creators/components/FollowButton";
 import { apiFetch } from "@/lib/api/client";
 import { getApiErrorMessage } from "@/lib/errors";
+import { Icon } from "@/components/ui/icon";
 import { useTranslation, interpolate } from "@/lib/i18n";
 import "@/lib/api";
 import type { CreatorItem, CreatorDiscoverPage } from "./page";
@@ -96,7 +97,7 @@ export function CreatorGrid({
             placeholder={t.creatorsPage.searchPlaceholder}
             className="h-10 flex-1 rounded-xl border border-input bg-background px-3 text-sm"
           />
-          <Button type="submit">{t.creatorsPage.searchButton}</Button>
+          <Button type="submit"><Icon name="search" className="mr-1.5 icon-sm" />{t.creatorsPage.searchButton}</Button>
         </div>
       </form>
 
@@ -110,7 +111,7 @@ export function CreatorGrid({
             className="mt-3"
             onClick={() => fetchPage(page, query, false)}
           >
-            {t.creatorsPage.retryButton}
+            <Icon name="refresh" className="mr-1.5 icon-sm" />{t.creatorsPage.retryButton}
           </Button>
         </Card>
       )}
@@ -148,10 +149,10 @@ export function CreatorGrid({
           </p>
           <div className="mt-6 flex flex-col gap-2 sm:flex-row">
             <Button size="sm" asChild>
-              <Link href="/signup">{t.creatorsPage.becomeCreator}</Link>
+              <Link href="/signup"><Icon name="person_add" className="mr-1.5 icon-sm" />{t.creatorsPage.becomeCreator}</Link>
             </Button>
             <Button variant="secondary" size="sm" asChild>
-              <Link href="/">{t.creatorsPage.backToHome}</Link>
+              <Link href="/"><Icon name="arrow_back" className="mr-1.5 icon-sm" />{t.creatorsPage.backToHome}</Link>
             </Button>
           </div>
         </div>
@@ -195,7 +196,7 @@ export function CreatorGrid({
               fetchPage(1, "", false);
             }}
           >
-            {t.creatorsPage.clearSearch}
+            <Icon name="close" className="mr-1.5 icon-sm" />{t.creatorsPage.clearSearch}
           </Button>
         </div>
       )}
@@ -298,7 +299,7 @@ export function CreatorGrid({
             onClick={onLoadMore}
             disabled={loading}
           >
-            {t.creatorsPage.loadMoreCreators}
+            <Icon name="expand_more" className="mr-1.5 icon-sm" />{t.creatorsPage.loadMoreCreators}
           </Button>
         </div>
       )}

@@ -11,6 +11,7 @@ import {
   type CollectionUpdate,
 } from "@zinovia/contracts";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -152,6 +153,7 @@ export default function EditCollectionPage() {
           <p className="font-semibold text-foreground">{t.collections.failedToLoadCollection}</p>
           <p className="mt-1 text-sm text-muted-foreground">{error}</p>
           <Button variant="secondary" size="sm" className="mt-4" onClick={loadData}>
+            <Icon name="refresh" className="mr-1.5 icon-sm" />
             {t.collections.retryButton}
           </Button>
         </Card>
@@ -166,7 +168,7 @@ export default function EditCollectionPage() {
           {t.collections.editCollectionTitle}
         </h1>
         <Button variant="secondary" size="sm" asChild>
-          <a href="/creator/collections">{t.collections.backToCollections}</a>
+          <a href="/creator/collections"><Icon name="arrow_back" className="mr-1.5 icon-sm" />{t.collections.backToCollections}</a>
         </Button>
       </div>
 
@@ -227,6 +229,7 @@ export default function EditCollectionPage() {
               size="sm"
               disabled={!title.trim() || saving}
             >
+              <Icon name="save" className="mr-1.5 icon-sm" />
               {saving ? t.collections.savingButton : t.collections.saveChangesButton}
             </Button>
           </div>
@@ -252,6 +255,7 @@ export default function EditCollectionPage() {
             onClick={handleAddPost}
             disabled={!addPostId.trim() || addingPost}
           >
+            <Icon name="add" className="mr-1.5 icon-sm" />
             {addingPost ? t.collections.addingPostButton : t.collections.addPostButton}
           </Button>
         </div>
@@ -280,6 +284,7 @@ export default function EditCollectionPage() {
                   size="sm"
                   onClick={() => handleRemovePost(p.post_id)}
                 >
+                  <Icon name="delete" className="mr-1.5 icon-sm" />
                   {t.collections.removeButton}
                 </Button>
               </li>

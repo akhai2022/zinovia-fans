@@ -9,6 +9,7 @@ import { FeedCard } from "@/features/posts/components/FeedCard";
 import { apiFetch } from "@/lib/api/client";
 import { getApiErrorMessage } from "@/lib/errors";
 import { useTranslation, interpolate } from "@/lib/i18n";
+import { Icon } from "@/components/ui/icon";
 import "@/lib/api";
 
 type SearchCreator = {
@@ -97,7 +98,7 @@ export default function SearchPostsPage() {
             autoFocus
           />
           <Button type="submit" disabled={loading || !query.trim()}>
-            {loading ? t.searchPage.searchButtonLoading : t.searchPage.searchButton}
+            <Icon name="search" className="mr-1.5 icon-sm" />{loading ? t.searchPage.searchButtonLoading : t.searchPage.searchButton}
           </Button>
         </div>
       </form>
@@ -141,7 +142,7 @@ export default function SearchPostsPage() {
             size="sm"
             onClick={() => doSearch(query, page + 1, true)}
           >
-            {t.searchPage.loadMore}
+            <Icon name="expand_more" className="mr-1.5 icon-sm" />{t.searchPage.loadMore}
           </Button>
         </div>
       )}
@@ -153,7 +154,7 @@ export default function SearchPostsPage() {
       )}
 
       <Button variant="ghost" size="sm" asChild>
-        <Link href="/">{t.searchPage.backToHome}</Link>
+        <Link href="/"><Icon name="arrow_back" className="mr-1.5 icon-sm" />{t.searchPage.backToHome}</Link>
       </Button>
     </Page>
   );

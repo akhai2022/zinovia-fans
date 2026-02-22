@@ -960,6 +960,7 @@ export const en: Dictionary = {
     translateAgainButton: "Translate again",
     toastCopiedToClipboard: "Copied to clipboard",
     toastTranslationFailed: "Translation request failed",
+    publishFirstHint: "Publish your post first to enable translation.",
   },
   promo: {
     title: "Promo suggestions",

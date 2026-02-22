@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ApiError } from "@zinovia/contracts";
 import { MediaService } from "@/features/media/api";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { Label } from "@/components/ui/label";
 import { getApiErrorMessage } from "@/lib/errors";
 import "@/lib/api";
@@ -138,6 +139,7 @@ export function ImageUploadField({
           onClick={() => inputRef.current?.click()}
           disabled={disabled || status === "uploading"}
         >
+          <Icon name="upload" className="mr-1.5 icon-sm" />
           {status === "uploading"
             ? `Uploading ${progress}%`
             : status === "done" && allowMultiple

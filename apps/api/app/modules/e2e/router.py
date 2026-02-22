@@ -273,6 +273,56 @@ async def seed_safety_scan(
 
 
 @router.post(
+    "/rate-limit/reset",
+    operation_id="e2e_rate_limit_reset",
+    summary="[E2E] Reset rate-limit counters for a user or IP",
+    dependencies=[Depends(_require_e2e)],
+)
+async def reset_rate_limit(
+    key_pattern: str = Query(
+        ...,
+        description="Redis key pattern to delete, e.g. 'ai:tool:rmbg:<user_id>' or 'login:*:<email>'",
+    ),
+) -> dict:
+    """Delete Redis rate-limit keys matching the given pattern.
+    Only matches known rate-limit prefixes for safety."""
+    import redis.asyncio as aioredis
+    from app.core.settings import get_settings as _get_settings
+
+    settings = _get_settings()
+
+    # Safety: only allow known rate-limit key prefixes
+    allowed_prefixes = (
+        "login:", "password_reset:", "resend_verify:",
+        "ai:tool:rmbg:", "ai:tool:cartoon:", "ai:generate:",
+        "rl:pay:", "rl:like:", "rl:comment:", "contact:",
+    )
+    if not any(key_pattern.startswith(p) for p in allowed_prefixes):
+        raise AppError(status_code=400, detail=f"key must start with one of {allowed_prefixes}")
+
+    deleted = 0
+    try:
+        client = aioredis.from_url(settings.redis_url)
+        try:
+            if "*" in key_pattern:
+                keys = []
+                async for k in client.scan_iter(match=key_pattern, count=100):
+                    keys.append(k)
+                if keys:
+                    deleted = await client.delete(*keys)
+            else:
+                deleted = await client.delete(key_pattern)
+        finally:
+            await client.aclose()
+    except Exception as exc:
+        logger.warning("e2e: rate-limit reset failed: %s", exc)
+        return {"status": "error", "error": str(exc), "deleted": 0}
+
+    logger.info("e2e: reset rate-limit keys matching '%s', deleted=%d", key_pattern, deleted)
+    return {"status": "ok", "pattern": key_pattern, "deleted": deleted}
+
+
+@router.post(
     "/cleanup",
     operation_id="e2e_cleanup",
     summary="[E2E] Delete test users by email prefix",

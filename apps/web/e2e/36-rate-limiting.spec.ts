@@ -2,6 +2,9 @@
  * STEP 36 — Rate limiting tests.
  *
  * Verifies that rate limits are enforced on auth and AI tool endpoints.
+ * Uses dedicated per-test users and resets Redis counters before each test
+ * to avoid flakiness from shared state or prior CI runs.
+ *
  * Some tests are @nightly because they require many requests.
  */
 
@@ -12,27 +15,28 @@ import {
   createVerifiedCreator,
   isE2EEnabled,
 } from "./helpers";
-import { extractCsrf, requestUploadUrl } from "./ai-helpers";
+import { extractCsrf, requestUploadUrl, resetRateLimit } from "./ai-helpers";
 
 const PASSWORD = "E2eRateLimit1!";
 let e2eAvailable = false;
 
-let creatorCookies = "";
-let creatorCsrf = "";
-
 test.beforeAll(async () => {
   e2eAvailable = await isE2EEnabled();
-  if (!e2eAvailable) return;
-
-  const creator = await createVerifiedCreator(uniqueEmail("rl-cr"), PASSWORD);
-  creatorCookies = creator.cookies;
-  creatorCsrf = extractCsrf(creatorCookies);
 });
 
-test.describe("Rate Limiting", () => {
+// Serial mode: rate-limit tests depend on cumulative request counts
+test.describe.configure({ mode: "serial" });
+
+test.describe("Rate Limiting — Auth Endpoints", () => {
   test("RL-001: login rate limit returns 429 after threshold", { tag: "@regression" }, async () => {
+    // Dedicated email for this test — isolated from other runs
     const email = uniqueEmail("rl-login");
-    // Attempt many login failures to trigger rate limit
+
+    // Reset any prior counters for this email
+    if (e2eAvailable) {
+      try { await resetRateLimit(`login:*:${email}`); } catch { /* best effort */ }
+    }
+
     let got429 = false;
     for (let i = 0; i < 20; i++) {
       const res = await apiFetch("/auth/login", {
@@ -44,16 +48,18 @@ test.describe("Rate Limiting", () => {
         break;
       }
     }
-    // Rate limit should have triggered — if not, the limit is higher than 20
-    // which is still acceptable (we just verify the mechanism exists)
     if (!got429) {
-      // Log but don't fail — rate limit threshold may be > 20
-      test.info().annotations.push({ type: "info", description: "Rate limit not triggered in 20 attempts" });
+      test.info().annotations.push({ type: "info", description: "Rate limit not triggered in 20 attempts — threshold may be higher" });
     }
   });
 
   test("RL-002: forgot-password rate limit returns 429", { tag: "@regression" }, async () => {
     const email = uniqueEmail("rl-forgot");
+
+    if (e2eAvailable) {
+      try { await resetRateLimit(`password_reset:*:${email}`); } catch { /* best effort */ }
+    }
+
     let got429 = false;
     for (let i = 0; i < 15; i++) {
       const res = await apiFetch("/auth/forgot-password", {
@@ -70,13 +76,50 @@ test.describe("Rate Limiting", () => {
     }
   });
 
-  test("RL-003: remove-bg rate limit @nightly", { tag: "@nightly" }, async () => {
+  test("RL-005: rate limit response is descriptive @nightly", { tag: "@nightly" }, async () => {
+    const email = uniqueEmail("rl-desc");
+
+    if (e2eAvailable) {
+      try { await resetRateLimit(`login:*:${email}`); } catch { /* best effort */ }
+    }
+
+    let lastRes: any = null;
+    for (let i = 0; i < 25; i++) {
+      lastRes = await apiFetch("/auth/login", {
+        method: "POST",
+        body: { email, password: "wrong" },
+      });
+      if (lastRes.status === 429) break;
+    }
+    if (lastRes?.status === 429) {
+      expect(lastRes.body).toBeTruthy();
+      // Should include a meaningful error message, not empty body
+      const bodyStr = typeof lastRes.body === "string" ? lastRes.body : JSON.stringify(lastRes.body);
+      expect(bodyStr.length).toBeGreaterThan(2);
+    } else {
+      test.info().annotations.push({ type: "info", description: "Rate limit not triggered" });
+    }
+  });
+});
+
+test.describe("Rate Limiting — AI Tools @nightly", { tag: "@nightly" }, () => {
+  // Each test creates its own user for isolation
+  test.setTimeout(120_000);
+
+  test("RL-003: remove-bg rate limit returns 429 after daily limit", async () => {
     test.skip(!e2eAvailable, "E2E bypass required");
-    test.setTimeout(120_000); // This test makes many requests
+
+    // Dedicated creator for this rate-limit test
+    const creator = await createVerifiedCreator(uniqueEmail("rl-rmbg"), PASSWORD);
+    const cookies = creator.cookies;
+    const csrf = extractCsrf(cookies);
+
+    // Reset any prior counters
+    try { await resetRateLimit(`ai:tool:rmbg:${creator.userId}`); } catch { /* best effort */ }
 
     let mediaAssetId = "";
     try {
-      const upload = await requestUploadUrl(creatorCookies, creatorCsrf);
+      const upload = await requestUploadUrl(cookies, csrf);
       mediaAssetId = upload.assetId;
     } catch {
       test.skip(true, "Could not upload media");
@@ -84,13 +127,13 @@ test.describe("Rate Limiting", () => {
     }
 
     let got429 = false;
-    // Default limit is 30/day — we need to exceed it
+    // Default limit is 30/day — send 35 to trigger it
     for (let i = 0; i < 35; i++) {
       const res = await apiFetch("/ai-tools/remove-bg", {
         method: "POST",
         body: { media_asset_id: mediaAssetId },
-        cookies: creatorCookies,
-        headers: { "X-CSRF-Token": creatorCsrf },
+        cookies,
+        headers: { "X-CSRF-Token": csrf },
       });
       if (res.status === 429) {
         got429 = true;
@@ -104,13 +147,18 @@ test.describe("Rate Limiting", () => {
     expect(got429).toBe(true);
   });
 
-  test("RL-004: cartoonize rate limit @nightly", { tag: "@nightly" }, async () => {
+  test("RL-004: cartoonize rate limit returns 429 after daily limit", async () => {
     test.skip(!e2eAvailable, "E2E bypass required");
-    test.setTimeout(60_000);
+
+    const creator = await createVerifiedCreator(uniqueEmail("rl-cartoon"), PASSWORD);
+    const cookies = creator.cookies;
+    const csrf = extractCsrf(cookies);
+
+    try { await resetRateLimit(`ai:tool:cartoon:${creator.userId}`); } catch { /* best effort */ }
 
     let mediaAssetId = "";
     try {
-      const upload = await requestUploadUrl(creatorCookies, creatorCsrf);
+      const upload = await requestUploadUrl(cookies, csrf);
       mediaAssetId = upload.assetId;
     } catch {
       test.skip(true, "Could not upload media");
@@ -118,13 +166,13 @@ test.describe("Rate Limiting", () => {
     }
 
     let got429 = false;
-    // Default limit is 5/day — we need to exceed it
+    // Default limit is 5/day — send 10 to trigger it
     for (let i = 0; i < 10; i++) {
       const res = await apiFetch("/ai-tools/cartoonize", {
         method: "POST",
         body: { media_asset_id: mediaAssetId },
-        cookies: creatorCookies,
-        headers: { "X-CSRF-Token": creatorCsrf },
+        cookies,
+        headers: { "X-CSRF-Token": csrf },
       });
       if (res.status === 429) {
         got429 = true;
@@ -136,23 +184,5 @@ test.describe("Rate Limiting", () => {
       }
     }
     expect(got429).toBe(true);
-  });
-
-  test("RL-005: rate limit response is descriptive @nightly", { tag: "@nightly" }, async () => {
-    const email = uniqueEmail("rl-desc");
-    let lastRes: any = null;
-    for (let i = 0; i < 25; i++) {
-      lastRes = await apiFetch("/auth/login", {
-        method: "POST",
-        body: { email, password: "wrong" },
-      });
-      if (lastRes.status === 429) break;
-    }
-    if (lastRes?.status === 429) {
-      // Should have a descriptive error
-      expect(lastRes.body).toBeTruthy();
-    } else {
-      test.info().annotations.push({ type: "info", description: "Rate limit not triggered" });
-    }
   });
 });

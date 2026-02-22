@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
+import { Icon } from "@/components/ui/icon";
 import { ImageUploadField } from "@/features/media/ImageUploadField";
 import { listVaultMedia, type MediaMineItem } from "@/features/engagement/api";
 import { MediaService } from "@/features/media/api";
@@ -298,6 +299,7 @@ export default function VaultPage() {
                 setDeleteConfirm(previewItem);
               }}
             >
+              <Icon name="delete" className="mr-1.5 icon-sm" />
               {t.vault.deleteButton}
             </Button>
           </div>
@@ -320,6 +322,7 @@ export default function VaultPage() {
             onClick={() => setDeleteConfirm(null)}
             disabled={deleting}
           >
+            <Icon name="close" className="mr-1.5 icon-sm" />
             {t.vault.cancelButton}
           </Button>
           <Button
@@ -328,6 +331,7 @@ export default function VaultPage() {
             onClick={handleDelete}
             disabled={deleting}
           >
+            <Icon name="delete" className="mr-1.5 icon-sm" />
             {deleting ? t.vault.deletingButton : t.vault.deleteButton}
           </Button>
         </div>
@@ -408,9 +412,11 @@ function VaultCell({
       )}
       <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
         <Button variant="secondary" size="sm" onClick={onPreview}>
+          <Icon name="visibility" className="mr-1.5 icon-sm" />
           {t.vault.previewButton}
         </Button>
         <Button variant="destructive" size="sm" onClick={onDelete}>
+          <Icon name="delete" className="mr-1.5 icon-sm" />
           {t.vault.deleteButton}
         </Button>
       </div>

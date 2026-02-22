@@ -186,13 +186,13 @@ export function Navbar({
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/creator/post/new" className="flex items-center gap-2">
+                      <Link href="/creator/post/new#promo" className="flex items-center gap-2">
                         <Icon name="campaign" className="icon-base text-muted-foreground" />
                         {t.nav.aiPromoCopy}
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/creator/post/new" className="flex items-center gap-2">
+                      <Link href="/creator/post/new#translate" className="flex items-center gap-2">
                         <Icon name="translate" className="icon-base text-muted-foreground" />
                         {t.nav.aiAutoTranslate}
                       </Link>

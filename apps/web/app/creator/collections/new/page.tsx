@@ -6,6 +6,7 @@ import { useRequireRole } from "@/lib/hooks/useRequireRole";
 import { useTranslation } from "@/lib/i18n";
 import { CollectionsService, type CollectionCreate } from "@zinovia/contracts";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -125,6 +126,7 @@ export default function NewCollectionPage() {
               size="sm"
               onClick={() => router.push("/creator/collections")}
             >
+              <Icon name="close" className="mr-1.5 icon-sm" />
               {t.collections.cancelButton}
             </Button>
             <Button
@@ -132,6 +134,7 @@ export default function NewCollectionPage() {
               size="sm"
               disabled={!title.trim() || status === "loading"}
             >
+              <Icon name="add" className="mr-1.5 icon-sm" />
               {status === "loading" ? t.collections.creatingButton : t.collections.createCollectionButton}
             </Button>
           </div>

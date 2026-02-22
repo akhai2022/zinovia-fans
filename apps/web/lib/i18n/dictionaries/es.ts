@@ -972,6 +972,7 @@ export const es: Dictionary = {
     translateAgainButton: "Traducir de nuevo",
     toastCopiedToClipboard: "Copiado al portapapeles",
     toastTranslationFailed: "La solicitud de traducción falló",
+    publishFirstHint: "Publica tu publicación primero para activar la traducción.",
   },
   promo: {
     title: "Sugerencias promocionales",

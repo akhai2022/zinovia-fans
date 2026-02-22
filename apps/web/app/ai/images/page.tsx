@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/lib/i18n";
+import { Icon } from "@/components/ui/icon";
 import "@/lib/api";
 
 export default function AiImagesListPage() {
@@ -62,7 +63,7 @@ export default function AiImagesListPage() {
           {t.aiStudio.title}
         </h1>
         <Button asChild>
-          <Link href="/ai/images/new">{t.aiStudio.generateNewButton}</Link>
+          <Link href="/ai/images/new"><Icon name="add_photo_alternate" className="mr-1.5 icon-sm" />{t.aiStudio.generateNewButton}</Link>
         </Button>
       </div>
       {!jobs || jobs.length === 0 ? (
@@ -72,7 +73,7 @@ export default function AiImagesListPage() {
               {t.aiStudio.emptyMessage}
             </p>
             <Button className="mt-4" asChild>
-              <Link href="/ai/images/new">{t.aiStudio.generateNewButton}</Link>
+              <Link href="/ai/images/new"><Icon name="add_photo_alternate" className="mr-1.5 icon-sm" />{t.aiStudio.generateNewButton}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -105,7 +106,7 @@ export default function AiImagesListPage() {
                   </div>
                 )}
                 <Button variant="outline" size="sm" className="mt-2 w-full" asChild>
-                  <Link href={`/ai/images/${job.id}`}>{t.aiStudio.viewApplyButton}</Link>
+                  <Link href={`/ai/images/${job.id}`}><Icon name="visibility" className="mr-1.5 icon-sm" />{t.aiStudio.viewApplyButton}</Link>
                 </Button>
               </CardContent>
             </Card>

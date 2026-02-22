@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
@@ -135,7 +136,7 @@ function SelfieStep({
               />
               <div className="absolute inset-x-0 bottom-0 flex justify-center gap-2 bg-gradient-to-t from-black/60 to-transparent p-4">
                 <Button variant="secondary" size="sm" onClick={retake}>
-                  {t.kyc.retakeButton}
+                  <Icon name="refresh" className="mr-1.5 icon-sm" />{t.kyc.retakeButton}
                 </Button>
               </div>
             </div>
@@ -173,14 +174,14 @@ function SelfieStep({
       </div>
       <div className="flex gap-2">
         <Button variant="secondary" onClick={onBack}>
-          {t.kyc.backButton}
+          <Icon name="arrow_back" className="mr-1.5 icon-sm" />{t.kyc.backButton}
         </Button>
         <Button
           onClick={onSubmit}
           disabled={submitting || !selfieFile}
           className="flex-1"
         >
-          {submitting ? t.kyc.submittingButton : t.kyc.submitButton}
+          <Icon name="check" className="mr-1.5 icon-sm" />{submitting ? t.kyc.submittingButton : t.kyc.submitButton}
         </Button>
       </div>
     </div>
@@ -277,13 +278,13 @@ export default function KycVerifyPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-3 sm:flex-row sm:justify-center">
             <Button onClick={() => router.push("/settings/profile")}>
-              {t.kyc.setUpProfile}
+              <Icon name="person" className="mr-1.5 icon-sm" />{t.kyc.setUpProfile}
             </Button>
             <Button
               variant="secondary"
               onClick={() => router.push("/creator/post/new")}
             >
-              {t.kyc.createFirstPost}
+              <Icon name="edit_square" className="mr-1.5 icon-sm" />{t.kyc.createFirstPost}
             </Button>
           </CardContent>
         </Card>
@@ -332,7 +333,7 @@ export default function KycVerifyPage() {
                 </p>
               </div>
               <Button onClick={onNextAge} className="w-full">
-                {t.kyc.continueButton}
+                <Icon name="arrow_forward" className="mr-1.5 icon-sm" />{t.kyc.continueButton}
               </Button>
             </div>
           )}
@@ -361,7 +362,7 @@ export default function KycVerifyPage() {
                         size="sm"
                         onClick={() => setIdFile(null)}
                       >
-                        {t.kyc.removeButton}
+                        <Icon name="close" className="mr-1.5 icon-sm" />{t.kyc.removeButton}
                       </Button>
                     </div>
                   ) : (
@@ -397,10 +398,10 @@ export default function KycVerifyPage() {
               </div>
               <div className="flex gap-2">
                 <Button variant="secondary" onClick={() => setStep(1)}>
-                  {t.kyc.backButton}
+                  <Icon name="arrow_back" className="mr-1.5 icon-sm" />{t.kyc.backButton}
                 </Button>
                 <Button onClick={onNextId} className="flex-1">
-                  {t.kyc.continueButton}
+                  <Icon name="arrow_forward" className="mr-1.5 icon-sm" />{t.kyc.continueButton}
                 </Button>
               </div>
             </div>

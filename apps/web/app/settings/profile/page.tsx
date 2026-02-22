@@ -23,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getApiErrorCode, getApiErrorMessage } from "@/lib/errors";
 import { useRequireRole } from "@/lib/hooks/useRequireRole";
 import { MediaService } from "@/features/media/api";
+import { Icon } from "@/components/ui/icon";
 import { useTranslation, interpolate, getCountryName } from "@/lib/i18n";
 import "@/lib/api";
 
@@ -225,7 +226,7 @@ export default function SettingsProfilePage() {
                   />
                   <Button variant="secondary" size="sm" asChild>
                     <Link href="/ai/images/new?apply=creator.avatar">
-                      {t.profile.generateWithAi}
+                      <Icon name="auto_awesome" className="mr-1.5 icon-sm" />{t.profile.generateWithAi}
                     </Link>
                   </Button>
                 </div>
@@ -248,7 +249,7 @@ export default function SettingsProfilePage() {
                 />
                 <Button variant="secondary" size="sm" asChild>
                   <Link href="/ai/images/new?apply=creator.banner">
-                    {t.profile.generateWithAi}
+                    <Icon name="auto_awesome" className="mr-1.5 icon-sm" />{t.profile.generateWithAi}
                   </Link>
                 </Button>
               </div>
@@ -353,7 +354,7 @@ export default function SettingsProfilePage() {
               <Switch id="nsfw" checked={nsfw} onCheckedChange={setNsfw} />
             </div>
             <Button type="submit" disabled={loading}>
-              {loading ? t.profile.savingButton : t.profile.saveButton}
+              <Icon name="save" className="mr-1.5 icon-sm" />{loading ? t.profile.savingButton : t.profile.saveButton}
             </Button>
           </form>
         </CardContent>
@@ -387,7 +388,7 @@ export default function SettingsProfilePage() {
                   onClick={onPriceSave}
                   disabled={priceLoading || subscriptionPrice === plan.price}
                 >
-                  {priceLoading ? t.profile.updatePriceSavingButton : t.profile.updatePriceButton}
+                  <Icon name="payments" className="mr-1.5 icon-sm" />{priceLoading ? t.profile.updatePriceSavingButton : t.profile.updatePriceButton}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -403,10 +404,10 @@ export default function SettingsProfilePage() {
       )}
       <div className="mt-4 flex gap-2">
         <Button variant="secondary" size="sm" asChild>
-          <Link href="/settings/security">{t.profile.changePasswordLink}</Link>
+          <Link href="/settings/security"><Icon name="lock" className="mr-1.5 icon-sm" />{t.profile.changePasswordLink}</Link>
         </Button>
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/">{t.profile.backToHomeLink}</Link>
+          <Link href="/"><Icon name="arrow_back" className="mr-1.5 icon-sm" />{t.profile.backToHomeLink}</Link>
         </Button>
       </div>
     </Page>

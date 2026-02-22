@@ -9,6 +9,7 @@ import { createKycSession, getOnboardingStatus } from "@/lib/onboardingApi";
 import { getApiErrorMessage } from "@/lib/errors";
 import { uuidClient } from "@/lib/uuid";
 import { useTranslation, interpolate } from "@/lib/i18n";
+import { Icon } from "@/components/ui/icon";
 import "@/lib/api";
 
 export default function OnboardingPage() {
@@ -79,7 +80,7 @@ export default function OnboardingPage() {
               onClick={onStartVerification}
               disabled={loading || !checklist.email_verified}
             >
-              {loading ? t.onboarding.redirecting : checklist.kyc_started ? t.onboarding.resumeVerification : t.onboarding.startVerification}
+              <Icon name="verified_user" className="mr-1.5 icon-sm" />{loading ? t.onboarding.redirecting : checklist.kyc_started ? t.onboarding.resumeVerification : t.onboarding.startVerification}
             </Button>
           )}
           {allDone && (
@@ -91,13 +92,13 @@ export default function OnboardingPage() {
                 <Button
                   onClick={() => router.push("/settings/profile")}
                 >
-                  {t.onboarding.setUpProfile}
+                  <Icon name="person" className="mr-1.5 icon-sm" />{t.onboarding.setUpProfile}
                 </Button>
                 <Button
                   variant="secondary"
                   onClick={() => router.push("/creator/post/new")}
                 >
-                  {t.onboarding.createFirstPost}
+                  <Icon name="edit_square" className="mr-1.5 icon-sm" />{t.onboarding.createFirstPost}
                 </Button>
               </div>
             </div>

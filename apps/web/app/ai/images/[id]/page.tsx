@@ -17,6 +17,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { useTranslation, interpolate } from "@/lib/i18n";
+import { Icon } from "@/components/ui/icon";
 import "@/lib/api";
 
 const POLL_INTERVAL_MS = 2000;
@@ -91,7 +92,7 @@ export default function AiImageJobPage() {
       <Page>
         <p className="text-destructive">{error}</p>
         <Button variant="outline" className="mt-2" asChild>
-          <Link href="/ai/images">{t.aiImages.backToList}</Link>
+          <Link href="/ai/images"><Icon name="arrow_back" className="mr-1.5 icon-sm" />{t.aiImages.backToList}</Link>
         </Button>
       </Page>
     );
@@ -103,7 +104,7 @@ export default function AiImageJobPage() {
     <Page>
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/ai/images">{t.aiImages.backButton}</Link>
+          <Link href="/ai/images"><Icon name="arrow_back" className="mr-1.5 icon-sm" />{t.aiImages.backButton}</Link>
         </Button>
       </div>
       <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
@@ -134,7 +135,7 @@ export default function AiImageJobPage() {
                             variant="secondary"
                             disabled={applying}
                           >
-                            {t.aiImages.useAsDropdown}
+                            <Icon name="auto_awesome" className="mr-1.5 icon-sm" />{t.aiImages.useAsDropdown}
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">

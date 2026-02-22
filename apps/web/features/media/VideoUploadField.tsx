@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { MediaService } from "@/features/media/api";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { Label } from "@/components/ui/label";
 import "@/lib/api";
 
@@ -120,6 +121,7 @@ export function VideoUploadField({
           onClick={() => inputRef.current?.click()}
           disabled={disabled || status === "uploading"}
         >
+          <Icon name="upload" className="mr-1.5 icon-sm" />
           {status === "uploading" ? `Uploading ${progress}%` : status === "done" ? "Uploaded" : "Choose video"}
         </Button>
         {status === "error" && errorMessage && (

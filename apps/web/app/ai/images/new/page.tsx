@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
+import { Icon } from "@/components/ui/icon";
 import { useTranslation, interpolate } from "@/lib/i18n";
 import "@/lib/api";
 
@@ -64,7 +65,7 @@ function AiImagesNewPageContent() {
     <Page>
       <div className="mb-4">
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/ai/images">{t.aiImages.backToAiStudio}</Link>
+          <Link href="/ai/images"><Icon name="arrow_back" className="mr-1.5 icon-sm" />{t.aiImages.backToAiStudio}</Link>
         </Button>
       </div>
       <h1 className="text-2xl font-semibold tracking-tight text-foreground">
@@ -136,7 +137,7 @@ function AiImagesNewPageContent() {
               <p className="text-sm text-destructive">{error}</p>
             )}
             <Button type="submit" disabled={loading}>
-              {loading ? t.aiImages.generateButtonLoading : t.aiImages.generateButton}
+              <Icon name="auto_awesome" className="mr-1.5 icon-sm" />{loading ? t.aiImages.generateButtonLoading : t.aiImages.generateButton}
             </Button>
           </form>
         </CardContent>
@@ -153,7 +154,7 @@ export default function AiImagesNewPage() {
         <Page>
           <div className="mb-4">
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/ai/images">{t.aiImages.backToAiStudio}</Link>
+              <Link href="/ai/images"><Icon name="arrow_back" className="mr-1.5 icon-sm" />{t.aiImages.backToAiStudio}</Link>
             </Button>
           </div>
           <p className="text-sm text-muted-foreground">{t.aiImages.loadingFallback}</p>

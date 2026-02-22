@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n";
+import { Icon } from "@/components/ui/icon";
 import "@/lib/api";
 
 function MePageSkeleton() {
@@ -86,7 +87,7 @@ function MePageContent() {
               <span className="text-muted-foreground">{t.mePage.roleLabel}</span> {user.role}
             </div>
             <Button variant="outline" size="sm" className="mt-4" asChild>
-              <Link href="/settings/profile">{t.mePage.editProfileLink}</Link>
+              <Link href="/settings/profile"><Icon name="edit" className="mr-1.5 icon-sm" />{t.mePage.editProfileLink}</Link>
             </Button>
           </CardContent>
         </Card>

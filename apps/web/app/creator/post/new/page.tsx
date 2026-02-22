@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRequireRole } from "@/lib/hooks/useRequireRole";
@@ -68,6 +68,16 @@ export default function NewPostPage() {
   const [vaultLoading, setVaultLoading] = useState(false);
   const [vaultSelection, setVaultSelection] = useState<string[]>([]);
   const [mediaTab, setMediaTab] = useState("images");
+
+  // Scroll to hash anchor (e.g. #promo, #translate) on mount
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (hash) {
+      setTimeout(() => {
+        document.getElementById(hash)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 300);
+    }
+  }, []);
 
   const hasMedia = uploadedImages.length > 0 || videoAssetId || vaultSelection.length > 0;
 
@@ -202,18 +212,19 @@ export default function NewPostPage() {
           </CardContent>
         </Card>
 
-        {/* AI Promo Suggestions — available after post is created */}
-        {hasMedia && (
+        {/* AI Promo Suggestions */}
+        <div id="promo">
           <PromoSuggestions
             postId={null}
+            caption={caption}
             onInsertCaption={(text) => setCaption(text)}
           />
-        )}
+        </div>
 
-        {/* AI Translation — available after post is created */}
-        {caption.length > 0 && (
+        {/* AI Translation */}
+        <div id="translate">
           <TranslatePanel postId={null} caption={caption} />
-        )}
+        </div>
 
         {/* Media */}
         <Card>
@@ -369,7 +380,7 @@ export default function NewPostPage() {
                               {t.newPost.vaultLoading}
                             </>
                           ) : (
-                            t.newPost.vaultLoadButton
+                            <><Icon name="folder_open" className="mr-1.5 icon-sm" />{t.newPost.vaultLoadButton}</>
                           )}
                         </Button>
                       </div>
@@ -628,13 +639,13 @@ export default function NewPostPage() {
                 {t.newPost.creatingButton}
               </>
             ) : scheduleEnabled && publishAt ? (
-              t.newPost.schedulePostButton
+              <><Icon name="schedule_send" className="mr-1.5 icon-sm" />{t.newPost.schedulePostButton}</>
             ) : (
-              t.newPost.publishPostButton
+              <><Icon name="send" className="mr-1.5 icon-sm" />{t.newPost.publishPostButton}</>
             )}
           </Button>
           <Button variant="outline" asChild>
-            <Link href="/feed">{t.newPost.cancelButton}</Link>
+            <Link href="/feed"><Icon name="close" className="mr-1.5 icon-sm" />{t.newPost.cancelButton}</Link>
           </Button>
         </div>
       </form>

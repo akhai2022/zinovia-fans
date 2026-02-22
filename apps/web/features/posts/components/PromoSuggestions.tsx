@@ -24,6 +24,7 @@ type PromoData = {
 
 type Props = {
   postId: string | null;
+  caption?: string;
   onInsertCaption?: (text: string) => void;
 };
 
@@ -33,7 +34,7 @@ const TONES: { value: Tone; labelKey: "toneProfessional" | "tonePlayful" | "tone
   { value: "teasing", labelKey: "toneTeasing" },
 ];
 
-export function PromoSuggestions({ postId, onInsertCaption }: Props) {
+export function PromoSuggestions({ postId, caption, onInsertCaption }: Props) {
   const [tone, setTone] = useState<Tone>("professional");
   const [promo, setPromo] = useState<PromoData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -43,16 +44,26 @@ export function PromoSuggestions({ postId, onInsertCaption }: Props) {
 
   if (!featureFlags.promoGenerator) return null;
 
+  const canGenerate = !!postId || (!!caption && caption.trim().length > 0);
+
   const generate = async () => {
-    if (!postId) return;
+    if (!canGenerate) return;
     setLoading(true);
     setError(null);
     try {
-      const data = await apiFetch<PromoData>("/ai-tools/promo/generate", {
-        method: "POST",
-        body: { post_id: postId, tone },
-      });
-      setPromo(data);
+      if (postId) {
+        const data = await apiFetch<PromoData>("/ai-tools/promo/generate", {
+          method: "POST",
+          body: { post_id: postId, tone },
+        });
+        setPromo(data);
+      } else {
+        const data = await apiFetch<Omit<PromoData, "id">>("/ai-tools/promo/preview", {
+          method: "POST",
+          body: { caption: caption!.trim(), tone },
+        });
+        setPromo({ ...data, id: "preview" } as PromoData);
+      }
     } catch {
       setError(t.promo.errorGenerate);
     } finally {
@@ -102,7 +113,7 @@ export function PromoSuggestions({ postId, onInsertCaption }: Props) {
             variant="outline"
             size="sm"
             onClick={generate}
-            disabled={!postId}
+            disabled={!canGenerate}
           >
             <Icon name="auto_awesome" className="mr-1.5 icon-sm" />
             {t.promo.generateButton}

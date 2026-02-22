@@ -24,10 +24,14 @@ export default defineConfig({
     video: "retain-on-failure",
   },
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
     {
       name: "smoke",
       grep: /@smoke/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "regression",
+      grepInvert: /@nightly/,
       use: { ...devices["Desktop Chrome"] },
     },
     {
@@ -35,6 +39,8 @@ export default defineConfig({
       grep: /@nightly/,
       use: { ...devices["Desktop Chrome"] },
     },
+    // Unfiltered — runs everything including @nightly. Use for local dev only.
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
   ],
   timeout: 30_000,
   expect: { timeout: 10_000 },

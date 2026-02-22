@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Icon } from "@/components/ui/icon";
 import { resendVerificationEmail, verifyEmail } from "@/lib/onboardingApi";
 import { getApiErrorMessage } from "@/lib/errors";
 import { uuidClient } from "@/lib/uuid";
@@ -130,7 +131,7 @@ export default function VerifyEmailPage() {
                   />
                 </div>
                 <Button type="button" variant="secondary" className="w-full" onClick={onResend} disabled={resendLoading}>
-                  {resendLoading ? "Sending…" : "Resend verification email"}
+                  <Icon name="send" className="mr-1.5 icon-sm" />{resendLoading ? "Sending…" : "Resend verification email"}
                 </Button>
                 {resendStatus && <p className="text-sm text-muted-foreground">{resendStatus}</p>}
               </div>
@@ -152,7 +153,7 @@ export default function VerifyEmailPage() {
                   </p>
                 )}
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Verifying…" : "Verify email"}
+                  <Icon name="verified" className="mr-1.5 icon-sm" />{loading ? "Verifying…" : "Verify email"}
                 </Button>
               </form>
               <p className="mt-4 text-center text-sm text-muted-foreground">

@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Icon } from "@/components/ui/icon";
 import { apiFetch } from "@/lib/api/client";
 import { getApiErrorMessage } from "@/lib/errors";
 import { useTranslation } from "@/lib/i18n";
@@ -99,7 +100,7 @@ export function LoginForm({ next, sessionUnavailable }: LoginFormProps) {
               </p>
             )}
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? t.login.submitLoading : t.login.submit}
+              <Icon name="login" className="mr-1.5 icon-sm" />{loading ? t.login.submitLoading : t.login.submit}
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">

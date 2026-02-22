@@ -965,6 +965,7 @@ export const tr: Dictionary = {
     translateAgainButton: "Tekrar çevir",
     toastCopiedToClipboard: "Panoya kopyalandı",
     toastTranslationFailed: "Çeviri isteği başarısız oldu",
+    publishFirstHint: "Çeviriyi etkinleştirmek için önce gönderinizi yayınlayın.",
   },
   promo: {
     title: "Tanıtım önerileri",

@@ -6,6 +6,7 @@ import { useRequireRole } from "@/lib/hooks/useRequireRole";
 import { useTranslation, interpolate } from "@/lib/i18n";
 import { CollectionsService, type CollectionOut } from "@zinovia/contracts";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Modal } from "@/components/ui/modal";
@@ -70,7 +71,7 @@ export default function CollectionsListPage() {
           {t.collections.title}
         </h1>
         <Button size="sm" asChild>
-          <Link href="/creator/collections/new">{t.collections.newCollectionButton}</Link>
+          <Link href="/creator/collections/new"><Icon name="add" className="mr-1.5 icon-sm" />{t.collections.newCollectionButton}</Link>
         </Button>
       </div>
 
@@ -89,6 +90,7 @@ export default function CollectionsListPage() {
           <p className="font-semibold text-foreground">{t.collections.errorTitle}</p>
           <p className="mt-1 text-sm text-muted-foreground">{error}</p>
           <Button variant="secondary" size="sm" className="mt-4" onClick={load}>
+            <Icon name="refresh" className="mr-1.5 icon-sm" />
             {t.collections.retryButton}
           </Button>
         </Card>
@@ -104,7 +106,7 @@ export default function CollectionsListPage() {
             {t.collections.emptyDescription}
           </p>
           <Button size="sm" className="mt-6" asChild>
-            <Link href="/creator/collections/new">{t.collections.createFirstCollection}</Link>
+            <Link href="/creator/collections/new"><Icon name="add" className="mr-1.5 icon-sm" />{t.collections.createFirstCollection}</Link>
           </Button>
         </Card>
       )}
@@ -147,13 +149,14 @@ export default function CollectionsListPage() {
                 </span>
                 <div className="flex gap-2">
                   <Button variant="secondary" size="sm" asChild>
-                    <Link href={`/creator/collections/${col.id}`}>{t.collections.editButton}</Link>
+                    <Link href={`/creator/collections/${col.id}`}><Icon name="edit" className="mr-1.5 icon-sm" />{t.collections.editButton}</Link>
                   </Button>
                   <Button
                     variant="destructive"
                     size="sm"
                     onClick={() => setDeleteTarget(col)}
                   >
+                    <Icon name="delete" className="mr-1.5 icon-sm" />
                     {t.collections.deleteButton}
                   </Button>
                 </div>
@@ -181,6 +184,7 @@ export default function CollectionsListPage() {
             onClick={() => setDeleteTarget(null)}
             disabled={deleting}
           >
+            <Icon name="close" className="mr-1.5 icon-sm" />
             {t.collections.cancelButton}
           </Button>
           <Button
@@ -189,6 +193,7 @@ export default function CollectionsListPage() {
             onClick={handleDelete}
             disabled={deleting}
           >
+            <Icon name="delete" className="mr-1.5 icon-sm" />
             {deleting ? t.collections.deletingButton : t.collections.deleteButton}
           </Button>
         </div>

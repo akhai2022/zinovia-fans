@@ -21,6 +21,8 @@ from app.modules.ai_tools.models import PostPromoSuggestion
 from app.modules.ai_tools.schemas import (
     PromoGenerateRequest,
     PromoListOut,
+    PromoPreviewOut,
+    PromoPreviewRequest,
     PromoSuggestionOut,
 )
 from app.modules.ai_tools.service import get_promo_suggestions, upsert_promo_suggestion
@@ -145,4 +147,28 @@ async def get_promos(
             )
             for r in rows
         ]
+    )
+
+
+@router.post(
+    "/promo/preview",
+    response_model=PromoPreviewOut,
+    operation_id="ai_tools_promo_preview",
+)
+async def promo_preview(
+    body: PromoPreviewRequest,
+    user: User = Depends(get_current_user),
+) -> PromoPreviewOut:
+    """Generate promo copy from raw caption text without saving to DB.
+
+    Useful for previewing promo suggestions before a post is created.
+    """
+    _require_promo_generator()
+    result = generate_promo(caption=body.caption, tone=body.tone, tags=[])
+    return PromoPreviewOut(
+        tone=body.tone,
+        title=result.title,
+        description=result.description,
+        cta_lines=result.cta_lines,
+        hashtags=result.hashtags,
     )

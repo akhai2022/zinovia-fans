@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Icon } from "@/components/ui/icon";
 import { apiFetch } from "@/lib/api/client";
 import { getApiErrorMessage } from "@/lib/errors";
 import "@/lib/api";
@@ -34,7 +35,7 @@ function ResetPasswordForm() {
           </CardHeader>
           <CardContent>
             <Button className="w-full" asChild>
-              <Link href="/forgot-password">Request a new link</Link>
+              <Link href="/forgot-password"><Icon name="link" className="mr-1.5 icon-sm" />Request a new link</Link>
             </Button>
           </CardContent>
         </Card>
@@ -54,7 +55,7 @@ function ResetPasswordForm() {
           </CardHeader>
           <CardContent>
             <Button className="w-full" asChild>
-              <Link href="/login">Sign in</Link>
+              <Link href="/login"><Icon name="login" className="mr-1.5 icon-sm" />Sign in</Link>
             </Button>
           </CardContent>
         </Card>
@@ -127,7 +128,7 @@ function ResetPasswordForm() {
               <p className="text-sm text-destructive" role="alert">{error}</p>
             )}
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Resetting..." : "Reset password"}
+              <Icon name="lock" className="mr-1.5 icon-sm" />{loading ? "Resetting..." : "Reset password"}
             </Button>
           </form>
         </CardContent>

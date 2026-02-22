@@ -12,6 +12,7 @@ import {
   apiFetch,
   createVerifiedCreator,
   isE2EEnabled,
+  API_BASE,
 } from "./helpers";
 import { extractCsrf } from "./ai-helpers";
 
@@ -113,5 +114,63 @@ test.describe("Feature Flag Gating", () => {
     if (res.status === 403) {
       expect(res.body?.detail).toMatch(/disabled|not_found|forbidden/i);
     }
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* PROD SAFETY — /__e2e__/ bypass must be unreachable in production   */
+/* ------------------------------------------------------------------ */
+test.describe("Prod Safety — E2E Bypass Locked Down", () => {
+  const PROD_API = "https://api.zinovia.ai";
+
+  test("PRODSAFE-001: /__e2e__/ai-safety/seed-scan returns 404 on prod (no header) @smoke", { tag: "@smoke" }, async () => {
+    // This test always targets the real prod URL, regardless of test env
+    const res = await fetch(`${PROD_API}/__e2e__/ai-safety/seed-scan?media_asset_id=00000000-0000-0000-0000-000000000000`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    expect([403, 404]).toContain(res.status);
+    // Body must not contain any "seeded" or success markers
+    const body = await res.text();
+    expect(body).not.toContain("seeded");
+    expect(body).not.toContain('"status":"ok"');
+  });
+
+  test("PRODSAFE-002: /__e2e__/ai-safety/seed-scan returns 404 on prod (bogus HMAC) @smoke", { tag: "@smoke" }, async () => {
+    const res = await fetch(`${PROD_API}/__e2e__/ai-safety/seed-scan?media_asset_id=00000000-0000-0000-0000-000000000000`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-E2E-Secret": "bogus_secret_should_not_work",
+      },
+    });
+    expect([403, 404]).toContain(res.status);
+    const body = await res.text();
+    expect(body).not.toContain("seeded");
+    expect(body).not.toContain('"status":"ok"');
+  });
+
+  test("PRODSAFE-003: /__e2e__/auth/force-role returns 404 on prod @smoke", { tag: "@smoke" }, async () => {
+    const res = await fetch(`${PROD_API}/__e2e__/auth/force-role?email=attacker@evil.com&role=admin`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    expect([403, 404]).toContain(res.status);
+  });
+
+  test("PRODSAFE-004: /__e2e__/cleanup returns 404 on prod @smoke", { tag: "@smoke" }, async () => {
+    const res = await fetch(`${PROD_API}/__e2e__/cleanup?email_prefix=prod_`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    expect([403, 404]).toContain(res.status);
+  });
+
+  test("PRODSAFE-005: /__e2e__/rate-limit/reset returns 404 on prod @smoke", { tag: "@smoke" }, async () => {
+    const res = await fetch(`${PROD_API}/__e2e__/rate-limit/reset?key_pattern=login:*:test@test.com`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    expect([403, 404]).toContain(res.status);
   });
 });

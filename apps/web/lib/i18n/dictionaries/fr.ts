@@ -965,6 +965,7 @@ export const fr: Dictionary = {
     translateAgainButton: "Traduire \u00e0 nouveau",
     toastCopiedToClipboard: "Copi\u00e9 dans le presse-papiers",
     toastTranslationFailed: "La demande de traduction a \u00e9chou\u00e9",
+    publishFirstHint: "Publiez votre publication pour activer la traduction.",
   },
   promo: {
     title: "Suggestions promotionnelles",

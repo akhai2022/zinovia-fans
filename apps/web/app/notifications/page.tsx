@@ -220,20 +220,20 @@ export default function NotificationsPage() {
       {nextCursor && !loadingMore && (
         <div className="flex justify-center">
           <Button variant="secondary" size="sm" onClick={() => load(nextCursor)}>
-            {t.notifications.loadMoreButton}
+            <Icon name="expand_more" className="mr-1.5 icon-sm" />{t.notifications.loadMoreButton}
           </Button>
         </div>
       )}
       {loadingMore && (
         <div className="flex justify-center">
           <Button variant="secondary" size="sm" disabled>
-            {t.notifications.loadingMoreButton}
+            <Icon name="expand_more" className="mr-1.5 icon-sm" />{t.notifications.loadingMoreButton}
           </Button>
         </div>
       )}
 
       <Button variant="ghost" size="sm" asChild>
-        <Link href="/">{t.notifications.backToHomeLink}</Link>
+        <Link href="/"><Icon name="arrow_back" className="mr-1.5 icon-sm" />{t.notifications.backToHomeLink}</Link>
       </Button>
     </Page>
   );

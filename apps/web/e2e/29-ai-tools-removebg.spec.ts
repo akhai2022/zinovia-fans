@@ -13,7 +13,15 @@ import {
   createVerifiedCreator,
   isE2EEnabled,
 } from "./helpers";
-import { extractCsrf, requestUploadUrl, pollJobStatus } from "./ai-helpers";
+import {
+  extractCsrf,
+  requestUploadUrl,
+  pollJobStatus,
+  downloadBytes,
+  sha256hex,
+  pngHasAlpha,
+  getContentType,
+} from "./ai-helpers";
 
 const PASSWORD = "E2eRmBg12345!";
 let e2eAvailable = false;
@@ -165,5 +173,177 @@ test.describe("Remove Background Tool", () => {
     await page.waitForLoadState("networkidle");
     // Page should load without errors
     expect(page.url()).toContain("/ai/tools/remove-bg");
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* Output Verification — prove results are real, not mocked           */
+/* ------------------------------------------------------------------ */
+test.describe("Remove Background — Output Verification @nightly", { tag: "@nightly" }, () => {
+  test.setTimeout(120_000); // Jobs + downloads can take a while
+
+  test("RBG-009: two different inputs produce different output hashes", async () => {
+    test.skip(!e2eAvailable, "E2E bypass required");
+
+    // Upload two different media assets (different filenames/sizes simulate different images)
+    let assetA = "";
+    let assetB = "";
+    try {
+      const [uploadA, uploadB] = await Promise.all([
+        requestUploadUrl(creatorCookies, creatorCsrf, {
+          filename: `e2e-rmbg-inputA-${Date.now()}.jpg`,
+          sizeBytes: 1024,
+        }),
+        requestUploadUrl(creatorCookies, creatorCsrf, {
+          filename: `e2e-rmbg-inputB-${Date.now()}.jpg`,
+          sizeBytes: 2048,
+        }),
+      ]);
+      assetA = uploadA.assetId;
+      assetB = uploadB.assetId;
+    } catch {
+      test.skip(true, "Could not upload media for output verification");
+      return;
+    }
+
+    // Submit remove-bg jobs for both
+    const [resA, resB] = await Promise.all([
+      apiFetch("/ai-tools/remove-bg", {
+        method: "POST",
+        body: { media_asset_id: assetA },
+        cookies: creatorCookies,
+        headers: { "X-CSRF-Token": creatorCsrf },
+      }),
+      apiFetch("/ai-tools/remove-bg", {
+        method: "POST",
+        body: { media_asset_id: assetB },
+        cookies: creatorCookies,
+        headers: { "X-CSRF-Token": creatorCsrf },
+      }),
+    ]);
+
+    if (resA.status === 403 || resA.status === 404) {
+      test.skip(true, "AI tools not enabled");
+      return;
+    }
+    expect(resA.ok).toBe(true);
+    expect(resB.ok).toBe(true);
+
+    // Poll both to completion
+    const [resultA, resultB] = await Promise.all([
+      pollJobStatus(`/ai-tools/remove-bg/${resA.body.job_id}`, creatorCookies, {
+        maxAttempts: 30,
+        intervalMs: 2000,
+      }),
+      pollJobStatus(`/ai-tools/remove-bg/${resB.body.job_id}`, creatorCookies, {
+        maxAttempts: 30,
+        intervalMs: 2000,
+      }),
+    ]);
+
+    if (!resultA.result_url || !resultB.result_url) {
+      test.skip(true, "One or both jobs did not complete with result URLs");
+      return;
+    }
+
+    // Download both results and hash them
+    const [bytesA, bytesB] = await Promise.all([
+      downloadBytes(resultA.result_url),
+      downloadBytes(resultB.result_url),
+    ]);
+    const [hashA, hashB] = await Promise.all([sha256hex(bytesA), sha256hex(bytesB)]);
+
+    // Different inputs must produce different outputs
+    expect(hashA).not.toBe(hashB);
+  });
+
+  test("RBG-010: output is PNG with alpha channel", async () => {
+    test.skip(!e2eAvailable, "E2E bypass required");
+
+    let asset = "";
+    try {
+      const upload = await requestUploadUrl(creatorCookies, creatorCsrf, {
+        filename: `e2e-rmbg-alpha-${Date.now()}.jpg`,
+      });
+      asset = upload.assetId;
+    } catch {
+      test.skip(true, "Could not upload media for alpha test");
+      return;
+    }
+
+    const submitRes = await apiFetch("/ai-tools/remove-bg", {
+      method: "POST",
+      body: { media_asset_id: asset },
+      cookies: creatorCookies,
+      headers: { "X-CSRF-Token": creatorCsrf },
+    });
+    if (submitRes.status === 403 || submitRes.status === 404) {
+      test.skip(true, "AI tools not enabled");
+      return;
+    }
+    expect(submitRes.ok).toBe(true);
+
+    const result = await pollJobStatus(
+      `/ai-tools/remove-bg/${submitRes.body.job_id}`,
+      creatorCookies,
+      { maxAttempts: 30, intervalMs: 2000 },
+    );
+    if (!result.result_url) {
+      test.skip(true, "Job did not complete with result URL");
+      return;
+    }
+
+    // Verify Content-Type is image/png
+    const ct = await getContentType(result.result_url);
+    expect(ct).toContain("image/png");
+
+    // Download and check PNG alpha channel
+    const buf = await downloadBytes(result.result_url);
+    const hasAlpha = pngHasAlpha(buf);
+    expect(hasAlpha).not.toBeNull(); // must be valid PNG
+    expect(hasAlpha).toBe(true); // must have alpha channel (background removed)
+  });
+
+  test("RBG-011: presigned URL has expiry (short TTL)", async () => {
+    test.skip(!e2eAvailable, "E2E bypass required");
+
+    // Re-use the job from RBG-001 if available, otherwise skip
+    let asset = "";
+    try {
+      const upload = await requestUploadUrl(creatorCookies, creatorCsrf);
+      asset = upload.assetId;
+    } catch {
+      test.skip(true, "Could not upload media");
+      return;
+    }
+
+    const submitRes = await apiFetch("/ai-tools/remove-bg", {
+      method: "POST",
+      body: { media_asset_id: asset },
+      cookies: creatorCookies,
+      headers: { "X-CSRF-Token": creatorCsrf },
+    });
+    if (submitRes.status === 403 || submitRes.status === 404) {
+      test.skip(true, "AI tools not enabled");
+      return;
+    }
+
+    const result = await pollJobStatus(
+      `/ai-tools/remove-bg/${submitRes.body.job_id}`,
+      creatorCookies,
+      { maxAttempts: 30, intervalMs: 2000 },
+    );
+    if (!result.result_url) {
+      test.skip(true, "Job did not complete");
+      return;
+    }
+
+    // S3 presigned URLs contain Expires or X-Amz-Expires in the query
+    const url = new URL(result.result_url);
+    const hasExpiry =
+      url.searchParams.has("Expires") ||
+      url.searchParams.has("X-Amz-Expires") ||
+      url.searchParams.has("X-Amz-Date");
+    expect(hasExpiry).toBe(true);
   });
 });

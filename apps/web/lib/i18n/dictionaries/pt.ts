@@ -985,6 +985,7 @@ export const pt: Dictionary = {
     translateAgainButton: "Traduzir novamente",
     toastCopiedToClipboard: "Copiado para a área de transferência",
     toastTranslationFailed: "Pedido de tradução falhou",
+    publishFirstHint: "Publique seu post primeiro para ativar a tradução.",
   },
   promo: {
     title: "Sugestões de promoção",

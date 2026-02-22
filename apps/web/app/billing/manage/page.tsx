@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api/client";
 import { getApiErrorMessage } from "@/lib/errors";
@@ -122,7 +123,7 @@ export default function BillingManagePage() {
             {t.billing.noSubscriptionsDescription}
           </p>
           <Button size="sm" className="mt-4" asChild>
-            <Link href="/creators">{t.billing.discoverCreators}</Link>
+            <Link href="/creators"><Icon name="explore" className="mr-1.5 icon-sm" />{t.billing.discoverCreators}</Link>
           </Button>
         </Card>
       )}
@@ -162,7 +163,7 @@ export default function BillingManagePage() {
                     onClick={() => cancelSubscription(sub.subscription_id)}
                     disabled={cancellingId === sub.subscription_id}
                   >
-                    {cancellingId === sub.subscription_id ? t.billing.cancellingButton : t.billing.cancelButton}
+                    <Icon name="cancel" className="mr-1.5 icon-sm" />{cancellingId === sub.subscription_id ? t.billing.cancellingButton : t.billing.cancelButton}
                   </Button>
                 )}
               </div>
@@ -199,7 +200,7 @@ export default function BillingManagePage() {
       )}
 
       <Button variant="ghost" size="sm" asChild>
-        <Link href="/feed">{t.billing.backToFeed}</Link>
+        <Link href="/feed"><Icon name="arrow_back" className="mr-1.5 icon-sm" />{t.billing.backToFeed}</Link>
       </Button>
     </Page>
   );

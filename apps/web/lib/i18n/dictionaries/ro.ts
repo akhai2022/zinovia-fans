@@ -986,6 +986,7 @@ export const ro: Dictionary = {
     translateAgainButton: "Traduceți din nou",
     toastCopiedToClipboard: "Copiat în clipboard",
     toastTranslationFailed: "Solicitarea de traducere a eșuat",
+    publishFirstHint: "Publică postarea mai întâi pentru a activa traducerea.",
   },
   promo: {
     title: "Sugestii promoționale",

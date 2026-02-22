@@ -138,10 +138,82 @@ export async function createImageRef(
   return { token: res.body.token, expiresAt: res.body.expires_at };
 }
 
+/* --------------- download & verify helpers --------------- */
+
+/**
+ * Download bytes from a URL and return a Buffer.
+ * Works with presigned S3 URLs.
+ */
+export async function downloadBytes(url: string): Promise<Buffer> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Download failed: ${res.status} ${res.statusText}`);
+  const ab = await res.arrayBuffer();
+  return Buffer.from(ab);
+}
+
+/**
+ * Compute a hex SHA-256 hash of a Buffer using Node's crypto module.
+ */
+export async function sha256hex(buf: Buffer): Promise<string> {
+  const { createHash } = await import("node:crypto");
+  return createHash("sha256").update(buf).digest("hex");
+}
+
+/**
+ * Check if a PNG buffer has an alpha channel by inspecting the IHDR chunk.
+ * PNG color types with alpha: 4 (grayscale+alpha) or 6 (RGBA).
+ * Returns true if the PNG has alpha, false otherwise.
+ * Returns null if the buffer doesn't look like a valid PNG.
+ */
+export function pngHasAlpha(buf: Buffer): boolean | null {
+  // PNG signature: 8 bytes (137 80 78 71 13 10 26 10)
+  if (buf.length < 26) return null;
+  if (buf[0] !== 0x89 || buf[1] !== 0x50 || buf[2] !== 0x4e || buf[3] !== 0x47) {
+    return null; // Not a PNG
+  }
+  // IHDR chunk starts at byte 8 (4 bytes length + 4 bytes "IHDR" + data)
+  // Color type is at offset 25 (8 sig + 4 len + 4 type + 4 width + 4 height + 1 bit_depth = 25)
+  const colorType = buf[25];
+  return colorType === 4 || colorType === 6;
+}
+
+/**
+ * Get Content-Type of a URL via HEAD request.
+ */
+export async function getContentType(url: string): Promise<string | null> {
+  const res = await fetch(url, { method: "HEAD" });
+  return res.headers.get("content-type");
+}
+
+/* --------------- rate limit helpers --------------- */
+
+/**
+ * Reset rate-limit counters via E2E bypass endpoint.
+ * Pass the exact Redis key or a pattern with wildcards.
+ *
+ * Common patterns:
+ *   - `login:*:${email}` — reset login rate limit for an email
+ *   - `password_reset:*:${email}` — reset forgot-password limit
+ *   - `ai:tool:rmbg:${userId}` — reset remove-bg daily limit
+ *   - `ai:tool:cartoon:${userId}` — reset cartoonize daily limit
+ */
+export async function resetRateLimit(keyPattern: string): Promise<number> {
+  const res = await e2eApi("/rate-limit/reset", {
+    query: { key_pattern: keyPattern },
+  });
+  if (!res.ok) {
+    throw new Error(
+      `resetRateLimit failed: ${res.status} ${JSON.stringify(res.body)}`,
+    );
+  }
+  return res.body.deleted ?? 0;
+}
+
 /* --------------- CSRF helper --------------- */
 
 /**
  * Extract CSRF token from a cookie string.
+ * Handles URL-encoded values and multiple csrf_token occurrences.
  */
 export function extractCsrf(cookies: string): string {
   return cookies.match(/csrf_token=([^;]+)/)?.[1] ?? "";

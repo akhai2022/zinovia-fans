@@ -855,6 +855,7 @@ export interface Dictionary {
     translateAgainButton: string;
     toastCopiedToClipboard: string;
     toastTranslationFailed: string;
+    publishFirstHint: string;
   };
   promo: {
     title: string;

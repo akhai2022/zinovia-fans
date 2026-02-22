@@ -26,7 +26,7 @@ type Props = {
 const LANGUAGES = [
   { code: "fr", labelKey: "languageFrench" as const, flag: "FR", comingSoon: false },
   { code: "es", labelKey: "languageSpanish" as const, flag: "ES", comingSoon: false },
-  { code: "ar", labelKey: "languageArabic" as const, flag: "AR", comingSoon: true },
+  { code: "ar", labelKey: "languageArabic" as const, flag: "AR", comingSoon: false },
 ];
 
 export function TranslatePanel({ postId, caption }: Props) {
@@ -151,16 +151,23 @@ export function TranslatePanel({ postId, caption }: Props) {
 
         {/* Translate button */}
         {translations.length === 0 && !loading && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={requestTranslation}
-            disabled={selectedLangs.length === 0 || !postId}
-          >
-            <Icon name="translate" className="mr-1.5 icon-sm" />
-            {t.translate.translateButton}
-          </Button>
+          <>
+            {!postId && (
+              <p className="text-xs text-muted-foreground italic">
+                {t.translate.publishFirstHint}
+              </p>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={requestTranslation}
+              disabled={selectedLangs.length === 0 || !postId}
+            >
+              <Icon name="translate" className="mr-1.5 icon-sm" />
+              {t.translate.translateButton}
+            </Button>
+          </>
         )}
 
         {loading && (

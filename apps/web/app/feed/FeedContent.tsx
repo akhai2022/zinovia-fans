@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api/client";
 import { getApiErrorMessage } from "@/lib/errors";
+import { Icon } from "@/components/ui/icon";
 import { useTranslation } from "@/lib/i18n";
 import "@/lib/api";
 import type { FeedItem, FeedPageData } from "./page";
@@ -77,7 +78,7 @@ export function FeedContent({ initialData, initialError }: FeedContentProps) {
           {t.feed.feedTitle}
         </h1>
         <Button variant="secondary" size="sm" asChild>
-          <Link href="/creators">{t.feed.discoverCreatorsButton}</Link>
+          <Link href="/creators"><Icon name="explore" className="mr-1.5 icon-sm" />{t.feed.discoverCreatorsButton}</Link>
         </Button>
       </div>
 
@@ -94,7 +95,7 @@ export function FeedContent({ initialData, initialError }: FeedContentProps) {
             {error}
           </p>
           <Button variant="secondary" size="sm" className="mt-6" asChild>
-            <Link href="/feed">{t.feed.retryButton}</Link>
+            <Link href="/feed"><Icon name="refresh" className="mr-1.5 icon-sm" />{t.feed.retryButton}</Link>
           </Button>
         </Card>
       )}
@@ -113,7 +114,7 @@ export function FeedContent({ initialData, initialError }: FeedContentProps) {
             {t.feed.emptyDescription}
           </p>
           <Button size="sm" className="mt-6" asChild>
-            <Link href="/creators">{t.feed.emptyDiscoverCreators}</Link>
+            <Link href="/creators"><Icon name="explore" className="mr-1.5 icon-sm" />{t.feed.emptyDiscoverCreators}</Link>
           </Button>
         </Card>
       )}
@@ -166,7 +167,7 @@ export function FeedContent({ initialData, initialError }: FeedContentProps) {
               loadMore();
             }}
           >
-            {t.feed.retryButton}
+            <Icon name="refresh" className="mr-1.5 icon-sm" />{t.feed.retryButton}
           </Button>
         </div>
       )}
