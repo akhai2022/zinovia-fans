@@ -97,8 +97,6 @@ async def get_posts_count(session: AsyncSession, creator_user_id: UUID) -> int:
     return result.scalar_one() or 0
 
 
-_KYC_APPROVED_STATES = {"KYC_APPROVED", "COMPLETED"}
-
 
 def _discoverable_where() -> tuple:
     """Base conditions for discoverable creators (role, handle set, discoverable)."""
@@ -232,10 +230,6 @@ async def update_creator_profile(
     profile = result.scalar_one_or_none()
     if not profile:
         raise AppError(status_code=404, detail="profile_not_found")
-    # Block setting discoverable=True without KYC approval
-    if payload.get("discoverable") is True and current_user:
-        if current_user.role not in (ADMIN_ROLE, SUPER_ADMIN_ROLE) and current_user.onboarding_state not in _KYC_APPROVED_STATES:
-            raise AppError(status_code=403, detail="kyc_required_for_discoverable")
     if "handle" in payload and payload["handle"] is not None:
         validate_handle(payload["handle"])
         profile.handle = payload["handle"].strip()
