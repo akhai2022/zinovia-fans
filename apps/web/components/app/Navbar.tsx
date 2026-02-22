@@ -11,8 +11,6 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Drawer } from "@/components/ui/drawer";
@@ -44,18 +42,15 @@ export function Navbar({
 
   const isCreator = user?.role === "creator" || user?.role === "admin" || user?.role === "super_admin";
 
-  const NAV_LINKS_AUTH: { href: string; label: string; icon: string; ai?: boolean }[] = [
+  const NAV_LINKS_AUTH: { href: string; label: string; icon: string }[] = [
     { href: "/feed", label: t.nav.feed, icon: "rss_feed" },
-    { href: "/messages", label: t.nav.messages, icon: "chat_bubble" },
     ...(isCreator
       ? [
           { href: "/creator/post/new", label: t.nav.newPost, icon: "edit_square" },
           { href: "/creator/vault", label: t.nav.vault, icon: "folder_open" },
           { href: "/creator/collections", label: t.nav.collections, icon: "grid_view" },
-          { href: "/ai/images", label: t.nav.aiStudio, icon: "auto_awesome", ai: true },
         ]
       : []),
-    { href: "/settings/profile", label: t.nav.settings, icon: "settings" },
   ];
 
   useEffect(() => {
@@ -152,7 +147,6 @@ export function Navbar({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-56">
-                    <DropdownMenuLabel>{t.nav.aiImagesGroup}</DropdownMenuLabel>
                     <DropdownMenuItem asChild>
                       <Link href="/ai/images/new" className="flex items-center gap-2">
                         <Icon name="add_photo_alternate" className="icon-base text-muted-foreground" />
@@ -175,34 +169,6 @@ export function Navbar({
                       <Link href="/ai/tools/cartoon-avatar" className="flex items-center gap-2">
                         <Icon name="brush" className="icon-base text-muted-foreground" />
                         {t.nav.aiCartoonAvatar}
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>{t.nav.aiPostToolsGroup}</DropdownMenuLabel>
-                    <DropdownMenuItem asChild>
-                      <Link href="/creator/post/new" className="flex items-center gap-2">
-                        <Icon name="subtitles" className="icon-base text-muted-foreground" />
-                        {t.nav.aiSmartCaptions}
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/creator/post/new#promo" className="flex items-center gap-2">
-                        <Icon name="campaign" className="icon-base text-muted-foreground" />
-                        {t.nav.aiPromoCopy}
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/creator/post/new#translate" className="flex items-center gap-2">
-                        <Icon name="translate" className="icon-base text-muted-foreground" />
-                        {t.nav.aiAutoTranslate}
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>{t.nav.aiVaultGroup}</DropdownMenuLabel>
-                    <DropdownMenuItem asChild>
-                      <Link href="/creator/vault" className="flex items-center gap-2">
-                        <Icon name="image_search" className="icon-base text-muted-foreground" />
-                        {t.nav.aiSemanticSearch}
                       </Link>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -385,10 +351,6 @@ export function Navbar({
                 { href: "/ai/images", label: t.nav.aiImageLibrary, icon: "photo_library" },
                 { href: "/ai/tools/remove-bg", label: t.nav.aiRemoveBg, icon: "content_cut" },
                 { href: "/ai/tools/cartoon-avatar", label: t.nav.aiCartoonAvatar, icon: "brush" },
-                { href: "/creator/post/new", label: t.nav.aiSmartCaptions, icon: "subtitles" },
-                { href: "/creator/post/new#promo", label: t.nav.aiPromoCopy, icon: "campaign" },
-                { href: "/creator/post/new#translate", label: t.nav.aiAutoTranslate, icon: "translate" },
-                { href: "/creator/vault", label: t.nav.aiSemanticSearch, icon: "image_search" },
               ] as { href: string; label: string; icon: string; comingSoon?: boolean }[]).map((item) => (
                 <Link
                   key={item.href + item.icon}

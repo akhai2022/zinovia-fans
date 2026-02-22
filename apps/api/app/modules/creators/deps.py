@@ -19,7 +19,7 @@ def require_creator(user: User = Depends(get_current_user)) -> User:
     return user
 
 
-_ALLOWED_ONBOARDING_STATES = {"KYC_APPROVED", "COMPLETED"}
+_ALLOWED_ONBOARDING_STATES = {"EMAIL_VERIFIED", "KYC_APPROVED", "COMPLETED"}
 
 
 async def require_creator_with_profile(
