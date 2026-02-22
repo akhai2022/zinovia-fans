@@ -16,7 +16,7 @@ from app.modules.ai_tools.translation_models import PostTranslation
 logger = logging.getLogger(__name__)
 
 # Supported language pairs (en → target)
-SUPPORTED_PAIRS = {"fr", "es"}
+SUPPORTED_PAIRS = {"fr", "es", "ar"}
 
 # Lock to ensure thread-safe argos model loading
 _argos_installed = False

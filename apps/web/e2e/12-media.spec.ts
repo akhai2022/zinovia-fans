@@ -26,7 +26,7 @@ test.beforeAll(async () => {
 });
 
 test.describe("Media Upload URL", () => {
-  test("request presigned upload URL for image", async () => {
+  test("request presigned upload URL for image @smoke", { tag: "@smoke" }, async () => {
     test.skip(!e2eAvailable, "E2E bypass required");
     const res = await apiFetch("/media/upload-url", {
       method: "POST",

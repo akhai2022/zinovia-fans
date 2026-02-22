@@ -54,7 +54,7 @@ BlipForConditionalGeneration.from_pretrained('Salesforce/blip-image-captioning-b
 from sentence_transformers import SentenceTransformer; \
 SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
 
-# Pre-install argostranslate language packages (en→fr, en→es) at build time.
+# Pre-install argostranslate language packages (en→fr, en→es, en→ar) at build time.
 # Packages are cached in /app/argos so the worker doesn't download at runtime.
 ENV ARGOS_PACKAGES_DIR=/app/argos
 RUN python <<'PYEOF'
@@ -62,7 +62,7 @@ import argostranslate.package
 argostranslate.package.update_package_index()
 available = argostranslate.package.get_available_packages()
 for pkg in available:
-    if pkg.from_code == 'en' and pkg.to_code in ('fr', 'es'):
+    if pkg.from_code == 'en' and pkg.to_code in ('fr', 'es', 'ar'):
         argostranslate.package.install_from_path(pkg.download())
         print(f'Installed: en -> {pkg.to_code}')
 PYEOF

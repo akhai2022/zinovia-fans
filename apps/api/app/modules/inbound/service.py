@@ -11,6 +11,8 @@ from sqlalchemy import case, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.settings import get_settings
+from app.modules.auth.constants import ADMIN_ROLE, SUPER_ADMIN_ROLE
+from app.modules.auth.models import User
 from app.modules.inbound.models import InboundEmail
 
 logger = logging.getLogger(__name__)
@@ -219,6 +221,57 @@ async def _forward_email(email: InboundEmail) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# Admin notification helpers
+# ---------------------------------------------------------------------------
+
+
+async def _get_admin_user_ids(session: AsyncSession) -> list[str]:
+    """Return string UUIDs of all active admin and super_admin users."""
+    result = await session.execute(
+        select(User.id).where(
+            User.role.in_([ADMIN_ROLE, SUPER_ADMIN_ROLE]),
+            User.is_active == True,  # noqa: E712
+        )
+    )
+    return [str(uid) for uid in result.scalars().all()]
+
+
+async def _notify_admins_new_email(
+    session: AsyncSession, email: InboundEmail,
+) -> None:
+    """Enqueue an INBOUND_EMAIL notification for each admin user."""
+    settings = get_settings()
+    if not settings.enable_notifications:
+        return
+
+    admin_ids = await _get_admin_user_ids(session)
+    if not admin_ids:
+        return
+
+    try:
+        from app.celery_client import enqueue_create_notification
+    except Exception:
+        logger.warning("Could not import celery client for inbound email notification")
+        return
+
+    payload = {
+        "email_id": str(email.id),
+        "from_address": email.from_address,
+        "subject": (email.subject or "")[:200],
+        "category": email.category,
+    }
+
+    for admin_id in admin_ids:
+        try:
+            enqueue_create_notification(admin_id, "INBOUND_EMAIL", payload)
+        except Exception:
+            logger.warning(
+                "Failed to enqueue inbound email notification for admin %s",
+                admin_id,
+            )
+
+
+# ---------------------------------------------------------------------------
 # Persist a single email from Resend API data
 # ---------------------------------------------------------------------------
 
@@ -324,6 +377,9 @@ async def persist_email_from_resend(
         email_obj.forwarded_to = dest
         email_obj.forwarded_at = datetime.now(UTC)
         await session.flush()
+
+    # Notify admins about new email
+    await _notify_admins_new_email(session, email_obj)
 
     return email_obj
 

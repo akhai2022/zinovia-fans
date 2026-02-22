@@ -7,13 +7,13 @@ import { test, expect } from "@playwright/test";
 import { API_BASE, WEB_BASE, apiFetch } from "./helpers";
 
 test.describe("Baseline Health", () => {
-  test("API /health returns ok", async () => {
+  test("API /health returns ok @smoke", { tag: "@smoke" }, async () => {
     const res = await apiFetch("/health");
     expect(res.ok).toBe(true);
     expect(res.body).toHaveProperty("ok", true);
   });
 
-  test("API /ready returns ok with checks", async () => {
+  test("API /ready returns ok with checks @smoke", { tag: "@smoke" }, async () => {
     const res = await apiFetch("/ready");
     expect(res.ok).toBe(true);
     expect(res.body).toHaveProperty("status");
@@ -22,18 +22,18 @@ test.describe("Baseline Health", () => {
     expect(res.body.checks).toHaveProperty("redis");
   });
 
-  test("Web homepage loads (HTTP 200)", async ({ page }) => {
+  test("Web homepage loads (HTTP 200) @smoke", { tag: "@smoke" }, async ({ page }) => {
     const response = await page.goto("/");
     expect(response?.status()).toBe(200);
   });
 
-  test("Web homepage contains Zinovia branding", async ({ page }) => {
+  test("Web homepage contains Zinovia branding @smoke", { tag: "@smoke" }, async ({ page }) => {
     await page.goto("/");
     const title = await page.title();
     expect(title.toLowerCase()).toContain("zinovia");
   });
 
-  test("CORS allows web origin", async () => {
+  test("CORS allows web origin @smoke", { tag: "@smoke" }, async () => {
     const res = await fetch(`${API_BASE}/health`, {
       method: "OPTIONS",
       headers: {
@@ -45,7 +45,7 @@ test.describe("Baseline Health", () => {
     expect(acao).toBeTruthy();
   });
 
-  test("Billing health endpoint accessible", async () => {
+  test("Billing health endpoint accessible @smoke", { tag: "@smoke" }, async () => {
     const res = await apiFetch("/billing/health");
     expect(res.ok).toBe(true);
     expect(res.body).toHaveProperty("payment_provider");

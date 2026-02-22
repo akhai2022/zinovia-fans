@@ -25,6 +25,16 @@ export default defineConfig({
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    {
+      name: "smoke",
+      grep: /@smoke/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "nightly",
+      grep: /@nightly/,
+      use: { ...devices["Desktop Chrome"] },
+    },
   ],
   timeout: 30_000,
   expect: { timeout: 10_000 },

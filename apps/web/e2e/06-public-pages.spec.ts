@@ -20,7 +20,7 @@ const PUBLIC_PAGES = [
   { path: "/forgot-password", name: "Forgot Password" },
 ];
 
-test.describe("Public Pages — HTTP 200 + No Crashes", () => {
+test.describe("Public Pages — HTTP 200 + No Crashes @smoke", { tag: "@smoke" }, () => {
   for (const pg of PUBLIC_PAGES) {
     test(`${pg.name} (${pg.path}) loads without error`, async ({ page }) => {
       const response = await page.goto(pg.path);

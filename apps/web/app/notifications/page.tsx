@@ -22,6 +22,7 @@ const NOTIFICATION_META: Record<string, { icon: string; color: string }> = {
   TIP_RECEIVED: { icon: "credit_card", color: "text-amber-400 bg-amber-500/10" },
   PPV_UNLOCKED: { icon: "lock_open", color: "text-emerald-400 bg-emerald-500/10" },
   ADMIN_MESSAGE: { icon: "campaign", color: "text-amber-400 bg-amber-500/10" },
+  INBOUND_EMAIL: { icon: "mail", color: "text-orange-400 bg-orange-500/10" },
 };
 
 const DEFAULT_META = { icon: "notifications", color: "text-muted-foreground bg-muted" };
@@ -52,6 +53,16 @@ function formatNotification(type: string, payload: Record<string, unknown>, noti
       if (typeof title === "string") return title;
       if (typeof msg === "string") return msg;
       return notifications.typeAdminMessageFallback;
+    }
+    case "INBOUND_EMAIL": {
+      const from = payload?.from_address;
+      const subject = payload?.subject;
+      const category = payload?.category;
+      const parts: string[] = [];
+      if (typeof category === "string") parts.push(`[${category.toUpperCase()}]`);
+      if (typeof from === "string") parts.push(from);
+      if (typeof subject === "string" && subject) parts.push(`\u2014 ${subject}`);
+      return parts.length > 0 ? parts.join(" ") : notifications.typeInboundEmail;
     }
     default: {
       const msg = payload?.message;
@@ -175,7 +186,10 @@ export default function NotificationsPage() {
               <button
                 key={item.id}
                 type="button"
-                onClick={() => { if (isUnread) markRead(item.id); }}
+                onClick={() => {
+                  if (isUnread) markRead(item.id);
+                  if (item.type === "INBOUND_EMAIL") router.push("/admin?tab=inbox");
+                }}
                 className={cn(
                   "flex w-full items-start gap-3 rounded-xl border px-4 py-3 text-left transition-colors",
                   isUnread

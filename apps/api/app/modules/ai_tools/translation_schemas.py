@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-SUPPORTED_LANGUAGES = frozenset({"fr", "es"})
+SUPPORTED_LANGUAGES = frozenset({"fr", "es", "ar"})
 
 
 class TranslateRequest(BaseModel):

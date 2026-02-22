@@ -223,6 +223,27 @@ export interface Dictionary {
     emptyMessage: string;
     viewApplyButton: string;
   };
+  cartoonAvatar: {
+    title: string;
+    description: string;
+    backToStudio: string;
+    uploadTitle: string;
+    resultTitle: string;
+    loadingRef: string;
+    imageFromUpload: string;
+    processing: string;
+    originalLabel: string;
+    cartoonLabel: string;
+    downloadButton: string;
+    processAnother: string;
+    cartoonizeButton: string;
+    starting: string;
+    errorRefExpired: string;
+    errorStatusCheck: string;
+    errorStart: string;
+    errorRateLimit: string;
+    toastSuccess: string;
+  };
   common: {
     never: string;
     justNow: string;
@@ -446,6 +467,7 @@ export interface Dictionary {
     typeTipReceived: string;
     typePpvUnlocked: string;
     typeAdminMessageFallback: string;
+    typeInboundEmail: string;
     backToHomeLink: string;
   };
   vault: {

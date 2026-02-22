@@ -1,4 +1,4 @@
-"""AI tool endpoints — remove-bg, image-ref, (cartoonize in follow-up PR)."""
+"""AI tool endpoints — remove-bg, cartoonize, image-ref."""
 
 from __future__ import annotations
 
@@ -21,6 +21,9 @@ from app.modules.media.service import generate_signed_download
 from app.modules.media.storage import get_storage_client
 from app.modules.ai_tools.tool_models import AiToolJob
 from app.modules.ai_tools.tool_schemas import (
+    CartoonizeRequest,
+    CartoonizeResponse,
+    CartoonizeStatusOut,
     ImageRefCreateRequest,
     ImageRefCreateResponse,
     ImageRefResolveResponse,
@@ -36,6 +39,7 @@ from app.modules.ai_tools.tool_service import (
 )
 from app.modules.audit.service import (
     ACTION_AI_IMAGE_REF_CREATE,
+    ACTION_AI_TOOL_CARTOONIZE,
     ACTION_AI_TOOL_REMOVE_BG,
     log_audit_event,
 )
@@ -137,6 +141,91 @@ async def remove_bg_status(
         result_url = generate_signed_download(storage, job.result_object_key)
 
     return RemoveBgStatusOut(
+        job_id=job.id,
+        status=job.status,
+        result_url=result_url,
+        error=job.error_message,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Cartoon Avatar
+# ---------------------------------------------------------------------------
+
+
+def _require_cartoon_avatar() -> None:
+    settings = get_settings()
+    if not settings.enable_ai_tools or not settings.enable_cartoon_avatar:
+        raise AppError(status_code=404, detail="feature_disabled")
+
+
+@router.post(
+    "/cartoonize",
+    response_model=CartoonizeResponse,
+    operation_id="ai_tools_cartoonize",
+)
+async def cartoonize(
+    body: CartoonizeRequest,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(get_current_user),
+) -> CartoonizeResponse:
+    """Submit a cartoon-avatar job. Rate limited per day."""
+    _require_cartoon_avatar()
+    settings = get_settings()
+    await check_rate_limit_custom(
+        f"ai:tool:cartoon:{user.id}",
+        max_count=settings.ai_tool_cartoon_daily_limit,
+        window_seconds=86400,
+    )
+    media = await _verify_media_ownership(session, body.media_asset_id, user)
+
+    job = await create_tool_job(
+        session,
+        user_id=user.id,
+        tool="cartoonize",
+        input_object_key=media.object_key,
+        input_media_asset_id=media.id,
+    )
+    await session.commit()
+
+    from app.celery_client import enqueue_cartoonize
+
+    enqueue_cartoonize(str(job.id))
+
+    await log_audit_event(
+        session,
+        action=ACTION_AI_TOOL_CARTOONIZE,
+        actor_id=user.id,
+        resource_type="ai_tool_job",
+        resource_id=str(job.id),
+        metadata={"tool": "cartoonize", "media_asset_id": str(media.id)},
+    )
+
+    return CartoonizeResponse(job_id=job.id, status="processing")
+
+
+@router.get(
+    "/cartoonize/{job_id}",
+    response_model=CartoonizeStatusOut,
+    operation_id="ai_tools_cartoonize_status",
+)
+async def cartoonize_status(
+    job_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(get_current_user),
+) -> CartoonizeStatusOut:
+    """Poll cartoon-avatar job status. When ready, includes presigned result URL."""
+    _require_cartoon_avatar()
+    job = await get_tool_job(session, job_id, user.id)
+    if not job:
+        raise AppError(status_code=404, detail="job_not_found")
+
+    result_url: str | None = None
+    if job.status == "ready" and job.result_object_key:
+        storage = get_storage_client()
+        result_url = generate_signed_download(storage, job.result_object_key)
+
+    return CartoonizeStatusOut(
         job_id=job.id,
         status=job.status,
         result_url=result_url,

@@ -15,7 +15,7 @@ const PASSWORD = "E2eTestPass123!";
 test.describe("Fan Signup & Verification", () => {
   const email = uniqueEmail("fan");
 
-  test("fan signup via API returns 201 + sends verification email", async () => {
+  test("fan signup via API returns 201 + sends verification email @smoke", { tag: "@smoke" }, async () => {
     const res = await apiFetch("/auth/signup", {
       method: "POST",
       body: { email, password: PASSWORD, display_name: "E2E Fan" },
@@ -45,7 +45,7 @@ test.describe("Fan Signup & Verification", () => {
     expect(setCookie).toContain("access_token");
   });
 
-  test("login after verification succeeds", async () => {
+  test("login after verification succeeds @smoke", { tag: "@smoke" }, async () => {
     const res = await apiFetch("/auth/login", {
       method: "POST",
       body: { email, password: PASSWORD },
@@ -123,7 +123,7 @@ test.describe("Fan Auth — Negative Cases", () => {
     expect([400, 409]).toContain(res.status);
   });
 
-  test("unauthenticated /auth/me returns 401", async () => {
+  test("unauthenticated /auth/me returns 401 @smoke", { tag: "@smoke" }, async () => {
     const res = await apiFetch("/auth/me");
     expect(res.status).toBe(401);
   });

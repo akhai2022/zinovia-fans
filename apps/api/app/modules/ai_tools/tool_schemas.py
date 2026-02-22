@@ -38,6 +38,7 @@ class CartoonizeRequest(BaseModel):
 
 class CartoonizeResponse(BaseModel):
     job_id: UUID
+    status: str
 
 
 class CartoonizeStatusOut(BaseModel):

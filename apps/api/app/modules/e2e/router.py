@@ -233,6 +233,46 @@ async def activate_post_purchase(
 
 
 @router.post(
+    "/ai-safety/seed-scan",
+    operation_id="e2e_seed_safety_scan",
+    summary="[E2E] Seed an AI safety scan result for testing",
+    dependencies=[Depends(_require_e2e)],
+)
+async def seed_safety_scan(
+    media_asset_id: str = Query(...),
+    nsfw_score: float = Query(default=0.1),
+    nsfw_label: str = Query(default="normal"),
+    age_range_prediction: str = Query(default="20-29"),
+    underage_likelihood_proxy: float = Query(default=0.0),
+    risk_level: str = Query(default="LOW"),
+    decision: str = Query(default="ALLOW"),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """Seed a safety scan result for a media asset, bypassing the ML pipeline."""
+    from app.modules.ai_safety.models import ImageSafetyScan
+
+    scan = ImageSafetyScan(
+        id=uuid.uuid4(),
+        media_asset_id=uuid.UUID(media_asset_id),
+        nsfw_score=nsfw_score,
+        nsfw_label=nsfw_label,
+        age_range_prediction=age_range_prediction,
+        underage_likelihood_proxy=underage_likelihood_proxy,
+        risk_level=risk_level,
+        decision=decision,
+        model_versions={"e2e": "seeded"},
+    )
+    session.add(scan)
+    await session.commit()
+    logger.info("e2e: seeded safety scan for media_asset=%s", media_asset_id)
+    return {
+        "status": "ok",
+        "scan_id": str(scan.id),
+        "media_asset_id": media_asset_id,
+    }
+
+
+@router.post(
     "/cleanup",
     operation_id="e2e_cleanup",
     summary="[E2E] Delete test users by email prefix",

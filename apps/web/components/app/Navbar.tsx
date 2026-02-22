@@ -171,6 +171,12 @@ export function Navbar({
                         {t.nav.aiRemoveBg}
                       </Link>
                     </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/ai/tools/cartoon-avatar" className="flex items-center gap-2">
+                        <Icon name="brush" className="icon-base text-muted-foreground" />
+                        {t.nav.aiCartoonAvatar}
+                      </Link>
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>{t.nav.aiPostToolsGroup}</DropdownMenuLabel>
                     <DropdownMenuItem asChild>
@@ -183,14 +189,12 @@ export function Navbar({
                       <Link href="/creator/post/new" className="flex items-center gap-2">
                         <Icon name="campaign" className="icon-base text-muted-foreground" />
                         {t.nav.aiPromoCopy}
-                        <span className="ml-auto rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{t.nav.comingSoon}</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href="/creator/post/new" className="flex items-center gap-2">
                         <Icon name="translate" className="icon-base text-muted-foreground" />
                         {t.nav.aiAutoTranslate}
-                        <span className="ml-auto rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{t.nav.comingSoon}</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
@@ -380,9 +384,10 @@ export function Navbar({
                 { href: "/ai/images/new", label: t.nav.aiGenerateImages, icon: "add_photo_alternate" },
                 { href: "/ai/images", label: t.nav.aiImageLibrary, icon: "photo_library" },
                 { href: "/ai/tools/remove-bg", label: t.nav.aiRemoveBg, icon: "content_cut" },
+                { href: "/ai/tools/cartoon-avatar", label: t.nav.aiCartoonAvatar, icon: "brush" },
                 { href: "/creator/post/new", label: t.nav.aiSmartCaptions, icon: "subtitles" },
-                { href: "/creator/post/new#promo", label: t.nav.aiPromoCopy, icon: "campaign", comingSoon: true },
-                { href: "/creator/post/new#translate", label: t.nav.aiAutoTranslate, icon: "translate", comingSoon: true },
+                { href: "/creator/post/new#promo", label: t.nav.aiPromoCopy, icon: "campaign" },
+                { href: "/creator/post/new#translate", label: t.nav.aiAutoTranslate, icon: "translate" },
                 { href: "/creator/vault", label: t.nav.aiSemanticSearch, icon: "image_search" },
               ] as { href: string; label: string; icon: string; comingSoon?: boolean }[]).map((item) => (
                 <Link

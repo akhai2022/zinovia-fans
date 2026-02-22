@@ -17,7 +17,7 @@ import {
 const PASSWORD = "E2eBilling123!";
 
 test.describe("Billing Health", () => {
-  test("billing health shows CCBill config", async () => {
+  test("billing health shows CCBill config @smoke", { tag: "@smoke" }, async () => {
     const res = await apiFetch("/billing/health");
     expect(res.ok).toBe(true);
     expect(res.body).toHaveProperty("payment_provider");

@@ -9,3 +9,4 @@ export { BillingManagePage, BillingSuccessPage } from "./billing.page";
 export { FeedPage, PostCreatePage } from "./feed.page";
 export { MessagesListPage, ConversationPage } from "./dm.page";
 export { AdminPage } from "./admin.page";
+export { AiToolsPage, AiStudioLandingPage } from "./ai-tools.page";

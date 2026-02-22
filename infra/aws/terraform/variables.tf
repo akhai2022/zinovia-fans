@@ -346,6 +346,12 @@ variable "enable_ai_tools" {
   description = "Enable AI Studio tools (remove-bg, cartoonize). False by default for safe rollout."
 }
 
+variable "enable_cartoon_avatar" {
+  type        = bool
+  default     = false
+  description = "Enable cartoon avatar AI tool (CPU-only OpenCV style transfer). Requires enable_ai_tools=true."
+}
+
 variable "default_currency" {
   type        = string
   default     = "eur"

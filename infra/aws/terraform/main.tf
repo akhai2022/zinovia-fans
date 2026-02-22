@@ -509,7 +509,7 @@ resource "aws_cloudfront_function" "strip_api_prefix" {
   code    = <<-JS
     function handler(event) {
       var request = event.request;
-      request.uri = request.uri.replace(/^\\/api/, '') || '/';
+      request.uri = request.uri.replace(/^\/api/, '') || '/';
       return request;
     }
   JS
@@ -526,10 +526,7 @@ resource "aws_cloudfront_cache_policy" "static_immutable" {
 
   parameters_in_cache_key_and_forwarded_to_origin {
     cookies_config { cookie_behavior = "none" }
-    headers_config {
-      header_behavior = "whitelist"
-      headers { items = ["Accept-Encoding"] }
-    }
+    headers_config { header_behavior = "none" }
     query_strings_config { query_string_behavior = "none" }
     enable_accept_encoding_gzip   = true
     enable_accept_encoding_brotli = true
@@ -547,10 +544,7 @@ resource "aws_cloudfront_cache_policy" "assets" {
 
   parameters_in_cache_key_and_forwarded_to_origin {
     cookies_config { cookie_behavior = "none" }
-    headers_config {
-      header_behavior = "whitelist"
-      headers { items = ["Accept-Encoding"] }
-    }
+    headers_config { header_behavior = "none" }
     query_strings_config { query_string_behavior = "all" }
     enable_accept_encoding_gzip   = true
     enable_accept_encoding_brotli = true
@@ -1433,6 +1427,7 @@ resource "aws_ecs_task_definition" "api" {
         { name = "ENABLE_TRANSLATIONS", value = tostring(var.enable_translations) },
         { name = "ENABLE_AI_SAFETY", value = tostring(var.enable_ai_safety) },
         { name = "ENABLE_AI_TOOLS", value = tostring(var.enable_ai_tools) },
+        { name = "ENABLE_CARTOON_AVATAR", value = tostring(var.enable_cartoon_avatar) },
         { name = "DEFAULT_CURRENCY", value = var.default_currency },
         { name = "CCBILL_ACCOUNT_NUMBER", value = var.ccbill_account_number },
         { name = "CCBILL_SUB_ACCOUNT", value = var.ccbill_sub_account },
@@ -1518,7 +1513,8 @@ resource "aws_ecs_task_definition" "web" {
         { name = "NEXT_PUBLIC_ENABLE_PROMO_GENERATOR", value = tostring(var.enable_promo_generator) },
         { name = "NEXT_PUBLIC_ENABLE_TRANSLATIONS", value = tostring(var.enable_translations) },
         { name = "NEXT_PUBLIC_ENABLE_AI_SAFETY", value = tostring(var.enable_ai_safety) },
-        { name = "NEXT_PUBLIC_ENABLE_AI_TOOLS", value = tostring(var.enable_ai_tools) }
+        { name = "NEXT_PUBLIC_ENABLE_AI_TOOLS", value = tostring(var.enable_ai_tools) },
+        { name = "NEXT_PUBLIC_ENABLE_CARTOON_AVATAR", value = tostring(var.enable_cartoon_avatar) }
       ],
       local.web_base_url != "" ? [{ name = "NEXT_PUBLIC_APP_URL", value = local.web_base_url }] : []
     )
@@ -1559,6 +1555,7 @@ resource "aws_ecs_task_definition" "worker" {
       { name = "AI_PROVIDER", value = var.ai_provider },
       { name = "ENABLE_AI_SAFETY", value = tostring(var.enable_ai_safety) },
       { name = "ENABLE_AI_TOOLS", value = tostring(var.enable_ai_tools) },
+      { name = "ENABLE_CARTOON_AVATAR", value = tostring(var.enable_cartoon_avatar) },
       { name = "ENABLE_SMART_PREVIEWS", value = tostring(var.enable_smart_previews) },
       { name = "ENABLE_TRANSLATIONS", value = tostring(var.enable_translations) },
       # Worker doesn't send email or use cookies but shares Settings with API

@@ -97,7 +97,7 @@ resource "aws_wafv2_web_acl" "cloudfront" {
   count       = local.ha_enable_waf && var.enable_cloudfront ? 1 : 0
   provider    = aws.us_east_1
   name        = "${local.name_prefix}-cf-waf"
-  description = "WAF for CloudFront distributions (media + web)"
+  description = "WAF for CloudFront distributions - media and web"
   scope       = "CLOUDFRONT"
 
   default_action {

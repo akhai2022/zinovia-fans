@@ -71,6 +71,7 @@ enable_promo_generator   = true
 enable_translations      = true
 enable_ai_safety         = true
 enable_ai_tools          = true
+enable_cartoon_avatar    = true
 
 # Currency
 default_currency = "eur"

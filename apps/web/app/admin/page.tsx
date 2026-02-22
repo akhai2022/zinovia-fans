@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Page } from "@/components/brand/Page";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -228,12 +228,16 @@ function getRoleFilters(adminT: Dictionary["admin"]) {
 
 export default function AdminPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useTranslation();
   const { authorized, user: adminUser } = useRequireRole(["admin", "super_admin"]);
   const isSuperAdmin = adminUser?.role === "super_admin";
   const ROLE_FILTERS = getRoleFilters(t.admin);
   const CATEGORY_LABELS = getCategoryLabels(t.admin);
-  const [tab, setTab] = useState<"users" | "posts" | "transactions" | "inbox" | "moderation">("users");
+  type AdminTab = "users" | "posts" | "transactions" | "inbox" | "moderation";
+  const VALID_TABS: AdminTab[] = ["users", "posts", "transactions", "inbox", "moderation"];
+  const initialTab = (VALID_TABS.includes(searchParams.get("tab") as AdminTab) ? searchParams.get("tab") : "users") as AdminTab;
+  const [tab, setTab] = useState<AdminTab>(initialTab);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -1896,7 +1900,7 @@ export default function AdminPage() {
           <CardHeader>
             <CardTitle>Content Moderation — Pending Reviews</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Items flagged by AI safety (proxy signals — requires human review before enforcement)
+              Items flagged by AI safety. Age and NSFW scores are AI estimates only — they do not reflect verified age or confirmed content classification. All decisions require human review.
             </p>
           </CardHeader>
           <CardContent>
@@ -1936,10 +1940,12 @@ export default function AdminPage() {
                           ({item.nsfw_label})
                         </span>
                         <span>
-                          Age range: <strong className="text-foreground">{item.age_range_prediction}</strong>
+                          Est. age range: <strong className="text-foreground">{item.age_range_prediction}</strong>{" "}
+                          <span className="text-muted-foreground/60">(AI estimate)</span>
                         </span>
                         <span>
-                          Underage proxy: <strong className="text-foreground">{(item.underage_likelihood_proxy * 100).toFixed(1)}%</strong>
+                          Underage proxy: <strong className="text-foreground">{(item.underage_likelihood_proxy * 100).toFixed(1)}%</strong>{" "}
+                          <span className="text-muted-foreground/60">(AI estimate)</span>
                         </span>
                         <span>Asset: {item.media_asset_id.slice(0, 8)}...</span>
                         <span>{new Date(item.created_at).toLocaleString()}</span>

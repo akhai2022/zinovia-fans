@@ -24,8 +24,8 @@ type Props = {
 };
 
 const LANGUAGES = [
-  { code: "fr", labelKey: "languageFrench" as const, flag: "FR" },
-  { code: "es", labelKey: "languageSpanish" as const, flag: "ES" },
+  { code: "fr", labelKey: "languageFrench" as const, flag: "FR", comingSoon: false },
+  { code: "es", labelKey: "languageSpanish" as const, flag: "ES", comingSoon: false },
   { code: "ar", labelKey: "languageArabic" as const, flag: "AR", comingSoon: true },
 ];
 

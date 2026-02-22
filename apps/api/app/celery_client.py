@@ -82,6 +82,12 @@ def enqueue_remove_background(job_id: str) -> None:
     app.send_task("ai_tools.remove_background", args=[job_id])  # type: ignore[attr-defined]
 
 
+def enqueue_cartoonize(job_id: str) -> None:
+    """Enqueue AI tool cartoon-avatar task. Idempotent on worker side."""
+    app = _get_celery_app()
+    app.send_task("ai_tools.cartoonize", args=[job_id])  # type: ignore[attr-defined]
+
+
 def enqueue_translate_caption(
     translation_id: str,
     source_text: str,

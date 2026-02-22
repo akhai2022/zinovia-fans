@@ -28,11 +28,11 @@ const TOOL_ICONS = [
 function getToolFeatures(t: Dictionary["aiToolsLanding"]) {
   return [
     { title: t.removeBgTitle, description: t.removeBgDesc, comingSoon: false },
-    { title: t.cartoonTitle, description: t.cartoonDesc, comingSoon: true },
+    { title: t.cartoonTitle, description: t.cartoonDesc, comingSoon: false },
     { title: t.captionsTitle, description: t.captionsDesc, comingSoon: false },
     { title: t.safetyTitle, description: t.safetyDesc, comingSoon: false },
     { title: t.promoTitle, description: t.promoDesc, comingSoon: false },
-    { title: t.translateTitle, description: t.translateDesc, comingSoon: true },
+    { title: t.translateTitle, description: t.translateDesc, comingSoon: false },
   ];
 }
 

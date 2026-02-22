@@ -132,7 +132,7 @@ test.describe("Admin — Token Lookup", () => {
 });
 
 test.describe("Admin UI", () => {
-  test("/admin page loads for admin user", async ({ page }) => {
+  test("/admin page loads for admin user @smoke", { tag: "@smoke" }, async ({ page }) => {
     test.skip(!e2eAvailable, "E2E bypass required");
     // Set cookies on the browser context
     const adminEmail = uniqueEmail("adminui");
