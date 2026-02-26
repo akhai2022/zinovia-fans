@@ -7,7 +7,6 @@ import hashlib
 import hmac
 import logging
 from datetime import datetime, timezone
-from decimal import Decimal
 
 import httpx
 
@@ -27,28 +26,30 @@ def worldline_configured() -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Authentication helpers
+# Authentication helpers (Worldline Connect v1HMAC)
 # ---------------------------------------------------------------------------
 
 def _auth_header(method: str, url_path: str, content_type: str = "") -> dict[str, str]:
-    """Build Worldline v1 HMAC-SHA256 authorization header.
+    """Build Worldline Connect v1HMAC authorization header.
 
-    See: https://docs.direct.worldline-solutions.com/en/integration/api-developer-guide/authentication
+    See: https://apireference.connect.worldline-solutions.com/s2sapi/v1/en_US/java/authentication.html
     """
     settings = get_settings()
     date = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
 
-    # String to sign: METHOD\nContent-Type\nDate\nCanonicalizedPath
+    # String to sign: METHOD\nContent-Type\nDate\nCanonicalizedHeaders\nCanonicalizedResource\n
+    # No X-GCS headers for server-to-server calls without metadata
     string_to_sign = f"{method}\n{content_type}\n{date}\n{url_path}\n"
 
-    secret_bytes = base64.b64decode(settings.worldline_api_secret)
+    # Connect SDK uses secret as UTF-8 string (NOT base64-decoded)
+    secret_bytes = settings.worldline_api_secret.encode("utf-8")
     signature = base64.b64encode(
         hmac.new(secret_bytes, string_to_sign.encode("utf-8"), hashlib.sha256).digest()
-    ).decode("utf-8")
+    ).decode("utf-8").rstrip("\n")
 
     return {
         "Date": date,
-        "Authorization": f"GCS v1HMAC:SHA256:{settings.worldline_api_key}:{signature}",
+        "Authorization": f"GCS v1HMAC:{settings.worldline_api_key}:{signature}",
     }
 
 
@@ -76,7 +77,7 @@ async def create_hosted_checkout(
     settings = get_settings()
     merchant_id = settings.worldline_merchant_id
     api_endpoint = settings.worldline_api_endpoint
-    url_path = f"/v2/{merchant_id}/hostedcheckouts"
+    url_path = f"/v1/{merchant_id}/hostedcheckouts"
     full_url = f"{api_endpoint}{url_path}"
 
     body: dict = {
@@ -116,12 +117,21 @@ async def create_hosted_checkout(
 
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(full_url, json=body, headers=headers)
+        if resp.status_code >= 400:
+            logger.error(
+                "worldline hosted checkout failed status=%s body=%s",
+                resp.status_code, resp.text[:500],
+            )
         resp.raise_for_status()
         data = resp.json()
 
     partial_url = data.get("partialRedirectUrl", "")
     checkout_url = f"https://payment.{partial_url}" if partial_url else ""
 
+    logger.info(
+        "worldline hosted checkout created hosted_checkout_id=%s",
+        data.get("hostedCheckoutId", ""),
+    )
     return {
         "checkout_url": checkout_url,
         "hosted_checkout_id": data.get("hostedCheckoutId", ""),
@@ -138,13 +148,15 @@ async def get_payment_status(payment_id: str) -> dict:
     settings = get_settings()
     merchant_id = settings.worldline_merchant_id
     api_endpoint = settings.worldline_api_endpoint
-    url_path = f"/v2/{merchant_id}/payments/{payment_id}"
+    url_path = f"/v1/{merchant_id}/payments/{payment_id}"
     full_url = f"{api_endpoint}{url_path}"
 
     headers = _auth_header("GET", url_path)
 
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.get(full_url, headers=headers)
+        if resp.status_code >= 400:
+            logger.error("worldline get_payment_status failed status=%s body=%s", resp.status_code, resp.text[:500])
         resp.raise_for_status()
         return resp.json()
 
@@ -154,13 +166,15 @@ async def get_hosted_checkout_status(hosted_checkout_id: str) -> dict:
     settings = get_settings()
     merchant_id = settings.worldline_merchant_id
     api_endpoint = settings.worldline_api_endpoint
-    url_path = f"/v2/{merchant_id}/hostedcheckouts/{hosted_checkout_id}"
+    url_path = f"/v1/{merchant_id}/hostedcheckouts/{hosted_checkout_id}"
     full_url = f"{api_endpoint}{url_path}"
 
     headers = _auth_header("GET", url_path)
 
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.get(full_url, headers=headers)
+        if resp.status_code >= 400:
+            logger.error("worldline get_hosted_checkout_status failed status=%s body=%s", resp.status_code, resp.text[:500])
         resp.raise_for_status()
         return resp.json()
 
@@ -192,7 +206,7 @@ def verify_webhook_signature(body: bytes, key_id: str, signature: str) -> bool:
         logger.error("worldline webhook secret not configured")
         return False
 
-    # Compute HMAC-SHA256
+    # Webhook secrets ARE base64-encoded (different from API secret)
     secret_bytes = base64.b64decode(secret)
     expected_sig = base64.b64encode(
         hmac.new(secret_bytes, body, hashlib.sha256).digest()
@@ -214,7 +228,7 @@ async def create_refund(payment_id: str, amount_cents: int, currency: str = "EUR
     settings = get_settings()
     merchant_id = settings.worldline_merchant_id
     api_endpoint = settings.worldline_api_endpoint
-    url_path = f"/v2/{merchant_id}/payments/{payment_id}/refund"
+    url_path = f"/v1/{merchant_id}/payments/{payment_id}/refund"
     full_url = f"{api_endpoint}{url_path}"
 
     body = {
@@ -232,5 +246,8 @@ async def create_refund(payment_id: str, amount_cents: int, currency: str = "EUR
 
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(full_url, json=body, headers=headers)
+        if resp.status_code >= 400:
+            logger.error("worldline create_refund failed status=%s body=%s", resp.status_code, resp.text[:500])
         resp.raise_for_status()
+        logger.info("worldline refund created payment_id=%s amount_cents=%s", payment_id, amount_cents)
         return resp.json()

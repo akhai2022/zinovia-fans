@@ -271,7 +271,7 @@ class Settings(BaseSettings):
     worldline_webhook_key_id: str = Field(default="", alias="WORLDLINE_WEBHOOK_KEY_ID")
     worldline_webhook_secret: str = Field(default="", alias="WORLDLINE_WEBHOOK_SECRET")
     worldline_api_endpoint: str = Field(
-        default="https://payment.preprod.direct.worldline-solutions.com",
+        default="https://api.preprod.connect.worldline-solutions.com",
         alias="WORLDLINE_API_ENDPOINT",
     )
     # Active payment provider: "ccbill" or "worldline"

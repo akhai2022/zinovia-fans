@@ -131,8 +131,6 @@ type AdminMediaItem = {
 
 type AdminKycSession = {
   id: string;
-  provider: string;
-  provider_session_id: string | null;
   status: string;
   date_of_birth: string | null;
   id_document_url: string | null;
@@ -140,9 +138,16 @@ type AdminKycSession = {
   admin_notes: string | null;
   reviewed_by: string | null;
   reviewed_at: string | null;
-  redirect_url: string | null;
+  redirect_url?: string | null;
   created_at: string;
-  updated_at: string | null;
+  updated_at?: string | null;
+  creator?: {
+    user_id: string;
+    email: string;
+    display_name: string;
+    handle: string | null;
+    avatar_url: string | null;
+  };
 };
 
 type PagedResult<T> = { items: T[]; total: number };
@@ -237,8 +242,8 @@ export default function AdminPage() {
   const isSuperAdmin = adminUser?.role === "super_admin";
   const ROLE_FILTERS = getRoleFilters(t.admin);
   const CATEGORY_LABELS = getCategoryLabels(t.admin);
-  type AdminTab = "users" | "posts" | "transactions" | "inbox" | "moderation";
-  const VALID_TABS: AdminTab[] = ["users", "posts", "transactions", "inbox", "moderation"];
+  type AdminTab = "users" | "posts" | "transactions" | "inbox" | "moderation" | "kyc";
+  const VALID_TABS: AdminTab[] = ["users", "posts", "transactions", "inbox", "moderation", ...(isSuperAdmin ? ["kyc" as const] : [])];
   const initialTab = (VALID_TABS.includes(searchParams.get("tab") as AdminTab) ? searchParams.get("tab") : "users") as AdminTab;
   const [tab, setTab] = useState<AdminTab>(initialTab);
   const [error, setError] = useState<string | null>(null);
@@ -304,9 +309,16 @@ export default function AdminPage() {
   const [userMediaTotal, setUserMediaTotal] = useState(0);
   const [userMediaPage, setUserMediaPage] = useState(1);
   const [userKyc, setUserKyc] = useState<AdminKycSession[]>([]);
-  const [kycReviewNotes, setKycReviewNotes] = useState("");
+  const [kycReviewNotes, setKycReviewNotes] = useState<Record<string, string>>({});
   const [kycReviewing, setKycReviewing] = useState<string | null>(null);
   const [deleteMediaConfirm, setDeleteMediaConfirm] = useState<string | null>(null);
+
+  /* ---- Global KYC tab state ---- */
+  const [globalKyc, setGlobalKyc] = useState<AdminKycSession[]>([]);
+  const [globalKycTotal, setGlobalKycTotal] = useState(0);
+  const [globalKycPage, setGlobalKycPage] = useState(1);
+  const [globalKycFilter, setGlobalKycFilter] = useState<string>("SUBMITTED");
+  const [globalKycLoading, setGlobalKycLoading] = useState(false);
 
   /* ---- Moderation state ---- */
   type ModerationItem = {
@@ -572,15 +584,39 @@ export default function AdminPage() {
     }
   };
 
+  const fetchGlobalKyc = useCallback(
+    async (pg = 1, statusFilter = globalKycFilter) => {
+      setGlobalKycLoading(true);
+      try {
+        const query: Record<string, string | number> = { page: pg, page_size: PAGE_SIZE };
+        if (statusFilter) query.status = statusFilter;
+        const data = await apiFetch<PagedResult<AdminKycSession>>("/admin/kyc/sessions", {
+          method: "GET",
+          query,
+        });
+        setGlobalKyc(data.items);
+        setGlobalKycTotal(data.total);
+        setGlobalKycPage(pg);
+        setError(null);
+      } catch (err) {
+        handleApiError(err);
+      } finally {
+        setGlobalKycLoading(false);
+      }
+    },
+    [globalKycFilter, handleApiError],
+  );
+
   const reviewKyc = async (sessionId: string, action: "approve" | "reject") => {
     try {
       setKycReviewing(sessionId);
       await apiFetch(`/admin/kyc/${sessionId}/review`, {
         method: "POST",
-        body: { action, notes: kycReviewNotes || null },
+        body: { action, notes: kycReviewNotes[sessionId] || null },
       });
-      setKycReviewNotes("");
+      setKycReviewNotes((prev) => { const next = { ...prev }; delete next[sessionId]; return next; });
       if (selectedUser) fetchUserKyc(selectedUser.user_id);
+      if (tab === "kyc") fetchGlobalKyc(globalKycPage, globalKycFilter);
     } catch (err) {
       handleApiError(err);
     } finally {
@@ -594,11 +630,12 @@ export default function AdminPage() {
     else if (tab === "posts") fetchPosts();
     else if (tab === "transactions") fetchTransactions();
     else if (tab === "moderation") fetchModeration();
+    else if (tab === "kyc") fetchGlobalKyc();
     else {
       fetchInbox();
       fetchInboxStats();
     }
-  }, [tab, fetchUsers, fetchPosts, fetchTransactions, fetchInbox, fetchInboxStats, fetchModeration]);
+  }, [tab, fetchUsers, fetchPosts, fetchTransactions, fetchInbox, fetchInboxStats, fetchModeration, fetchGlobalKyc]);
 
   // Reload users when search/role changes
   useEffect(() => {
@@ -739,7 +776,7 @@ export default function AdminPage() {
 
       {/* Tab selector */}
       <div className="flex gap-2 rounded-xl border border-border bg-muted/50 p-1">
-        {(["users", "posts", "transactions", "inbox", "moderation"] as const).map((t) => (
+        {([...["users", "posts", "transactions", "inbox", "moderation"] as const, ...(isSuperAdmin ? ["kyc" as const] : [])]).map((t) => (
           <button
             key={t}
             type="button"
@@ -773,6 +810,16 @@ export default function AdminPage() {
                 {modTotal > 0 && (
                   <span className="ml-1.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-white">
                     {modTotal}
+                  </span>
+                )}
+              </>
+            )}
+            {t === "kyc" && (
+              <>
+                <Icon name="verified_user" className="icon-base" /> KYC
+                {globalKycTotal > 0 && (
+                  <span className="ml-1.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white">
+                    {globalKycTotal}
                   </span>
                 )}
               </>
@@ -1699,88 +1746,130 @@ export default function AdminPage() {
                     {userDetailTab === "kyc" && isSuperAdmin && (
                       <div className="space-y-3">
                         {userKyc.length === 0 ? (
-                          <p className="py-4 text-center text-sm text-muted-foreground">No KYC sessions found.</p>
+                          <div className="flex flex-col items-center justify-center py-10 text-center">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted/50 mb-3">
+                              <Icon name="verified_user" className="text-2xl text-muted-foreground" />
+                            </div>
+                            <p className="text-sm text-muted-foreground">No KYC sessions found for this user.</p>
+                          </div>
                         ) : (
                           <div className="space-y-4">
                             {userKyc.map((k) => (
-                              <div key={k.id} className="rounded-lg border border-border p-4 space-y-3">
+                              <div
+                                key={k.id}
+                                className={`rounded-xl border p-4 space-y-3 ${
+                                  k.status === "SUBMITTED" ? "border-amber-500/30 bg-amber-500/[0.03]"
+                                  : k.status === "APPROVED" ? "border-emerald-500/20 bg-emerald-500/[0.02]"
+                                  : k.status === "REJECTED" ? "border-red-500/20 bg-red-500/[0.02]"
+                                  : "border-border"
+                                }`}
+                              >
                                 {/* Status badge and date */}
                                 <div className="flex items-center justify-between">
-                                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
                                     k.status === "APPROVED" ? "bg-emerald-500/15 text-emerald-400"
                                     : k.status === "REJECTED" ? "bg-red-500/15 text-red-400"
                                     : k.status === "SUBMITTED" ? "bg-amber-500/15 text-amber-400"
                                     : "bg-muted text-muted-foreground"
                                   }`}>
-                                    {k.status}
+                                    <Icon name={
+                                      k.status === "APPROVED" ? "check_circle"
+                                      : k.status === "REJECTED" ? "cancel"
+                                      : k.status === "SUBMITTED" ? "schedule"
+                                      : "draft"
+                                    } className="text-[12px]" />
+                                    {k.status === "SUBMITTED" ? "Pending Review" : k.status.charAt(0) + k.status.slice(1).toLowerCase()}
                                   </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {k.created_at ? new Date(k.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "\u2014"}
+                                  <span className="text-[11px] text-muted-foreground">
+                                    {k.created_at ? new Date(k.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "\u2014"}
                                   </span>
                                 </div>
 
-                                {/* Metadata */}
-                                <div className="grid grid-cols-2 gap-2 text-xs">
-                                  {k.date_of_birth && (
-                                    <div>
-                                      <span className="text-muted-foreground">Date of Birth:</span>{" "}
-                                      <span className="text-foreground font-medium">{k.date_of_birth}</span>
-                                    </div>
-                                  )}
-                                  <div>
-                                    <span className="text-muted-foreground">Provider:</span>{" "}
-                                    <span className="text-foreground font-medium">{k.provider}</span>
+                                {/* Date of birth */}
+                                {k.date_of_birth && (
+                                  <div className="rounded-lg bg-muted/40 px-3 py-2 inline-block">
+                                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Date of Birth</p>
+                                    <p className="mt-0.5 text-sm font-semibold text-foreground">
+                                      {new Date(k.date_of_birth + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                                    </p>
                                   </div>
-                                </div>
+                                )}
 
                                 {/* Document images */}
-                                {(k.id_document_url || k.selfie_url) && (
+                                {(k.id_document_url || k.selfie_url) ? (
                                   <div className="grid grid-cols-2 gap-3">
                                     {k.id_document_url && (
-                                      <div>
-                                        <p className="text-xs text-muted-foreground mb-1">ID Document</p>
-                                        <a href={k.id_document_url} target="_blank" rel="noopener noreferrer">
+                                      <div className="space-y-1.5">
+                                        <div className="flex items-center gap-1">
+                                          <Icon name="badge" className="text-xs text-muted-foreground" />
+                                          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">ID Document</p>
+                                        </div>
+                                        <a href={k.id_document_url} target="_blank" rel="noopener noreferrer" className="group relative block overflow-hidden rounded-lg border border-border bg-black/20">
                                           {/* eslint-disable-next-line @next/next/no-img-element */}
                                           <img
                                             src={k.id_document_url}
                                             alt="ID Document"
-                                            className="rounded-lg border border-border object-cover max-h-48 w-full"
+                                            className="w-full h-44 object-contain transition-transform duration-200 group-hover:scale-[1.02]"
+                                            loading="lazy"
                                           />
+                                          <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
+                                            <span className="rounded-full bg-black/60 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                              <Icon name="open_in_new" className="text-white text-sm" />
+                                            </span>
+                                          </div>
                                         </a>
                                       </div>
                                     )}
                                     {k.selfie_url && (
-                                      <div>
-                                        <p className="text-xs text-muted-foreground mb-1">Selfie</p>
-                                        <a href={k.selfie_url} target="_blank" rel="noopener noreferrer">
+                                      <div className="space-y-1.5">
+                                        <div className="flex items-center gap-1">
+                                          <Icon name="face" className="text-xs text-muted-foreground" />
+                                          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Selfie</p>
+                                        </div>
+                                        <a href={k.selfie_url} target="_blank" rel="noopener noreferrer" className="group relative block overflow-hidden rounded-lg border border-border bg-black/20">
                                           {/* eslint-disable-next-line @next/next/no-img-element */}
                                           <img
                                             src={k.selfie_url}
                                             alt="Selfie"
-                                            className="rounded-lg border border-border object-cover max-h-48 w-full"
+                                            className="w-full h-44 object-contain transition-transform duration-200 group-hover:scale-[1.02]"
+                                            loading="lazy"
                                           />
+                                          <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
+                                            <span className="rounded-full bg-black/60 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                              <Icon name="open_in_new" className="text-white text-sm" />
+                                            </span>
+                                          </div>
                                         </a>
                                       </div>
                                     )}
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2 rounded-lg border border-dashed border-border py-4 justify-center">
+                                    <Icon name="image_not_supported" className="text-sm text-muted-foreground" />
+                                    <p className="text-xs text-muted-foreground">No documents uploaded</p>
                                   </div>
                                 )}
 
                                 {/* Admin notes */}
                                 {k.admin_notes && (
-                                  <div className="rounded bg-muted/50 p-2 text-xs">
-                                    <span className="text-muted-foreground">Admin Notes:</span>{" "}
-                                    <span className="text-foreground">{k.admin_notes}</span>
+                                  <div className="flex items-start gap-2 rounded-lg bg-muted/30 border border-border/50 px-3 py-2">
+                                    <Icon name="note" className="text-xs text-muted-foreground mt-0.5 shrink-0" />
+                                    <div>
+                                      <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-0.5">Admin Notes</p>
+                                      <p className="text-xs text-foreground">{k.admin_notes}</p>
+                                    </div>
                                   </div>
                                 )}
 
                                 {/* Review controls (SUBMITTED sessions only) */}
                                 {k.status === "SUBMITTED" && (
-                                  <div className="space-y-2 border-t border-border pt-3">
+                                  <div className="space-y-2.5 border-t border-border pt-3">
+                                    <p className="text-xs font-semibold text-foreground">Review Decision</p>
                                     <textarea
-                                      placeholder="Review notes (optional)..."
-                                      value={kycReviewNotes}
-                                      onChange={(e) => setKycReviewNotes(e.target.value)}
-                                      className="w-full rounded-md border border-border bg-background p-2 text-sm"
+                                      placeholder="Add notes about this review (optional)..."
+                                      value={kycReviewNotes[k.id] || ""}
+                                      onChange={(e) => setKycReviewNotes((prev) => ({ ...prev, [k.id]: e.target.value }))}
+                                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all"
                                       rows={2}
                                     />
                                     <div className="flex gap-2">
@@ -1788,9 +1877,13 @@ export default function AdminPage() {
                                         size="sm"
                                         onClick={() => reviewKyc(k.id, "approve")}
                                         disabled={kycReviewing === k.id}
-                                        className="bg-emerald-600 hover:bg-emerald-700"
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
                                       >
-                                        <Icon name="check" className="mr-1 icon-sm" />
+                                        {kycReviewing === k.id ? (
+                                          <Spinner className="mr-1.5 h-3.5 w-3.5" />
+                                        ) : (
+                                          <Icon name="check_circle" className="mr-1.5 icon-sm" />
+                                        )}
                                         Approve
                                       </Button>
                                       <Button
@@ -1798,8 +1891,13 @@ export default function AdminPage() {
                                         variant="destructive"
                                         onClick={() => reviewKyc(k.id, "reject")}
                                         disabled={kycReviewing === k.id}
+                                        className="shadow-sm"
                                       >
-                                        <Icon name="close" className="mr-1 icon-sm" />
+                                        {kycReviewing === k.id ? (
+                                          <Spinner className="mr-1.5 h-3.5 w-3.5" />
+                                        ) : (
+                                          <Icon name="cancel" className="mr-1.5 icon-sm" />
+                                        )}
                                         Reject
                                       </Button>
                                     </div>
@@ -1808,8 +1906,9 @@ export default function AdminPage() {
 
                                 {/* Reviewed info */}
                                 {k.reviewed_at && (
-                                  <div className="text-xs text-muted-foreground">
-                                    Reviewed {new Date(k.reviewed_at).toLocaleString()}
+                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1">
+                                    <Icon name="history" className="text-[12px]" />
+                                    Reviewed {new Date(k.reviewed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                                   </div>
                                 )}
                               </div>
@@ -2195,6 +2294,290 @@ export default function AdminPage() {
                   pageSize={20}
                   total={modTotal}
                   onPageChange={(pg) => fetchModeration(pg)}
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ============================================================ */}
+      {/* KYC TAB (super_admin only)                                    */}
+      {/* ============================================================ */}
+      {tab === "kyc" && isSuperAdmin && (
+        <Card>
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10">
+                <Icon name="verified_user" className="text-amber-400 text-xl" />
+              </div>
+              <div>
+                <CardTitle>KYC Verification Review</CardTitle>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  Review creator identity documents and approve or reject submissions.
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {/* Status filter pills */}
+            <div className="flex flex-wrap gap-2">
+              {([
+                { value: "SUBMITTED", label: "Pending Review", icon: "schedule" },
+                { value: "APPROVED", label: "Approved", icon: "check_circle" },
+                { value: "REJECTED", label: "Rejected", icon: "cancel" },
+                { value: "CREATED", label: "Created", icon: "draft" },
+                { value: "", label: "All", icon: "list" },
+              ] as const).map((f) => (
+                <button
+                  key={f.value}
+                  type="button"
+                  onClick={() => {
+                    setGlobalKycFilter(f.value);
+                    fetchGlobalKyc(1, f.value);
+                  }}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
+                    globalKycFilter === f.value
+                      ? f.value === "SUBMITTED" ? "bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30"
+                        : f.value === "APPROVED" ? "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30"
+                        : f.value === "REJECTED" ? "bg-red-500/20 text-red-300 ring-1 ring-red-500/30"
+                        : "bg-primary/20 text-primary ring-1 ring-primary/30"
+                      : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  <Icon name={f.icon} className="text-[14px]" />
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {globalKycLoading ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <Skeleton key={i} className="h-48 w-full rounded-xl" />
+                ))}
+              </div>
+            ) : globalKyc.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted/50 mb-4">
+                  <Icon name="verified_user" className="text-3xl text-muted-foreground" />
+                </div>
+                <p className="text-sm font-medium text-muted-foreground">No KYC sessions found</p>
+                <p className="mt-1 text-xs text-muted-foreground/70">
+                  {globalKycFilter === "SUBMITTED" ? "No pending submissions to review" : "Try a different filter"}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {globalKyc.map((k) => (
+                  <div
+                    key={k.id}
+                    className={`rounded-xl border p-5 space-y-4 transition-colors ${
+                      k.status === "SUBMITTED"
+                        ? "border-amber-500/30 bg-amber-500/[0.03]"
+                        : k.status === "APPROVED"
+                        ? "border-emerald-500/20 bg-emerald-500/[0.02]"
+                        : k.status === "REJECTED"
+                        ? "border-red-500/20 bg-red-500/[0.02]"
+                        : "border-border"
+                    }`}
+                  >
+                    {/* Creator info header */}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        {k.creator?.avatar_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={k.creator.avatar_url}
+                            alt=""
+                            className="h-12 w-12 rounded-full object-cover ring-2 ring-border"
+                          />
+                        ) : (
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted ring-2 ring-border">
+                            <Icon name="person" className="text-xl text-muted-foreground" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-semibold text-foreground leading-tight">
+                            {k.creator?.display_name || "Unknown Creator"}
+                          </p>
+                          {k.creator?.handle && (
+                            <p className="text-xs text-primary/80 font-medium">@{k.creator.handle}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-0.5">{k.creator?.email}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1.5">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          k.status === "APPROVED" ? "bg-emerald-500/15 text-emerald-400"
+                          : k.status === "REJECTED" ? "bg-red-500/15 text-red-400"
+                          : k.status === "SUBMITTED" ? "bg-amber-500/15 text-amber-400"
+                          : "bg-muted text-muted-foreground"
+                        }`}>
+                          <Icon name={
+                            k.status === "APPROVED" ? "check_circle"
+                            : k.status === "REJECTED" ? "cancel"
+                            : k.status === "SUBMITTED" ? "schedule"
+                            : "draft"
+                          } className="text-[12px]" />
+                          {k.status === "SUBMITTED" ? "Pending Review" : k.status.charAt(0) + k.status.slice(1).toLowerCase()}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">
+                          {k.created_at ? new Date(k.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "\u2014"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Info grid: DOB + Session ID */}
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      {k.date_of_birth && (
+                        <div className="rounded-lg bg-muted/40 px-3 py-2">
+                          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Date of Birth</p>
+                          <p className="mt-0.5 text-sm font-semibold text-foreground">
+                            {new Date(k.date_of_birth + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                          </p>
+                        </div>
+                      )}
+                      <div className="rounded-lg bg-muted/40 px-3 py-2">
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Session ID</p>
+                        <p className="mt-0.5 text-xs font-mono text-foreground/70 truncate">{k.id.slice(0, 12)}...</p>
+                      </div>
+                    </div>
+
+                    {/* Document images — side by side, clickable */}
+                    {(k.id_document_url || k.selfie_url) ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {k.id_document_url && (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-1.5">
+                              <Icon name="badge" className="text-sm text-muted-foreground" />
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">ID Document</p>
+                            </div>
+                            <a
+                              href={k.id_document_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="group relative block overflow-hidden rounded-xl border border-border bg-black/20"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={k.id_document_url}
+                                alt="ID Document"
+                                className="w-full h-56 object-contain transition-transform duration-200 group-hover:scale-[1.02]"
+                                loading="lazy"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
+                                <span className="rounded-full bg-black/60 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Icon name="open_in_new" className="text-white text-lg" />
+                                </span>
+                              </div>
+                            </a>
+                          </div>
+                        )}
+                        {k.selfie_url && (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-1.5">
+                              <Icon name="face" className="text-sm text-muted-foreground" />
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Selfie Photo</p>
+                            </div>
+                            <a
+                              href={k.selfie_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="group relative block overflow-hidden rounded-xl border border-border bg-black/20"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={k.selfie_url}
+                                alt="Selfie"
+                                className="w-full h-56 object-contain transition-transform duration-200 group-hover:scale-[1.02]"
+                                loading="lazy"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
+                                <span className="rounded-full bg-black/60 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Icon name="open_in_new" className="text-white text-lg" />
+                                </span>
+                              </div>
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 rounded-lg border border-dashed border-border py-6 justify-center">
+                        <Icon name="image_not_supported" className="text-muted-foreground" />
+                        <p className="text-xs text-muted-foreground">No documents uploaded yet</p>
+                      </div>
+                    )}
+
+                    {/* Previous admin notes */}
+                    {k.admin_notes && (
+                      <div className="flex items-start gap-2 rounded-lg bg-muted/30 border border-border/50 px-3 py-2.5">
+                        <Icon name="note" className="text-sm text-muted-foreground mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-0.5">Admin Notes</p>
+                          <p className="text-sm text-foreground">{k.admin_notes}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Review controls — only for SUBMITTED sessions */}
+                    {k.status === "SUBMITTED" && (
+                      <div className="space-y-3 border-t border-border pt-4">
+                        <p className="text-xs font-semibold text-foreground">Review Decision</p>
+                        <textarea
+                          placeholder="Add notes about this review (optional)..."
+                          value={kycReviewNotes[k.id] || ""}
+                          onChange={(e) => setKycReviewNotes((prev) => ({ ...prev, [k.id]: e.target.value }))}
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all"
+                          rows={2}
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => reviewKyc(k.id, "approve")}
+                            disabled={kycReviewing === k.id}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                          >
+                            {kycReviewing === k.id ? (
+                              <Spinner className="mr-1.5 h-3.5 w-3.5" />
+                            ) : (
+                              <Icon name="check_circle" className="mr-1.5 icon-sm" />
+                            )}
+                            Approve Identity
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => reviewKyc(k.id, "reject")}
+                            disabled={kycReviewing === k.id}
+                            className="shadow-sm"
+                          >
+                            {kycReviewing === k.id ? (
+                              <Spinner className="mr-1.5 h-3.5 w-3.5" />
+                            ) : (
+                              <Icon name="cancel" className="mr-1.5 icon-sm" />
+                            )}
+                            Reject
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Reviewed timestamp */}
+                    {k.reviewed_at && (
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1">
+                        <Icon name="history" className="text-[13px]" />
+                        Reviewed on {new Date(k.reviewed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} at{" "}
+                        {new Date(k.reviewed_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <Pagination
+                  page={globalKycPage}
+                  pageSize={PAGE_SIZE}
+                  total={globalKycTotal}
+                  onPageChange={(pg) => fetchGlobalKyc(pg, globalKycFilter)}
                 />
               </div>
             )}

@@ -930,11 +930,18 @@ async def _handle_worldline_refund(
         select(Subscription).where(Subscription.ccbill_subscription_id == wl_tx_id)
     )
     sub = result.scalar_one_or_none()
-    if sub:
-        sub.status = "canceled"
+    if sub and sub.status != "refunded":
+        sub.status = "refunded"
+        # Reverse ledger entries for the subscription payment
+        creator_debit = (amount * (1 - fee_pct)).quantize(Decimal("0.01"))
+        platform_debit = (amount * fee_pct).quantize(Decimal("0.01"))
+        if creator_debit > 0:
+            await create_ledger_entry(session, account_id=creator_pending_account_id(str(sub.creator_user_id)), currency=currency, amount=creator_debit, direction=LEDGER_DIRECTION_DEBIT, reference=ref, auto_commit=False)
+        if platform_debit > 0:
+            await create_ledger_entry(session, account_id=PLATFORM_ACCOUNT_ID, currency=currency, amount=platform_debit, direction=LEDGER_DIRECTION_DEBIT, reference=ref, auto_commit=False)
         await session.flush()
 
-    logger.info("worldline refund processed payment_id=%s", payment_id)
+    logger.info("worldline refund processed payment_id=%s amount_cents=%s", payment_id, amount_cents)
 
 
 async def _handle_worldline_chargeback(

@@ -41,10 +41,9 @@ from app.modules.onboarding.service import (
 
 class KycCompleteRequest(BaseModel):
     session_id: str
-    status: str = Field(..., pattern="^(APPROVED|REJECTED)$")
-    date_of_birth: date | None = None
-    id_document_media_id: UUID | None = None
-    selfie_media_id: UUID | None = None
+    date_of_birth: date
+    id_document_media_id: UUID
+    selfie_media_id: UUID
 
 router = APIRouter()
 
@@ -155,77 +154,49 @@ async def kyc_complete(
     if not kyc or kyc.creator_id != user.id:
         raise AppError(status_code=404, detail="session_not_found")
 
-    # Validate media ownership if documents provided
-    if payload.id_document_media_id:
-        media = (
-            await session.execute(
-                select(MediaObject).where(
-                    MediaObject.id == payload.id_document_media_id,
-                    MediaObject.owner_user_id == user.id,
-                )
-            )
-        ).scalar_one_or_none()
-        if not media:
-            raise AppError(status_code=400, detail="invalid_id_document_media")
+    # Documents are required — no auto-approve
+    if not payload.id_document_media_id or not payload.selfie_media_id or not payload.date_of_birth:
+        raise AppError(
+            status_code=400,
+            detail="id_document, selfie, and date_of_birth are required",
+        )
 
-    if payload.selfie_media_id:
+    # Validate media ownership
+    for media_id, label in [
+        (payload.id_document_media_id, "id_document"),
+        (payload.selfie_media_id, "selfie"),
+    ]:
         media = (
             await session.execute(
                 select(MediaObject).where(
-                    MediaObject.id == payload.selfie_media_id,
+                    MediaObject.id == media_id,
                     MediaObject.owner_user_id == user.id,
                 )
             )
         ).scalar_one_or_none()
         if not media:
-            raise AppError(status_code=400, detail="invalid_selfie_media")
+            raise AppError(status_code=400, detail=f"invalid_{label}_media")
 
     # Store document references
-    if payload.date_of_birth is not None:
-        kyc.date_of_birth = payload.date_of_birth
-    if payload.id_document_media_id:
-        kyc.id_document_media_id = payload.id_document_media_id
-    if payload.selfie_media_id:
-        kyc.selfie_media_id = payload.selfie_media_id
+    kyc.date_of_birth = payload.date_of_birth
+    kyc.id_document_media_id = payload.id_document_media_id
+    kyc.selfie_media_id = payload.selfie_media_id
 
-    has_documents = bool(payload.id_document_media_id and payload.selfie_media_id)
-    status_action = payload.status
-    event_id = f"kyc_{payload.session_id}_{status_action}"
-
+    event_id = f"kyc_{payload.session_id}_SUBMITTED"
     kyc.raw_webhook_payload = {
         "provider_session_id": kyc.provider_session_id,
-        "status": status_action,
+        "status": "SUBMITTED",
         "event_id": event_id,
-        "has_documents": has_documents,
     }
 
-    if has_documents:
-        # Documents provided — set to SUBMITTED for admin review
-        kyc.status = "SUBMITTED"
-        if user.onboarding_state == KYC_PENDING:
-            await transition_creator_state(
-                session,
-                user.id,
-                KYC_SUBMITTED,
-                "kyc_submitted",
-                {"event_id": event_id, "has_documents": True},
-            )
-    else:
-        # Legacy path (no documents) — auto-approve
-        kyc.status = status_action
-        if user.onboarding_state == KYC_PENDING:
-            await transition_creator_state(
-                session,
-                user.id,
-                KYC_SUBMITTED,
-                "kyc_submitted",
-                {"event_id": event_id},
-            )
+    # Always set to SUBMITTED — admin must approve/reject
+    kyc.status = "SUBMITTED"
+    if user.onboarding_state in (KYC_PENDING, EMAIL_VERIFIED):
         await transition_creator_state(
             session,
             user.id,
-            KYC_APPROVED if status_action == "APPROVED" else KYC_REJECTED,
-            f"kyc_{status_action.lower()}",
+            KYC_SUBMITTED,
+            "kyc_submitted",
             {"event_id": event_id},
         )
 

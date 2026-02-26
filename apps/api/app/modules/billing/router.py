@@ -6,6 +6,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -170,6 +171,18 @@ async def ccbill_webhook(
         event_type=event_type,
         event_payload=params,
     )
+
+
+@router.get(
+    "/webhooks/worldline",
+    operation_id="billing_webhooks_worldline_verify",
+)
+async def worldline_webhook_verify(request: Request) -> Response:
+    """Worldline endpoint verification: echo the verification header value."""
+    verification = request.headers.get("X-GCS-Webhooks-Endpoint-Verification", "")
+    if not verification:
+        raise AppError(status_code=400, detail="missing_verification_header")
+    return Response(content=verification, media_type="text/plain")
 
 
 @router.post(

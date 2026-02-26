@@ -405,7 +405,7 @@ variable "worldline_merchant_id" {
 
 variable "worldline_api_endpoint" {
   type        = string
-  default     = "https://payment.preprod.direct.worldline-solutions.com"
+  default     = "https://api.preprod.connect.worldline-solutions.com"
   description = "Worldline API endpoint (preprod or production)"
 }
 

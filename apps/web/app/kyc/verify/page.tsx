@@ -258,7 +258,7 @@ export default function KycVerifyPage() {
         uploadFile(selfieFile, "selfie"),
       ]);
 
-      await kycComplete(sessionId, "APPROVED", {
+      await kycComplete(sessionId, {
         date_of_birth: dob,
         id_document_media_id: idDocMediaId,
         selfie_media_id: selfieMediaId,

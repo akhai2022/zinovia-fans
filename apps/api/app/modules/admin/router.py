@@ -503,6 +503,99 @@ async def resolve_support_message(
 # ---------------------------------------------------------------------------
 
 
+@router.get("/kyc/sessions", operation_id="admin_list_kyc_sessions")
+async def list_kyc_sessions(
+    status_filter: str | None = Query(default=None, alias="status"),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    session: AsyncSession = Depends(get_async_session),
+    admin: User = Depends(require_admin),
+) -> dict:
+    """List all KYC sessions with creator info. Super_admin sees document URLs."""
+    from app.modules.media.models import MediaObject
+    from app.modules.media.storage import get_storage_client
+    from app.modules.onboarding.models import KycSession
+
+    query = select(KycSession).order_by(KycSession.created_at.desc())
+    count_query = select(func.count(KycSession.id))
+
+    if status_filter:
+        query = query.where(KycSession.status == status_filter.upper())
+        count_query = count_query.where(KycSession.status == status_filter.upper())
+
+    total = (await session.execute(count_query)).scalar() or 0
+    offset = (page - 1) * page_size
+    result = await session.execute(query.offset(offset).limit(page_size))
+    sessions = result.scalars().all()
+
+    is_super = admin.role == "super_admin"
+    storage = get_storage_client() if is_super else None
+
+    # Gather creator IDs and fetch profiles in bulk
+    creator_ids = list({s.creator_id for s in sessions})
+    creator_map: dict[UUID, dict] = {}
+    if creator_ids:
+        users_result = await session.execute(
+            select(User, Profile)
+            .outerjoin(Profile, User.id == Profile.user_id)
+            .where(User.id.in_(creator_ids))
+        )
+        for u, p in users_result.all():
+            creator_map[u.id] = {
+                "user_id": str(u.id),
+                "email": u.email,
+                "display_name": p.display_name if p else u.email,
+                "handle": p.handle if p else None,
+                "avatar_url": p.avatar_url if p else None,
+            }
+
+    items = []
+    for s in sessions:
+        id_doc_url = None
+        selfie_url = None
+
+        if is_super and storage:
+            if s.id_document_media_id:
+                media = (
+                    await session.execute(
+                        select(MediaObject).where(
+                            MediaObject.id == s.id_document_media_id
+                        )
+                    )
+                ).scalar_one_or_none()
+                if media:
+                    id_doc_url = storage.create_signed_download_url(media.object_key)
+
+            if s.selfie_media_id:
+                media = (
+                    await session.execute(
+                        select(MediaObject).where(
+                            MediaObject.id == s.selfie_media_id
+                        )
+                    )
+                ).scalar_one_or_none()
+                if media:
+                    selfie_url = storage.create_signed_download_url(media.object_key)
+
+        creator = creator_map.get(s.creator_id, {})
+        items.append(
+            {
+                "id": str(s.id),
+                "status": s.status,
+                "date_of_birth": s.date_of_birth.isoformat() if s.date_of_birth else None,
+                "id_document_url": id_doc_url,
+                "selfie_url": selfie_url,
+                "admin_notes": s.admin_notes,
+                "reviewed_by": str(s.reviewed_by) if s.reviewed_by else None,
+                "reviewed_at": s.reviewed_at.isoformat() if s.reviewed_at else None,
+                "created_at": s.created_at.isoformat() if s.created_at else None,
+                "creator": creator,
+            }
+        )
+
+    return {"items": items, "total": total}
+
+
 @router.get("/users/{user_id}/kyc", operation_id="admin_get_user_kyc")
 async def get_user_kyc(
     user_id: UUID,
@@ -555,8 +648,6 @@ async def get_user_kyc(
         items.append(
             {
                 "id": str(s.id),
-                "provider": s.provider,
-                "provider_session_id": s.provider_session_id,
                 "status": s.status,
                 "date_of_birth": s.date_of_birth.isoformat() if s.date_of_birth else None,
                 "id_document_url": id_doc_url,
