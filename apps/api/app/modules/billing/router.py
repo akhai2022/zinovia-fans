@@ -36,11 +36,13 @@ from app.modules.billing.service import (
     create_checkout_session,
     get_or_create_creator_plan,
     handle_ccbill_event,
+    handle_worldline_event,
     mark_event_processed,
     record_payment_event,
     update_creator_plan_price,
 )
 from app.modules.billing.ccbill_client import ccbill_configured, verify_webhook_digest
+from app.modules.billing.worldline_client import verify_webhook_signature as verify_worldline_signature, worldline_configured
 from app.modules.creators.deps import require_creator
 from app.modules.creators.service import get_creator_by_handle_any
 
@@ -170,6 +172,63 @@ async def ccbill_webhook(
     )
 
 
+@router.post(
+    "/webhooks/worldline",
+    response_model=WebhookAck,
+    operation_id="billing_webhooks_worldline",
+)
+async def worldline_webhook(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session),
+) -> WebhookAck:
+    """Worldline webhook: verify HMAC signature, idempotent by event id."""
+    request_id = (
+        request.headers.get("X-Request-Id")
+        or request.headers.get("X-Amzn-Trace-Id")
+        or get_request_id()
+    )
+
+    body_bytes = await request.body()
+    key_id = request.headers.get("x-gcs-keyid", "")
+    signature = request.headers.get("x-gcs-signature", "")
+
+    # Verify signature
+    if not verify_worldline_signature(body_bytes, key_id, signature):
+        logger.warning("worldline webhook invalid signature request_id=%s", request_id)
+        raise AppError(status_code=400, detail="invalid_signature")
+
+    try:
+        payload = json.loads(body_bytes)
+    except json.JSONDecodeError:
+        raise AppError(status_code=400, detail="invalid_payload")
+
+    # Extract event info
+    event_type = payload.get("type", "")
+    event_id = payload.get("id", "")
+    if not event_type:
+        raise AppError(status_code=400, detail="missing_event_type")
+
+    # Idempotent processing
+    async with session.begin():
+        processed, _ = await record_payment_event(
+            session, f"wl:{event_id}", event_type, payload=payload
+        )
+        if not processed:
+            logger.info(
+                "worldline webhook duplicate",
+                extra={"request_id": request_id, "event_id": event_id, "event_type": event_type},
+            )
+            return WebhookAck(status="duplicate_ignored")
+        outcome = await handle_worldline_event(session, payload)
+        await mark_event_processed(session, f"wl:{event_id}")
+
+    logger.info(
+        "worldline webhook completed",
+        extra={"request_id": request_id, "event_id": event_id, "event_type": event_type, "outcome": outcome},
+    )
+    return WebhookAck(status=outcome)
+
+
 @router.get(
     "/status",
     response_model=BillingStatusOut,
@@ -234,11 +293,17 @@ async def cancel_subscription_endpoint(
 )
 async def billing_health() -> BillingHealthOut:
     settings = get_settings()
-    configured = ccbill_configured()
+    provider = settings.payment_provider
+    if provider == "worldline":
+        configured = worldline_configured()
+        webhook_ok = bool(settings.worldline_webhook_key_id and settings.worldline_webhook_secret)
+    else:
+        configured = ccbill_configured()
+        webhook_ok = bool(settings.ccbill_salt)
     return BillingHealthOut(
-        payment_provider="ccbill",
+        payment_provider=provider,
         configured=configured,
-        webhook_configured=bool(settings.ccbill_salt),
+        webhook_configured=webhook_ok,
         checkout_defaults_configured=bool(
             (settings.checkout_success_url or "").strip()
             and (settings.checkout_cancel_url or "").strip()

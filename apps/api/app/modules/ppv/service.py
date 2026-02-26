@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import AppError
 from app.core.settings import get_settings
 from app.modules.billing.ccbill_client import build_flexform_url, ccbill_configured
+from app.modules.billing.worldline_client import create_hosted_checkout, worldline_configured
 from app.modules.messaging.models import Conversation, Message, MessageMedia
 from app.modules.payments.models import PostPurchase, PpvPurchase
 from app.modules.posts.models import Post
@@ -84,10 +85,15 @@ async def create_ppv_message_media_intent(
     message_media_id: UUID,
 ) -> dict:
     _ensure_enabled()
-    if not ccbill_configured():
-        raise AppError(status_code=501, detail="payment_not_configured")
-    await _check_intent_rate_limit(session, purchaser_id)
     settings = get_settings()
+    provider = settings.payment_provider
+    if provider == "worldline":
+        if not worldline_configured():
+            raise AppError(status_code=501, detail="payment_not_configured")
+    else:
+        if not ccbill_configured():
+            raise AppError(status_code=501, detail="payment_not_configured")
+    await _check_intent_rate_limit(session, purchaser_id)
 
     mm, _msg, conv = await _get_message_media_context(session, message_media_id)
     if purchaser_id not in {conv.creator_user_id, conv.fan_user_id}:
@@ -136,22 +142,36 @@ async def create_ppv_message_media_intent(
             await session.rollback()
             raise AppError(status_code=409, detail="ppv_already_unlocked") from exc
 
-    price = Decimal(existing.amount_cents) / 100
-    checkout_url = build_flexform_url(
-        price=price,
-        currency=existing.currency,
-        initial_period_days=2,
-        recurring=False,
-        success_url=settings.checkout_success_url,
-        failure_url=settings.checkout_cancel_url,
-        custom_fields={
-            "zv_payment_type": "PPV_MESSAGE_UNLOCK",
-            "zv_fan_user_id": str(purchaser_id),
-            "zv_creator_user_id": str(conv.creator_user_id),
-            "zv_purchase_id": str(existing.id),
-            "zv_message_media_id": str(message_media_id),
-        },
-    )
+    custom_fields = {
+        "zv_payment_type": "PPV_MESSAGE_UNLOCK",
+        "zv_fan_user_id": str(purchaser_id),
+        "zv_creator_user_id": str(conv.creator_user_id),
+        "zv_purchase_id": str(existing.id),
+        "zv_message_media_id": str(message_media_id),
+    }
+
+    if provider == "worldline":
+        result = await create_hosted_checkout(
+            amount_cents=existing.amount_cents,
+            currency=existing.currency.upper(),
+            description="Zinovia Fans - Unlock media",
+            return_url=settings.checkout_success_url,
+            custom_fields=custom_fields,
+            recurring=False,
+        )
+        checkout_url = result["checkout_url"]
+    else:
+        price = Decimal(existing.amount_cents) / 100
+        checkout_url = build_flexform_url(
+            price=price,
+            currency=existing.currency,
+            initial_period_days=2,
+            recurring=False,
+            success_url=settings.checkout_success_url,
+            failure_url=settings.checkout_cancel_url,
+            custom_fields=custom_fields,
+        )
+
     existing.status = "REQUIRES_PAYMENT"
     await session.commit()
     await session.refresh(existing)
@@ -198,12 +218,17 @@ async def create_ppv_post_intent(
     purchaser_id: UUID,
     post_id: UUID,
 ) -> dict:
-    """Create a CCBill FlexForm checkout URL for a PPV post purchase."""
+    """Create a checkout URL for a PPV post purchase (supports CCBill and Worldline)."""
     settings = get_settings()
     if not settings.enable_ppv_posts:
         raise AppError(status_code=503, detail="ppv_posts_disabled")
-    if not ccbill_configured():
-        raise AppError(status_code=501, detail="payment_not_configured")
+    provider = settings.payment_provider
+    if provider == "worldline":
+        if not worldline_configured():
+            raise AppError(status_code=501, detail="payment_not_configured")
+    else:
+        if not ccbill_configured():
+            raise AppError(status_code=501, detail="payment_not_configured")
     await _check_intent_rate_limit(session, purchaser_id)
 
     post = (
@@ -252,22 +277,36 @@ async def create_ppv_post_intent(
             await session.rollback()
             raise AppError(status_code=409, detail="ppv_already_purchased") from exc
 
-    price = Decimal(existing.amount_cents) / 100
-    checkout_url = build_flexform_url(
-        price=price,
-        currency=existing.currency,
-        initial_period_days=2,
-        recurring=False,
-        success_url=settings.checkout_success_url,
-        failure_url=settings.checkout_cancel_url,
-        custom_fields={
-            "zv_payment_type": "PPV_POST_UNLOCK",
-            "zv_fan_user_id": str(purchaser_id),
-            "zv_creator_user_id": str(post.creator_user_id),
-            "zv_purchase_id": str(existing.id),
-            "zv_post_id": str(post_id),
-        },
-    )
+    custom_fields = {
+        "zv_payment_type": "PPV_POST_UNLOCK",
+        "zv_fan_user_id": str(purchaser_id),
+        "zv_creator_user_id": str(post.creator_user_id),
+        "zv_purchase_id": str(existing.id),
+        "zv_post_id": str(post_id),
+    }
+
+    if provider == "worldline":
+        result = await create_hosted_checkout(
+            amount_cents=existing.amount_cents,
+            currency=existing.currency.upper(),
+            description="Zinovia Fans - Unlock post",
+            return_url=settings.checkout_success_url,
+            custom_fields=custom_fields,
+            recurring=False,
+        )
+        checkout_url = result["checkout_url"]
+    else:
+        price = Decimal(existing.amount_cents) / 100
+        checkout_url = build_flexform_url(
+            price=price,
+            currency=existing.currency,
+            initial_period_days=2,
+            recurring=False,
+            success_url=settings.checkout_success_url,
+            failure_url=settings.checkout_cancel_url,
+            custom_fields=custom_fields,
+        )
+
     existing.status = "REQUIRES_PAYMENT"
     await session.commit()
     await session.refresh(existing)

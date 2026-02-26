@@ -29,3 +29,19 @@ output "resend_webhook_secret_arn" {
 output "replicate_api_token_arn" {
   value = aws_secretsmanager_secret.replicate_api_token.arn
 }
+
+output "worldline_api_key_arn" {
+  value = aws_secretsmanager_secret.worldline_api_key.arn
+}
+
+output "worldline_api_secret_arn" {
+  value = aws_secretsmanager_secret.worldline_api_secret.arn
+}
+
+output "worldline_webhook_key_id_arn" {
+  value = aws_secretsmanager_secret.worldline_webhook_key_id.arn
+}
+
+output "worldline_webhook_secret_arn" {
+  value = aws_secretsmanager_secret.worldline_webhook_secret.arn
+}

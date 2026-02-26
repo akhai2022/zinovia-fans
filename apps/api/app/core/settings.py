@@ -73,7 +73,7 @@ class Settings(BaseSettings):
         default="http://localhost:3000/billing/cancel",
         alias="CHECKOUT_CANCEL_URL",
     )
-    platform_fee_percent: float = Field(default=10, alias="PLATFORM_FEE_PERCENT", ge=0, le=100)
+    platform_fee_percent: float = Field(default=20, alias="PLATFORM_FEE_PERCENT", ge=20, le=100)
     tip_min_cents: int = Field(default=100, alias="TIP_MIN_CENTS", ge=1)
     tip_max_cents: int = Field(default=10_000_00, alias="TIP_MAX_CENTS", ge=100)  # $10k
     rate_limit_messages_per_min: int = Field(
@@ -231,17 +231,17 @@ class Settings(BaseSettings):
         default=False,
         alias="ALLOW_BRAND_ASSET_WRITE",
     )
-    enable_likes: bool = Field(default=False, alias="ENABLE_LIKES")
-    enable_comments: bool = Field(default=False, alias="ENABLE_COMMENTS")
-    enable_notifications: bool = Field(default=False, alias="ENABLE_NOTIFICATIONS")
+    enable_likes: bool = Field(default=True, alias="ENABLE_LIKES")
+    enable_comments: bool = Field(default=True, alias="ENABLE_COMMENTS")
+    enable_notifications: bool = Field(default=True, alias="ENABLE_NOTIFICATIONS")
     enable_vault: bool = Field(default=True, alias="ENABLE_VAULT")
-    enable_scheduled_posts: bool = Field(default=False, alias="ENABLE_SCHEDULED_POSTS")
+    enable_scheduled_posts: bool = Field(default=True, alias="ENABLE_SCHEDULED_POSTS")
     enable_promotions: bool = Field(default=False, alias="ENABLE_PROMOTIONS")
     enable_dm_broadcast: bool = Field(default=False, alias="ENABLE_DM_BROADCAST")
-    enable_ppv_posts: bool = Field(default=False, alias="ENABLE_PPV_POSTS")
-    enable_ppvm: bool = Field(default=False, alias="ENABLE_PPVM")
+    enable_ppv_posts: bool = Field(default=True, alias="ENABLE_PPV_POSTS")
+    enable_ppvm: bool = Field(default=True, alias="ENABLE_PPVM")
     enable_moderation: bool = Field(default=False, alias="ENABLE_MODERATION")
-    enable_ai_safety: bool = Field(default=False, alias="ENABLE_AI_SAFETY")
+    enable_ai_safety: bool = Field(default=True, alias="ENABLE_AI_SAFETY")
     ai_safety_nsfw_block_threshold: float = Field(
         default=0.85, ge=0.0, le=1.0, alias="AI_SAFETY_NSFW_BLOCK_THRESHOLD"
     )
@@ -251,18 +251,36 @@ class Settings(BaseSettings):
     ai_safety_minor_med_threshold: float = Field(
         default=0.3, ge=0.0, le=1.0, alias="AI_SAFETY_MINOR_MED_THRESHOLD"
     )
-    enable_ai_tools: bool = Field(default=False, alias="ENABLE_AI_TOOLS")
+    enable_ai_tools: bool = Field(default=True, alias="ENABLE_AI_TOOLS")
     enable_cartoon_avatar: bool = Field(default=True, alias="ENABLE_CARTOON_AVATAR")
     ai_tool_rmbg_daily_limit: int = Field(default=30, alias="AI_TOOL_RMBG_DAILY_LIMIT", ge=1)
     ai_tool_cartoon_daily_limit: int = Field(default=5, alias="AI_TOOL_CARTOON_DAILY_LIMIT", ge=1)
-    enable_smart_previews: bool = Field(default=False, alias="ENABLE_SMART_PREVIEWS")
-    enable_promo_generator: bool = Field(default=False, alias="ENABLE_PROMO_GENERATOR")
-    enable_translations: bool = Field(default=False, alias="ENABLE_TRANSLATIONS")
+    enable_smart_previews: bool = Field(default=True, alias="ENABLE_SMART_PREVIEWS")
+    enable_promo_generator: bool = Field(default=True, alias="ENABLE_PROMO_GENERATOR")
+    enable_translations: bool = Field(default=True, alias="ENABLE_TRANSLATIONS")
     enable_analytics: bool = Field(default=False, alias="ENABLE_ANALYTICS")
     enable_mobile_nav_polish: bool = Field(default=False, alias="ENABLE_MOBILE_NAV_POLISH")
     # Allow mock KYC provider in production (temporary; disable once real provider integrated).
     enable_mock_kyc: bool = Field(default=False, alias="ENABLE_MOCK_KYC")
     default_currency: str = Field(default="eur", alias="DEFAULT_CURRENCY")
+
+    # Worldline payment processor
+    worldline_merchant_id: str = Field(default="", alias="WORLDLINE_MERCHANT_ID")
+    worldline_api_key: str = Field(default="", alias="WORLDLINE_API_KEY")
+    worldline_api_secret: str = Field(default="", alias="WORLDLINE_API_SECRET")
+    worldline_webhook_key_id: str = Field(default="", alias="WORLDLINE_WEBHOOK_KEY_ID")
+    worldline_webhook_secret: str = Field(default="", alias="WORLDLINE_WEBHOOK_SECRET")
+    worldline_api_endpoint: str = Field(
+        default="https://payment.preprod.direct.worldline-solutions.com",
+        alias="WORLDLINE_API_ENDPOINT",
+    )
+    # Active payment provider: "ccbill" or "worldline"
+    payment_provider: str = Field(default="worldline", alias="PAYMENT_PROVIDER")
+
+    # Payouts — SEPA bank transfer configuration
+    payouts_encryption_key_b64: str = Field(default="", alias="PAYOUTS_ENCRYPTION_KEY_B64")
+    payout_hold_days: int = Field(default=10, alias="PAYOUT_HOLD_DAYS", ge=1)
+    payout_min_threshold_cents: int = Field(default=5000, alias="PAYOUT_MIN_THRESHOLD_CENTS", ge=100)
 
     # E2E testing: enable test-only endpoints (MUST be off in production)
     e2e_enable: bool = Field(default=False, alias="E2E_ENABLE")

@@ -11,7 +11,7 @@ export interface TipCreateIntent {
 }
 
 export interface TipIntentOut {
-  client_secret: string;
+  checkout_url: string;
   tip_id: string;
 }
 
@@ -20,7 +20,7 @@ export interface PpvCreateIntent {
 }
 
 export interface PpvIntentOut {
-  client_secret: string;
+  checkout_url: string;
   purchase_id: string;
 }
 

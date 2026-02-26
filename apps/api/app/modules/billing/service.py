@@ -1,4 +1,4 @@
-"""Billing service: CCBill FlexForms checkout and webhook handling."""
+"""Billing service: checkout and webhook handling for CCBill and Worldline."""
 
 from __future__ import annotations
 
@@ -134,15 +134,12 @@ async def create_checkout_session(
     cancel_url: str | None = None,
     creator_handle: str | None = None,
 ) -> str:
-    """Build CCBill FlexForms URL for subscription checkout; return URL."""
-    if not ccbill_configured():
-        raise AppError(status_code=501, detail="Payment processor not configured in this environment")
-
+    """Build checkout URL for subscription. Supports CCBill and Worldline."""
+    settings = get_settings()
     plan = await get_or_create_creator_plan(session, creator_user_id)
     if not plan.active:
         raise AppError(status_code=400, detail="creator_plan_inactive")
 
-    settings = get_settings()
     final_success_url = success_url or settings.checkout_success_url
     final_cancel_url = cancel_url or settings.checkout_cancel_url
 
@@ -150,26 +147,51 @@ async def create_checkout_session(
         "zv_fan_user_id": str(fan_user_id),
         "zv_creator_user_id": str(creator_user_id),
         "zv_correlation_id": str(uuid4()),
+        "zv_payment_type": "SUBSCRIPTION",
     }
     if creator_handle:
         custom_fields["zv_creator_handle"] = creator_handle
 
-    url = build_flexform_url(
-        price=plan.price,
-        currency=plan.currency,
-        initial_period_days=30,
-        recurring=True,
-        recurring_period_days=30,
-        num_rebills=99,
-        success_url=final_success_url,
-        failure_url=final_cancel_url,
-        custom_fields=custom_fields,
-    )
+    if settings.payment_provider == "worldline":
+        from app.modules.billing.worldline_client import create_hosted_checkout, worldline_configured
+        if not worldline_configured():
+            raise AppError(status_code=501, detail="Payment processor not configured in this environment")
 
-    logger.info(
-        "ccbill checkout created fan_user_id=%s creator_user_id=%s",
-        fan_user_id, creator_user_id,
-    )
+        amount_cents = int(plan.price * 100)
+        result = await create_hosted_checkout(
+            amount_cents=amount_cents,
+            currency=plan.currency.upper(),
+            description=f"Zinovia Fans - Subscribe to {creator_handle or str(creator_user_id)[:8]}",
+            return_url=final_success_url,
+            custom_fields=custom_fields,
+            recurring=True,
+            tokens_requested=True,
+        )
+        url = result["checkout_url"]
+        logger.info(
+            "worldline checkout created fan_user_id=%s creator_user_id=%s hosted_checkout_id=%s",
+            fan_user_id, creator_user_id, result.get("hosted_checkout_id"),
+        )
+    else:
+        if not ccbill_configured():
+            raise AppError(status_code=501, detail="Payment processor not configured in this environment")
+
+        url = build_flexform_url(
+            price=plan.price,
+            currency=plan.currency,
+            initial_period_days=30,
+            recurring=True,
+            recurring_period_days=30,
+            num_rebills=99,
+            success_url=final_success_url,
+            failure_url=final_cancel_url,
+            custom_fields=custom_fields,
+        )
+        logger.info(
+            "ccbill checkout created fan_user_id=%s creator_user_id=%s",
+            fan_user_id, creator_user_id,
+        )
+
     return url
 
 
@@ -591,6 +613,375 @@ async def handle_ccbill_event(session: AsyncSession, params: dict) -> str:
     except Exception:
         logger.exception("ccbill webhook handler failed event_type=%s event_id=%s", event_type, event_id)
         raise
+
+
+# ---------------------------------------------------------------------------
+# Worldline webhook handlers
+# ---------------------------------------------------------------------------
+
+def _parse_merchant_reference(ref: str) -> dict[str, str]:
+    """Parse pipe-delimited key=value custom fields from merchantReference."""
+    result: dict[str, str] = {}
+    if not ref:
+        return result
+    for part in ref.split("|"):
+        if "=" in part:
+            k, v = part.split("=", 1)
+            result[k] = v
+    return result
+
+
+def _worldline_amount_to_str(amount_minor: int, currency: str = "EUR") -> str:
+    """Convert Worldline minor-unit amount (cents) to decimal string."""
+    return str(Decimal(amount_minor) / 100)
+
+
+async def handle_worldline_event(session: AsyncSession, payload: dict) -> str:
+    """Dispatch Worldline webhook event. Return outcome: processed|ignored|error.
+
+    Worldline webhook payload structure:
+      { "id": "...", "type": "payment.paid", "payment": { ... } }
+    """
+    event_type = payload.get("type", "")
+    event_id = payload.get("id", str(uuid4()))
+
+    # Extract payment/refund objects
+    payment = payload.get("payment") or {}
+    refund_obj = payload.get("refund") or {}
+
+    # Parse custom fields from merchantReference
+    payment_output = payment.get("paymentOutput") or {}
+    refs = payment_output.get("references") or {}
+    merchant_ref = refs.get("merchantReference", "")
+    custom = _parse_merchant_reference(merchant_ref)
+
+    # Also try refund output references
+    if not custom and refund_obj:
+        refund_output = refund_obj.get("refundOutput") or {}
+        refund_refs = refund_output.get("references") or {}
+        custom = _parse_merchant_reference(refund_refs.get("merchantReference", ""))
+
+    try:
+        audit_action: str | None = None
+        audit_metadata: dict[str, Any] = {"event_id": event_id, "event_type": event_type}
+
+        if event_type in ("payment.paid", "payment.captured"):
+            await _handle_worldline_payment_success(session, payment, custom)
+            payment_type = custom.get("zv_payment_type", "SUBSCRIPTION")
+            audit_action = ACTION_SUBSCRIPTION_CREATED if payment_type == "SUBSCRIPTION" else ACTION_PAYMENT_SUCCEEDED
+
+        elif event_type in ("payment.rejected", "payment.cancelled"):
+            await _handle_worldline_payment_failure(session, payment, custom)
+            audit_action = ACTION_PAYMENT_FAILED
+
+        elif event_type == "payment.refunded":
+            await _handle_worldline_refund(session, payment, refund_obj, custom)
+            audit_action = ACTION_REFUND
+
+        elif event_type == "payment.chargebacked":
+            await _handle_worldline_chargeback(session, payment, custom)
+            audit_action = ACTION_DISPUTE_CREATED
+
+        else:
+            logger.info("worldline webhook ignored event_type=%s", event_type)
+            return "ignored"
+
+        if audit_action:
+            await log_audit_event(
+                session,
+                action=audit_action,
+                resource_type="worldline_event",
+                resource_id=event_id,
+                metadata=audit_metadata,
+                auto_commit=False,
+            )
+
+        logger.info("worldline webhook handled event_type=%s event_id=%s", event_type, event_id)
+        return "processed"
+    except Exception:
+        logger.exception("worldline webhook handler failed event_type=%s event_id=%s", event_type, event_id)
+        raise
+
+
+async def _handle_worldline_payment_success(
+    session: AsyncSession, payment: dict, custom: dict
+) -> None:
+    """Handle successful Worldline payment (paid/captured)."""
+    payment_id = payment.get("id", "")
+    payment_output = payment.get("paymentOutput") or {}
+    amount_info = payment_output.get("amountOfMoney") or {}
+    amount_cents = amount_info.get("amount", 0)
+    currency = amount_info.get("currencyCode", "EUR").lower()
+
+    fan_user_id_str = custom.get("zv_fan_user_id")
+    creator_user_id_str = custom.get("zv_creator_user_id")
+    payment_type = custom.get("zv_payment_type", "SUBSCRIPTION")
+
+    if not fan_user_id_str or not creator_user_id_str:
+        logger.warning("worldline payment success missing zv_fan_user_id/zv_creator_user_id payment_id=%s", payment_id)
+        return
+
+    fan_user_id = UUID(fan_user_id_str)
+    creator_user_id = UUID(creator_user_id_str)
+
+    if payment_type == "TIP":
+        tip_id_str = custom.get("zv_tip_id")
+        if not tip_id_str:
+            logger.warning("worldline TIP payment missing zv_tip_id")
+            return
+        result = await session.execute(select(Tip).where(Tip.id == UUID(tip_id_str)))
+        tip = result.scalar_one_or_none()
+        if not tip or tip.status == "SUCCEEDED":
+            return
+        tip.status = "SUCCEEDED"
+        tip.ccbill_transaction_id = f"wl:{payment_id}"
+        amount_str = _worldline_amount_to_str(amount_cents, currency)
+        await _create_payment_ledger_entries(
+            session, amount_str, currency, str(creator_user_id), f"wl_tip:{payment_id}"
+        )
+        await create_ledger_event(
+            session,
+            creator_id=creator_user_id,
+            type="TIP",
+            gross_cents=tip.amount_cents,
+            fee_cents=_fee_cents(tip.amount_cents),
+            net_cents=tip.amount_cents - _fee_cents(tip.amount_cents),
+            currency=currency,
+            reference_type="tip",
+            reference_id=tip_id_str,
+        )
+        await session.flush()
+        return
+
+    if payment_type in ("PPV_MESSAGE_UNLOCK", "PPV_POST_UNLOCK"):
+        purchase_id_str = custom.get("zv_purchase_id")
+        if not purchase_id_str:
+            logger.warning("worldline PPV payment missing zv_purchase_id")
+            return
+        if payment_type == "PPV_MESSAGE_UNLOCK":
+            result = await session.execute(select(PpvPurchase).where(PpvPurchase.id == UUID(purchase_id_str)))
+        else:
+            result = await session.execute(select(PostPurchase).where(PostPurchase.id == UUID(purchase_id_str)))
+        purchase = result.scalar_one_or_none()
+        if not purchase or purchase.status == "SUCCEEDED":
+            return
+        purchase.status = "SUCCEEDED"
+        purchase.ccbill_transaction_id = f"wl:{payment_id}"
+        amount_str = _worldline_amount_to_str(amount_cents, currency)
+        await _create_payment_ledger_entries(
+            session, amount_str, currency, str(purchase.creator_id), f"wl_ppv:{payment_id}"
+        )
+        ledger_type = "PPV_UNLOCK" if payment_type == "PPV_MESSAGE_UNLOCK" else "PPV_POST_UNLOCK"
+        await create_ledger_event(
+            session,
+            creator_id=UUID(str(purchase.creator_id)),
+            type=ledger_type,
+            gross_cents=purchase.amount_cents,
+            fee_cents=_fee_cents(purchase.amount_cents),
+            net_cents=purchase.amount_cents - _fee_cents(purchase.amount_cents),
+            currency=currency,
+            reference_type="ppv_purchase" if payment_type == "PPV_MESSAGE_UNLOCK" else "post_purchase",
+            reference_id=purchase_id_str,
+        )
+        await session.flush()
+        return
+
+    # Subscription payment
+    period_end = _period_end_from_days(30)
+    result = await session.execute(
+        select(Subscription).where(
+            Subscription.fan_user_id == fan_user_id,
+            Subscription.creator_user_id == creator_user_id,
+        )
+    )
+    existing = result.scalar_one_or_none()
+    if existing:
+        existing.ccbill_subscription_id = f"wl:{payment_id}"
+        existing.status = "active"
+        existing.renew_at = period_end
+        existing.current_period_end = period_end
+        existing.cancel_at_period_end = False
+        existing.cancel_at = None
+    else:
+        sub = Subscription(
+            fan_user_id=fan_user_id,
+            creator_user_id=creator_user_id,
+            status="active",
+            renew_at=period_end,
+            current_period_end=period_end,
+            cancel_at_period_end=False,
+            ccbill_subscription_id=f"wl:{payment_id}",
+        )
+        session.add(sub)
+    await session.flush()
+
+    amount_str = _worldline_amount_to_str(amount_cents, currency)
+    await _create_payment_ledger_entries(
+        session, amount_str, currency, str(creator_user_id), f"wl_sub:{payment_id}"
+    )
+
+    logger.info(
+        "worldline subscription created fan_user_id=%s creator_user_id=%s payment_id=%s",
+        fan_user_id, creator_user_id, payment_id,
+    )
+
+
+async def _handle_worldline_payment_failure(
+    session: AsyncSession, payment: dict, custom: dict
+) -> None:
+    """Handle failed/cancelled Worldline payment."""
+    payment_type = custom.get("zv_payment_type", "")
+
+    if payment_type == "TIP":
+        tip_id_str = custom.get("zv_tip_id")
+        if tip_id_str:
+            result = await session.execute(select(Tip).where(Tip.id == UUID(tip_id_str)))
+            tip = result.scalar_one_or_none()
+            if tip and tip.status == "REQUIRES_PAYMENT":
+                tip.status = "CANCELED"
+    elif payment_type == "PPV_MESSAGE_UNLOCK":
+        purchase_id_str = custom.get("zv_purchase_id")
+        if purchase_id_str:
+            result = await session.execute(select(PpvPurchase).where(PpvPurchase.id == UUID(purchase_id_str)))
+            purchase = result.scalar_one_or_none()
+            if purchase and purchase.status == "REQUIRES_PAYMENT":
+                purchase.status = "CANCELED"
+    elif payment_type == "PPV_POST_UNLOCK":
+        purchase_id_str = custom.get("zv_purchase_id")
+        if purchase_id_str:
+            result = await session.execute(select(PostPurchase).where(PostPurchase.id == UUID(purchase_id_str)))
+            purchase = result.scalar_one_or_none()
+            if purchase and purchase.status == "REQUIRES_PAYMENT":
+                purchase.status = "CANCELED"
+    await session.flush()
+
+
+async def _handle_worldline_refund(
+    session: AsyncSession, payment: dict, refund_obj: dict, custom: dict
+) -> None:
+    """Handle Worldline refund event."""
+    payment_id = payment.get("id", "")
+    wl_tx_id = f"wl:{payment_id}"
+
+    # Get refund amount
+    refund_output = refund_obj.get("refundOutput") or {}
+    amount_info = refund_output.get("amountOfMoney") or {}
+    if not amount_info:
+        # Fallback to payment amount
+        payment_output = payment.get("paymentOutput") or {}
+        amount_info = payment_output.get("amountOfMoney") or {}
+    amount_cents = amount_info.get("amount", 0)
+    currency = amount_info.get("currencyCode", "EUR").lower()
+    amount = Decimal(amount_cents) / 100
+    ref = f"wl_refund:{payment_id}"
+
+    settings = get_settings()
+    fee_pct = Decimal(str(settings.platform_fee_percent)) / 100
+
+    # Try PPV purchase
+    result = await session.execute(
+        select(PpvPurchase).where(PpvPurchase.ccbill_transaction_id == wl_tx_id)
+    )
+    purchase = result.scalar_one_or_none()
+    if purchase and purchase.status != "REFUNDED":
+        purchase.status = "REFUNDED"
+        creator_debit = (amount * (1 - fee_pct)).quantize(Decimal("0.01"))
+        platform_debit = (amount * fee_pct).quantize(Decimal("0.01"))
+        if creator_debit > 0:
+            await create_ledger_entry(session, account_id=creator_pending_account_id(str(purchase.creator_id)), currency=currency, amount=creator_debit, direction=LEDGER_DIRECTION_DEBIT, reference=ref, auto_commit=False)
+        if platform_debit > 0:
+            await create_ledger_entry(session, account_id=PLATFORM_ACCOUNT_ID, currency=currency, amount=platform_debit, direction=LEDGER_DIRECTION_DEBIT, reference=ref, auto_commit=False)
+        await session.flush()
+        return
+
+    # Try post purchase
+    result = await session.execute(
+        select(PostPurchase).where(PostPurchase.ccbill_transaction_id == wl_tx_id)
+    )
+    post_purchase = result.scalar_one_or_none()
+    if post_purchase and post_purchase.status != "REFUNDED":
+        post_purchase.status = "REFUNDED"
+        creator_debit = (amount * (1 - fee_pct)).quantize(Decimal("0.01"))
+        platform_debit = (amount * fee_pct).quantize(Decimal("0.01"))
+        if creator_debit > 0:
+            await create_ledger_entry(session, account_id=creator_pending_account_id(str(post_purchase.creator_id)), currency=currency, amount=creator_debit, direction=LEDGER_DIRECTION_DEBIT, reference=ref, auto_commit=False)
+        if platform_debit > 0:
+            await create_ledger_entry(session, account_id=PLATFORM_ACCOUNT_ID, currency=currency, amount=platform_debit, direction=LEDGER_DIRECTION_DEBIT, reference=ref, auto_commit=False)
+        await session.flush()
+        return
+
+    # Try tip
+    result = await session.execute(
+        select(Tip).where(Tip.ccbill_transaction_id == wl_tx_id)
+    )
+    tip = result.scalar_one_or_none()
+    if tip and tip.status != "REFUNDED":
+        tip.status = "REFUNDED"
+        creator_debit = (amount * (1 - fee_pct)).quantize(Decimal("0.01"))
+        platform_debit = (amount * fee_pct).quantize(Decimal("0.01"))
+        if creator_debit > 0:
+            await create_ledger_entry(session, account_id=creator_pending_account_id(str(tip.creator_id)), currency=currency, amount=creator_debit, direction=LEDGER_DIRECTION_DEBIT, reference=ref, auto_commit=False)
+        if platform_debit > 0:
+            await create_ledger_entry(session, account_id=PLATFORM_ACCOUNT_ID, currency=currency, amount=platform_debit, direction=LEDGER_DIRECTION_DEBIT, reference=ref, auto_commit=False)
+        await session.flush()
+
+    # Try subscription
+    result = await session.execute(
+        select(Subscription).where(Subscription.ccbill_subscription_id == wl_tx_id)
+    )
+    sub = result.scalar_one_or_none()
+    if sub:
+        sub.status = "canceled"
+        await session.flush()
+
+    logger.info("worldline refund processed payment_id=%s", payment_id)
+
+
+async def _handle_worldline_chargeback(
+    session: AsyncSession, payment: dict, custom: dict
+) -> None:
+    """Handle Worldline chargeback event."""
+    payment_id = payment.get("id", "")
+    wl_tx_id = f"wl:{payment_id}"
+
+    # Check PPV purchases
+    result = await session.execute(
+        select(PpvPurchase).where(PpvPurchase.ccbill_transaction_id == wl_tx_id)
+    )
+    purchase = result.scalar_one_or_none()
+    if purchase:
+        purchase.status = "DISPUTED"
+        await session.flush()
+        return
+
+    result = await session.execute(
+        select(PostPurchase).where(PostPurchase.ccbill_transaction_id == wl_tx_id)
+    )
+    post_purchase = result.scalar_one_or_none()
+    if post_purchase:
+        post_purchase.status = "DISPUTED"
+        await session.flush()
+        return
+
+    result = await session.execute(
+        select(Tip).where(Tip.ccbill_transaction_id == wl_tx_id)
+    )
+    tip = result.scalar_one_or_none()
+    if tip:
+        tip.status = "DISPUTED"
+        await session.flush()
+        return
+
+    # Check subscription
+    result = await session.execute(
+        select(Subscription).where(Subscription.ccbill_subscription_id == wl_tx_id)
+    )
+    sub = result.scalar_one_or_none()
+    if sub:
+        sub.status = "disputed"
+        await session.flush()
+
+    logger.warning("worldline chargeback payment_id=%s", payment_id)
 
 
 # ---------------------------------------------------------------------------

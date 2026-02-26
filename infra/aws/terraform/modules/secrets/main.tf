@@ -109,3 +109,60 @@ resource "aws_secretsmanager_secret_version" "replicate_api_token" {
     ignore_changes = [secret_string]
   }
 }
+
+# Worldline payment processor secrets
+resource "aws_secretsmanager_secret" "worldline_api_key" {
+  name                    = "${var.name_prefix}-worldline-api-key"
+  recovery_window_in_days = 7
+  tags                    = { Name = "${var.name_prefix}-worldline-api-key" }
+}
+
+resource "aws_secretsmanager_secret_version" "worldline_api_key" {
+  secret_id     = aws_secretsmanager_secret.worldline_api_key.id
+  secret_string = "CHANGE-ME-set-in-console"
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
+}
+
+resource "aws_secretsmanager_secret" "worldline_api_secret" {
+  name                    = "${var.name_prefix}-worldline-api-secret"
+  recovery_window_in_days = 7
+  tags                    = { Name = "${var.name_prefix}-worldline-api-secret" }
+}
+
+resource "aws_secretsmanager_secret_version" "worldline_api_secret" {
+  secret_id     = aws_secretsmanager_secret.worldline_api_secret.id
+  secret_string = "CHANGE-ME-set-in-console"
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
+}
+
+resource "aws_secretsmanager_secret" "worldline_webhook_key_id" {
+  name                    = "${var.name_prefix}-worldline-webhook-key-id"
+  recovery_window_in_days = 7
+  tags                    = { Name = "${var.name_prefix}-worldline-webhook-key-id" }
+}
+
+resource "aws_secretsmanager_secret_version" "worldline_webhook_key_id" {
+  secret_id     = aws_secretsmanager_secret.worldline_webhook_key_id.id
+  secret_string = "CHANGE-ME-set-in-console"
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
+}
+
+resource "aws_secretsmanager_secret" "worldline_webhook_secret" {
+  name                    = "${var.name_prefix}-worldline-webhook-secret"
+  recovery_window_in_days = 7
+  tags                    = { Name = "${var.name_prefix}-worldline-webhook-secret" }
+}
+
+resource "aws_secretsmanager_secret_version" "worldline_webhook_secret" {
+  secret_id     = aws_secretsmanager_secret.worldline_webhook_secret.id
+  secret_string = "CHANGE-ME-set-in-console"
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
+}

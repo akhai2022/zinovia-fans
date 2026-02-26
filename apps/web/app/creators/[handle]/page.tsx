@@ -18,6 +18,7 @@ import { getServerDictionary } from "@/lib/i18n/server";
 import { interpolate } from "@/lib/i18n";
 import { SubscribeCheckoutButton } from "@/features/billing/components/SubscribeCheckoutButton";
 import { MessageButton } from "@/features/messaging/MessageButton";
+import { TipButton } from "@/features/payments/TipButton";
 import { CreatorPostsSection } from "./CreatorPostsSection";
 
 const SITE_URL = "https://zinovia.ai";
@@ -238,10 +239,11 @@ export default async function CreatorProfilePage({
                 )}
               </div>
             )}
-            {/* Secondary actions: Follow + Message */}
+            {/* Secondary actions: Follow + Message + Tip */}
             <div className="flex gap-2">
               <FollowButton creatorId={creator.user_id} initialFollowing={creator.is_following ?? false} />
               <MessageButton creatorId={creator.user_id} />
+              <TipButton creatorId={creator.user_id} creatorHandle={creator.handle} />
             </div>
           </div>
         </div>

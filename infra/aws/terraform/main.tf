@@ -1335,7 +1335,11 @@ resource "aws_iam_role_policy" "ecs_task_secrets" {
         module.secrets.ccbill_datalink_password_arn,
         module.secrets.resend_api_key_arn,
         module.secrets.resend_webhook_secret_arn,
-        module.secrets.replicate_api_token_arn
+        module.secrets.replicate_api_token_arn,
+        module.secrets.worldline_api_key_arn,
+        module.secrets.worldline_api_secret_arn,
+        module.secrets.worldline_webhook_key_id_arn,
+        module.secrets.worldline_webhook_secret_arn
       ]
     }]
   })
@@ -1359,7 +1363,11 @@ resource "aws_iam_role_policy" "ecs_execution_secrets" {
           module.secrets.ccbill_datalink_password_arn,
           module.secrets.resend_api_key_arn,
           module.secrets.resend_webhook_secret_arn,
-          module.secrets.replicate_api_token_arn
+          module.secrets.replicate_api_token_arn,
+          module.secrets.worldline_api_key_arn,
+          module.secrets.worldline_api_secret_arn,
+          module.secrets.worldline_webhook_key_id_arn,
+          module.secrets.worldline_webhook_secret_arn
         ],
         var.enable_cloudfront ? [aws_secretsmanager_secret.cloudfront_private_key[0].arn] : []
       )
@@ -1437,7 +1445,10 @@ resource "aws_ecs_task_definition" "api" {
         { name = "CHECKOUT_SUCCESS_URL", value = local.web_base_url != "" ? "${local.web_base_url}/billing/success" : "http://localhost:3000/billing/success" },
         { name = "CHECKOUT_CANCEL_URL", value = local.web_base_url != "" ? "${local.web_base_url}/billing/cancel" : "http://localhost:3000/billing/cancel" },
         { name = "MEDIA_WM_PREVIEW_ENABLED", value = "true" },
-        { name = "MEDIA_WM_PREVIEW_TEXT", value = "zinovia-fans" }
+        { name = "MEDIA_WM_PREVIEW_TEXT", value = "zinovia-fans" },
+        { name = "PAYMENT_PROVIDER", value = var.payment_provider },
+        { name = "WORLDLINE_MERCHANT_ID", value = var.worldline_merchant_id },
+        { name = "WORLDLINE_API_ENDPOINT", value = var.worldline_api_endpoint }
       ],
       local.web_base_url != "" ? [
         { name = "APP_BASE_URL", value = local.web_base_url },
@@ -1458,7 +1469,11 @@ resource "aws_ecs_task_definition" "api" {
         { name = "CCBILL_SALT", valueFrom = module.secrets.ccbill_salt_arn },
         { name = "CCBILL_DATALINK_PASSWORD", valueFrom = module.secrets.ccbill_datalink_password_arn },
         { name = "RESEND_API_KEY", valueFrom = module.secrets.resend_api_key_arn },
-        { name = "RESEND_WEBHOOK_SECRET", valueFrom = module.secrets.resend_webhook_secret_arn }
+        { name = "RESEND_WEBHOOK_SECRET", valueFrom = module.secrets.resend_webhook_secret_arn },
+        { name = "WORLDLINE_API_KEY", valueFrom = module.secrets.worldline_api_key_arn },
+        { name = "WORLDLINE_API_SECRET", valueFrom = module.secrets.worldline_api_secret_arn },
+        { name = "WORLDLINE_WEBHOOK_KEY_ID", valueFrom = module.secrets.worldline_webhook_key_id_arn },
+        { name = "WORLDLINE_WEBHOOK_SECRET", valueFrom = module.secrets.worldline_webhook_secret_arn }
       ],
       var.enable_cloudfront ? [
         { name = "CLOUDFRONT_PRIVATE_KEY_PEM", valueFrom = aws_secretsmanager_secret.cloudfront_private_key[0].arn }

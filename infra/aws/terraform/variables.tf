@@ -396,6 +396,25 @@ variable "resend_api_key" {
   description = "Resend API key for transactional email delivery"
 }
 
+# Worldline payment processor
+variable "worldline_merchant_id" {
+  type        = string
+  default     = "9000000889"
+  description = "Worldline merchant ID"
+}
+
+variable "worldline_api_endpoint" {
+  type        = string
+  default     = "https://payment.preprod.direct.worldline-solutions.com"
+  description = "Worldline API endpoint (preprod or production)"
+}
+
+variable "payment_provider" {
+  type        = string
+  default     = "worldline"
+  description = "Active payment provider: ccbill or worldline"
+}
+
 variable "ai_provider" {
   type        = string
   default     = "mock"
