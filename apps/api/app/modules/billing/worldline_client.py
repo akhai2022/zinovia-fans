@@ -71,16 +71,29 @@ async def create_hosted_checkout(
 ) -> dict:
     """Create a Worldline Hosted Checkout session.
 
+    Worldline Connect limits merchantReference to 30 chars, so custom fields
+    are stored in the payment_events table keyed by a short correlation ID.
+    The webhook handler looks up the correlation ID to retrieve custom fields.
+
     Returns dict with:
       - checkout_url: URL to redirect the customer to
       - hosted_checkout_id: Worldline's hosted checkout ID
       - return_mac: MAC for return URL verification
+      - correlation_id: Short ID linking to stored custom fields
     """
+    import uuid
+
     settings = get_settings()
     merchant_id = settings.worldline_merchant_id
     api_endpoint = settings.worldline_api_endpoint
     url_path = f"/v1/{merchant_id}/hostedcheckouts"
     full_url = f"{api_endpoint}{url_path}"
+
+    # Generate short correlation ID (max 30 chars for merchantReference)
+    correlation_id = f"zv_{uuid.uuid4().hex[:12]}"
+
+    # Truncate customer_id to 15 chars (Worldline limit)
+    short_cust_id = (customer_id.replace("-", "")[:15]) if customer_id else "anon"
 
     body: dict = {
         "order": {
@@ -90,10 +103,14 @@ async def create_hosted_checkout(
             },
             "references": {
                 "descriptor": description or "Zinovia Fans",
+                "merchantReference": correlation_id,
             },
             "customer": {
-                "merchantCustomerId": customer_id or "anonymous",
+                "merchantCustomerId": short_cust_id,
                 "locale": locale,
+                "billingAddress": {
+                    "countryCode": "FR",
+                },
             },
         },
         "hostedCheckoutSpecificInput": {
@@ -109,12 +126,6 @@ async def create_hosted_checkout(
         body.setdefault("cardPaymentMethodSpecificInput", {})
         body["cardPaymentMethodSpecificInput"]["tokenize"] = True
         body["cardPaymentMethodSpecificInput"]["authorizationMode"] = "SALE"
-
-    # Attach custom fields as merchant reference
-    if custom_fields:
-        body["order"]["references"]["merchantReference"] = "|".join(
-            f"{k}={v}" for k, v in custom_fields.items()
-        )
 
     content_type = "application/json"
     headers = {
@@ -136,13 +147,15 @@ async def create_hosted_checkout(
     checkout_url = f"https://payment.{partial_url}" if partial_url else ""
 
     logger.info(
-        "worldline hosted checkout created hosted_checkout_id=%s",
-        data.get("hostedCheckoutId", ""),
+        "worldline hosted checkout created hosted_checkout_id=%s correlation_id=%s",
+        data.get("hostedCheckoutId", ""), correlation_id,
     )
     return {
         "checkout_url": checkout_url,
         "hosted_checkout_id": data.get("hostedCheckoutId", ""),
         "return_mac": data.get("RETURNMAC", ""),
+        "correlation_id": correlation_id,
+        "custom_fields": custom_fields or {},
     }
 
 

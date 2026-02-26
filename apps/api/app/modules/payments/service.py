@@ -11,6 +11,7 @@ from app.core.errors import AppError
 from app.core.settings import get_settings
 from app.modules.auth.rate_limit import check_rate_limit_custom
 from app.modules.billing.ccbill_client import build_flexform_url, ccbill_configured
+from app.modules.billing.service import store_checkout_correlation
 from app.modules.billing.worldline_client import create_hosted_checkout, worldline_configured
 from app.modules.payments.models import PpvPurchase, Tip
 
@@ -80,6 +81,7 @@ async def create_tip_intent(
             customer_id=str(tipper_id),
         )
         checkout_url = result["checkout_url"]
+        await store_checkout_correlation(session, result["correlation_id"], result["custom_fields"])
     else:
         price = Decimal(amount_cents) / 100
         checkout_url = build_flexform_url(

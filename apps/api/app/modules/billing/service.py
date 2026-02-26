@@ -69,6 +69,39 @@ async def record_payment_event(
     return True, inserted_id
 
 
+async def store_checkout_correlation(
+    session: AsyncSession,
+    correlation_id: str,
+    custom_fields: dict[str, str],
+) -> None:
+    """Store custom fields for a Worldline checkout, keyed by correlation_id.
+
+    Worldline merchantReference is limited to 30 chars so we can't embed
+    all custom fields there.  Instead we store them as a payment_event with
+    type 'wl_checkout_intent' and look them up when the webhook arrives.
+    """
+    await record_payment_event(
+        session,
+        event_id=f"wl_intent:{correlation_id}",
+        event_type="wl_checkout_intent",
+        payload=custom_fields,
+    )
+
+
+async def get_checkout_correlation(
+    session: AsyncSession,
+    correlation_id: str,
+) -> dict[str, str]:
+    """Retrieve custom fields stored for a Worldline checkout."""
+    result = await session.execute(
+        select(PaymentEvent.payload).where(
+            PaymentEvent.event_id == f"wl_intent:{correlation_id}"
+        )
+    )
+    payload = result.scalar_one_or_none()
+    return dict(payload) if payload else {}
+
+
 async def mark_event_processed(session: AsyncSession, event_id: str) -> None:
     now = datetime.now(timezone.utc)
     await session.execute(
@@ -168,10 +201,13 @@ async def create_checkout_session(
             tokens_requested=True,
             customer_id=str(fan_user_id),
         )
+        # Store custom fields keyed by correlation_id (merchantReference is max 30 chars)
+        await store_checkout_correlation(session, result["correlation_id"], result["custom_fields"])
+        await session.commit()
         url = result["checkout_url"]
         logger.info(
-            "worldline checkout created fan_user_id=%s creator_user_id=%s hosted_checkout_id=%s",
-            fan_user_id, creator_user_id, result.get("hosted_checkout_id"),
+            "worldline checkout created fan_user_id=%s creator_user_id=%s hosted_checkout_id=%s correlation_id=%s",
+            fan_user_id, creator_user_id, result.get("hosted_checkout_id"), result.get("correlation_id"),
         )
     else:
         if not ccbill_configured():
@@ -642,6 +678,10 @@ async def handle_worldline_event(session: AsyncSession, payload: dict) -> str:
 
     Worldline webhook payload structure:
       { "id": "...", "type": "payment.paid", "payment": { ... } }
+
+    Custom fields are stored in a correlation table (payment_events) because
+    Worldline limits merchantReference to 30 chars.  The short correlation_id
+    (e.g. "zv_abc123def456") is used as merchantReference during checkout.
     """
     event_type = payload.get("type", "")
     event_id = payload.get("id", str(uuid4()))
@@ -650,17 +690,24 @@ async def handle_worldline_event(session: AsyncSession, payload: dict) -> str:
     payment = payload.get("payment") or {}
     refund_obj = payload.get("refund") or {}
 
-    # Parse custom fields from merchantReference
+    # Get merchantReference (correlation_id) from payment or refund output
     payment_output = payment.get("paymentOutput") or {}
     refs = payment_output.get("references") or {}
     merchant_ref = refs.get("merchantReference", "")
-    custom = _parse_merchant_reference(merchant_ref)
 
-    # Also try refund output references
-    if not custom and refund_obj:
+    if not merchant_ref and refund_obj:
         refund_output = refund_obj.get("refundOutput") or {}
         refund_refs = refund_output.get("references") or {}
-        custom = _parse_merchant_reference(refund_refs.get("merchantReference", ""))
+        merchant_ref = refund_refs.get("merchantReference", "")
+
+    # Look up custom fields from correlation table
+    if merchant_ref:
+        custom = await get_checkout_correlation(session, merchant_ref)
+        if not custom:
+            # Fallback: try parsing as legacy pipe-delimited format
+            custom = _parse_merchant_reference(merchant_ref)
+    else:
+        custom = {}
 
     try:
         audit_action: str | None = None

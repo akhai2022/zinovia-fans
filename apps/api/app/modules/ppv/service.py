@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import AppError
 from app.core.settings import get_settings
 from app.modules.billing.ccbill_client import build_flexform_url, ccbill_configured
+from app.modules.billing.service import store_checkout_correlation
 from app.modules.billing.worldline_client import create_hosted_checkout, worldline_configured
 from app.modules.messaging.models import Conversation, Message, MessageMedia
 from app.modules.payments.models import PostPurchase, PpvPurchase
@@ -161,6 +162,7 @@ async def create_ppv_message_media_intent(
             customer_id=str(purchaser_id),
         )
         checkout_url = result["checkout_url"]
+        await store_checkout_correlation(session, result["correlation_id"], result["custom_fields"])
     else:
         price = Decimal(existing.amount_cents) / 100
         checkout_url = build_flexform_url(
@@ -297,6 +299,7 @@ async def create_ppv_post_intent(
             customer_id=str(purchaser_id),
         )
         checkout_url = result["checkout_url"]
+        await store_checkout_correlation(session, result["correlation_id"], result["custom_fields"])
     else:
         price = Decimal(existing.amount_cents) / 100
         checkout_url = build_flexform_url(
