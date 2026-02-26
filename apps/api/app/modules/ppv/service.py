@@ -158,6 +158,7 @@ async def create_ppv_message_media_intent(
             return_url=settings.checkout_success_url,
             custom_fields=custom_fields,
             recurring=False,
+            customer_id=str(purchaser_id),
         )
         checkout_url = result["checkout_url"]
     else:
@@ -293,6 +294,7 @@ async def create_ppv_post_intent(
             return_url=settings.checkout_success_url,
             custom_fields=custom_fields,
             recurring=False,
+            customer_id=str(purchaser_id),
         )
         checkout_url = result["checkout_url"]
     else:

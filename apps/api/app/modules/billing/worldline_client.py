@@ -66,6 +66,8 @@ async def create_hosted_checkout(
     custom_fields: dict[str, str] | None = None,
     recurring: bool = False,
     tokens_requested: bool = False,
+    customer_id: str = "",
+    locale: str = "en_GB",
 ) -> dict:
     """Create a Worldline Hosted Checkout session.
 
@@ -89,11 +91,16 @@ async def create_hosted_checkout(
             "references": {
                 "descriptor": description or "Zinovia Fans",
             },
+            "customer": {
+                "merchantCustomerId": customer_id or "anonymous",
+                "locale": locale,
+            },
         },
         "hostedCheckoutSpecificInput": {
             "returnUrl": return_url,
             "showResultPage": False,
             "variant": "100",
+            "locale": locale,
         },
     }
 

@@ -77,6 +77,7 @@ async def create_tip_intent(
             return_url=settings.checkout_success_url,
             custom_fields=custom_fields,
             recurring=False,
+            customer_id=str(tipper_id),
         )
         checkout_url = result["checkout_url"]
     else:

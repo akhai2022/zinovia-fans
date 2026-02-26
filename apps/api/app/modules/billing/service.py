@@ -166,6 +166,7 @@ async def create_checkout_session(
             custom_fields=custom_fields,
             recurring=True,
             tokens_requested=True,
+            customer_id=str(fan_user_id),
         )
         url = result["checkout_url"]
         logger.info(
