@@ -4,15 +4,17 @@ from datetime import UTC, datetime
 from urllib.parse import quote
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select
+from fastapi import APIRouter, Body, Depends, Query
+from pydantic import BaseModel
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
 from app.core.settings import get_settings
 from app.db.session import get_async_session
 from app.modules.auth.deps import require_admin
-from app.modules.auth.models import User
+from app.modules.auth.models import Profile, User
+from app.modules.auth.service import _generate_unique_handle, _sanitize_handle
 from app.modules.admin.schemas import (
     AdminCreatorAction,
     AdminCreatorPage,
@@ -369,3 +371,328 @@ async def force_verify_email(
         "user_id": str(user.id),
         "onboarding_state": "EMAIL_VERIFIED",
     }
+
+
+@router.post(
+    "/backfill-handles",
+    operation_id="admin_backfill_handles",
+    summary="Auto-generate handles for creators who don't have one",
+)
+async def backfill_handles(
+    session: AsyncSession = Depends(get_async_session),
+    _admin: User = Depends(require_admin),
+) -> dict:
+    """Find all creators without a handle and generate one from their display name or email."""
+    result = await session.execute(
+        select(User, Profile)
+        .join(Profile, Profile.user_id == User.id)
+        .where(
+            User.role == "creator",
+            Profile.handle.is_(None),
+        )
+    )
+    rows = result.all()
+    updated = []
+    for user, profile in rows:
+        base = _sanitize_handle(profile.display_name or user.email.split("@")[0])
+        handle = await _generate_unique_handle(session, base)
+        profile.handle = handle
+        profile.handle_normalized = handle.lower()
+        updated.append({"user_id": str(user.id), "email": user.email, "handle": handle})
+    await session.commit()
+    return {"updated_count": len(updated), "creators": updated}
+
+
+# ---------------------------------------------------------------------------
+# Support Messages (contact form submissions)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/support-messages", operation_id="admin_list_support_messages")
+async def list_support_messages(
+    session: AsyncSession = Depends(get_async_session),
+    _admin: User = Depends(require_admin),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=100),
+    category: str | None = Query(None),
+    resolved: bool | None = Query(None),
+) -> dict:
+    """List contact form submissions for admin review."""
+    from app.modules.contact.models import ContactSubmission
+
+    where = []
+    if category:
+        where.append(ContactSubmission.category == category)
+    if resolved is not None:
+        where.append(ContactSubmission.resolved.is_(resolved))
+
+    count_q = select(func.count(ContactSubmission.id))
+    if where:
+        count_q = count_q.where(*where)
+    total = (await session.execute(count_q)).scalar_one() or 0
+
+    unread_count = (await session.execute(
+        select(func.count(ContactSubmission.id)).where(ContactSubmission.is_read.is_(False))
+    )).scalar_one() or 0
+
+    offset = (page - 1) * page_size
+    q = select(ContactSubmission)
+    if where:
+        q = q.where(*where)
+    q = q.order_by(ContactSubmission.created_at.desc()).offset(offset).limit(page_size)
+    rows = (await session.execute(q)).scalars().all()
+
+    items = [
+        {
+            "id": str(s.id),
+            "email": s.email,
+            "category": s.category,
+            "subject": s.subject,
+            "message": s.message,
+            "ip_address": s.ip_address,
+            "is_read": s.is_read,
+            "resolved": s.resolved,
+            "admin_notes": s.admin_notes,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+        }
+        for s in rows
+    ]
+    return {"items": items, "total": total, "unread_count": unread_count}
+
+
+@router.post("/support-messages/{message_id}/read", operation_id="admin_mark_support_read")
+async def mark_support_message_read(
+    message_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    _admin: User = Depends(require_admin),
+) -> dict:
+    from app.modules.contact.models import ContactSubmission
+
+    await session.execute(
+        update(ContactSubmission)
+        .where(ContactSubmission.id == message_id)
+        .values(is_read=True)
+    )
+    await session.commit()
+    return {"status": "ok"}
+
+
+@router.post("/support-messages/{message_id}/resolve", operation_id="admin_resolve_support")
+async def resolve_support_message(
+    message_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    _admin: User = Depends(require_admin),
+    notes: str | None = Body(None),
+) -> dict:
+    from app.modules.contact.models import ContactSubmission
+
+    values: dict = {"resolved": True, "is_read": True}
+    if notes:
+        values["admin_notes"] = notes
+    await session.execute(
+        update(ContactSubmission)
+        .where(ContactSubmission.id == message_id)
+        .values(**values)
+    )
+    await session.commit()
+    return {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
+# KYC Sessions (super_admin only)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/users/{user_id}/kyc", operation_id="admin_get_user_kyc")
+async def get_user_kyc(
+    user_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    _admin: User = Depends(require_admin),
+) -> dict:
+    """Get KYC sessions for a user. Includes document URLs for super_admin."""
+    from app.modules.media.models import MediaObject
+    from app.modules.media.storage import get_storage_client
+    from app.modules.onboarding.models import KycSession
+
+    result = await session.execute(
+        select(KycSession)
+        .where(KycSession.creator_id == user_id)
+        .order_by(KycSession.created_at.desc())
+    )
+    sessions = result.scalars().all()
+
+    is_super = _admin.role == "super_admin"
+    storage = get_storage_client() if is_super else None
+
+    items = []
+    for s in sessions:
+        id_doc_url = None
+        selfie_url = None
+
+        if is_super and storage:
+            if s.id_document_media_id:
+                media = (
+                    await session.execute(
+                        select(MediaObject).where(
+                            MediaObject.id == s.id_document_media_id
+                        )
+                    )
+                ).scalar_one_or_none()
+                if media:
+                    id_doc_url = storage.create_signed_download_url(media.object_key)
+
+            if s.selfie_media_id:
+                media = (
+                    await session.execute(
+                        select(MediaObject).where(
+                            MediaObject.id == s.selfie_media_id
+                        )
+                    )
+                ).scalar_one_or_none()
+                if media:
+                    selfie_url = storage.create_signed_download_url(media.object_key)
+
+        items.append(
+            {
+                "id": str(s.id),
+                "provider": s.provider,
+                "provider_session_id": s.provider_session_id,
+                "status": s.status,
+                "date_of_birth": s.date_of_birth.isoformat() if s.date_of_birth else None,
+                "id_document_url": id_doc_url,
+                "selfie_url": selfie_url,
+                "admin_notes": s.admin_notes,
+                "reviewed_by": str(s.reviewed_by) if s.reviewed_by else None,
+                "reviewed_at": s.reviewed_at.isoformat() if s.reviewed_at else None,
+                "redirect_url": s.redirect_url,
+                "created_at": s.created_at.isoformat() if s.created_at else None,
+                "updated_at": s.updated_at.isoformat() if s.updated_at else None,
+            }
+        )
+
+    return {"items": items, "total": len(items)}
+
+
+class _KycReviewRequest(BaseModel):
+    action: str
+    notes: str | None = None
+
+
+@router.post("/kyc/{session_id}/review", operation_id="admin_review_kyc")
+async def review_kyc(
+    session_id: UUID,
+    payload: _KycReviewRequest,
+    session: AsyncSession = Depends(get_async_session),
+    admin: User = Depends(require_admin),
+) -> dict:
+    """Approve or reject a KYC session. Super_admin only."""
+    if admin.role != "super_admin":
+        raise AppError(status_code=403, detail="super_admin_required")
+    if payload.action not in ("approve", "reject"):
+        raise AppError(status_code=400, detail="action must be approve or reject")
+
+    from app.modules.onboarding.constants import KYC_APPROVED, KYC_REJECTED
+    from app.modules.onboarding.models import KycSession
+    from app.modules.onboarding.service import transition_creator_state
+
+    kyc = (
+        await session.execute(select(KycSession).where(KycSession.id == session_id))
+    ).scalar_one_or_none()
+    if not kyc:
+        raise AppError(status_code=404, detail="kyc_session_not_found")
+    if kyc.status not in ("SUBMITTED", "CREATED"):
+        raise AppError(status_code=400, detail="session_not_reviewable")
+
+    now = datetime.now(UTC)
+    kyc.admin_notes = payload.notes
+    kyc.reviewed_by = admin.id
+    kyc.reviewed_at = now
+
+    if payload.action == "approve":
+        kyc.status = "APPROVED"
+        await transition_creator_state(
+            session,
+            kyc.creator_id,
+            KYC_APPROVED,
+            "admin_kyc_approved",
+            {"session_id": str(kyc.id), "admin_id": str(admin.id)},
+        )
+    else:
+        kyc.status = "REJECTED"
+        await transition_creator_state(
+            session,
+            kyc.creator_id,
+            KYC_REJECTED,
+            "admin_kyc_rejected",
+            {"session_id": str(kyc.id), "admin_id": str(admin.id), "notes": payload.notes},
+        )
+
+    await session.commit()
+    return {"status": "ok", "action": payload.action, "session_id": str(session_id)}
+
+
+# ---------------------------------------------------------------------------
+# User Media (admin content management)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/users/{user_id}/media", operation_id="admin_list_user_media")
+async def list_user_media(
+    user_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    _admin: User = Depends(require_admin),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=100),
+) -> dict:
+    """List all media assets uploaded by a user."""
+    from app.modules.media.models import MediaObject
+
+    total = (await session.execute(
+        select(func.count(MediaObject.id)).where(MediaObject.owner_user_id == user_id)
+    )).scalar_one() or 0
+
+    offset = (page - 1) * page_size
+    q = (
+        select(MediaObject)
+        .where(MediaObject.owner_user_id == user_id)
+        .order_by(MediaObject.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
+    )
+    rows = (await session.execute(q)).scalars().all()
+
+    items = [
+        {
+            "id": str(m.id),
+            "object_key": m.object_key,
+            "content_type": m.content_type,
+            "size_bytes": m.size_bytes,
+            "created_at": m.created_at.isoformat() if m.created_at else None,
+        }
+        for m in rows
+    ]
+    return {"items": items, "total": total}
+
+
+@router.delete("/media/{media_id}", operation_id="admin_delete_media")
+async def delete_media(
+    media_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    _admin: User = Depends(require_admin),
+) -> dict:
+    """Delete a media asset and its derived variants. Removes from DB (S3 cleanup is separate)."""
+    from app.modules.media.models import MediaDerivedAsset, MediaObject
+    from app.modules.posts.models import PostMedia
+
+    media = (await session.execute(
+        select(MediaObject).where(MediaObject.id == media_id)
+    )).scalar_one_or_none()
+    if not media:
+        raise AppError(status_code=404, detail="media_not_found")
+
+    # Remove references
+    await session.execute(delete(PostMedia).where(PostMedia.media_asset_id == media_id))
+    await session.execute(delete(MediaDerivedAsset).where(MediaDerivedAsset.parent_asset_id == media_id))
+    await session.execute(delete(MediaObject).where(MediaObject.id == media_id))
+    await session.commit()
+    return {"status": "ok", "media_id": str(media_id)}

@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +15,7 @@ from app.core.settings import get_settings
 from app.db.session import get_async_session
 from app.modules.auth.deps import get_current_user
 from app.modules.auth.models import User
+from app.modules.media.models import MediaObject
 from app.modules.onboarding.constants import (
     EMAIL_VERIFIED,
     KYC_APPROVED,
@@ -34,6 +37,14 @@ from app.modules.onboarding.service import (
     transition_creator_state,
     verify_webhook_hmac,
 )
+
+
+class KycCompleteRequest(BaseModel):
+    session_id: str
+    status: str = Field(..., pattern="^(APPROVED|REJECTED)$")
+    date_of_birth: date | None = None
+    id_document_media_id: UUID | None = None
+    selfie_media_id: UUID | None = None
 
 router = APIRouter()
 
@@ -128,21 +139,13 @@ async def create_kyc_session(
     operation_id="kyc_complete",
 )
 async def kyc_complete(
-    request: Request,
+    payload: KycCompleteRequest,
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict:
-    """Complete KYC verification. Called by /kyc/verify page after user submits documents."""
-    body = await request.json()
-    session_id = body.get("session_id")
-    status_action = body.get("status")
-    if not session_id or status_action not in ("APPROVED", "REJECTED"):
-        raise AppError(
-            status_code=400,
-            detail="session_id and status (APPROVED|REJECTED) required",
-        )
+    """Complete KYC verification. Stores documents and sets status for admin review."""
     try:
-        sid = UUID(session_id)
+        sid = UUID(payload.session_id)
     except ValueError:
         raise AppError(status_code=400, detail="invalid_session_id")
     result = await session.execute(
@@ -151,29 +154,81 @@ async def kyc_complete(
     kyc = result.scalar_one_or_none()
     if not kyc or kyc.creator_id != user.id:
         raise AppError(status_code=404, detail="session_not_found")
-    event_id = f"kyc_{session_id}_{status_action}"
+
+    # Validate media ownership if documents provided
+    if payload.id_document_media_id:
+        media = (
+            await session.execute(
+                select(MediaObject).where(
+                    MediaObject.id == payload.id_document_media_id,
+                    MediaObject.owner_user_id == user.id,
+                )
+            )
+        ).scalar_one_or_none()
+        if not media:
+            raise AppError(status_code=400, detail="invalid_id_document_media")
+
+    if payload.selfie_media_id:
+        media = (
+            await session.execute(
+                select(MediaObject).where(
+                    MediaObject.id == payload.selfie_media_id,
+                    MediaObject.owner_user_id == user.id,
+                )
+            )
+        ).scalar_one_or_none()
+        if not media:
+            raise AppError(status_code=400, detail="invalid_selfie_media")
+
+    # Store document references
+    if payload.date_of_birth is not None:
+        kyc.date_of_birth = payload.date_of_birth
+    if payload.id_document_media_id:
+        kyc.id_document_media_id = payload.id_document_media_id
+    if payload.selfie_media_id:
+        kyc.selfie_media_id = payload.selfie_media_id
+
+    has_documents = bool(payload.id_document_media_id and payload.selfie_media_id)
+    status_action = payload.status
+    event_id = f"kyc_{payload.session_id}_{status_action}"
+
     kyc.raw_webhook_payload = {
         "provider_session_id": kyc.provider_session_id,
         "status": status_action,
         "event_id": event_id,
+        "has_documents": has_documents,
     }
-    kyc.status = status_action
-    # Transition lifecycle: KYC_PENDING -> KYC_SUBMITTED -> APPROVED/REJECTED
-    if user.onboarding_state == KYC_PENDING:
+
+    if has_documents:
+        # Documents provided — set to SUBMITTED for admin review
+        kyc.status = "SUBMITTED"
+        if user.onboarding_state == KYC_PENDING:
+            await transition_creator_state(
+                session,
+                user.id,
+                KYC_SUBMITTED,
+                "kyc_submitted",
+                {"event_id": event_id, "has_documents": True},
+            )
+    else:
+        # Legacy path (no documents) — auto-approve
+        kyc.status = status_action
+        if user.onboarding_state == KYC_PENDING:
+            await transition_creator_state(
+                session,
+                user.id,
+                KYC_SUBMITTED,
+                "kyc_submitted",
+                {"event_id": event_id},
+            )
         await transition_creator_state(
             session,
             user.id,
-            KYC_SUBMITTED,
-            "kyc_submitted",
+            KYC_APPROVED if status_action == "APPROVED" else KYC_REJECTED,
+            f"kyc_{status_action.lower()}",
             {"event_id": event_id},
         )
-    await transition_creator_state(
-        session,
-        user.id,
-        KYC_APPROVED if status_action == "APPROVED" else KYC_REJECTED,
-        f"kyc_{status_action.lower()}",
-        {"event_id": event_id},
-    )
+
     await session.commit()
     return {"ack": True}
 

@@ -108,39 +108,42 @@ type AdminTransaction = {
   created_at: string;
 };
 
-type InboundEmail = {
+type SupportMessage = {
   id: string;
-  resend_email_id: string;
-  from_address: string;
-  to_addresses: string[];
-  cc_addresses: string[];
-  subject: string;
+  email: string;
   category: string;
-  snippet: string;
-  attachment_count: number;
-  attachments_meta: { id: string; filename: string; content_type: string; size: number }[];
+  subject: string;
+  message: string;
+  ip_address: string | null;
   is_read: boolean;
-  forwarded_to: string | null;
-  forwarded_at: string | null;
-  received_at: string;
+  resolved: boolean;
+  admin_notes: string | null;
   created_at: string;
 };
 
-type InboundEmailDetail = InboundEmail & {
-  html_body: string | null;
-  text_body: string | null;
-  reply_to_addresses: string[];
-  message_id_header: string | null;
-  headers: Record<string, string> | null;
-  raw_download_url: string | null;
-  raw_download_expires_at: string | null;
-  spf_result: string | null;
-  dkim_result: string | null;
-  spam_score: string | null;
+type AdminMediaItem = {
+  id: string;
+  object_key: string;
+  content_type: string;
+  size_bytes: number;
+  created_at: string;
 };
 
-type InboundCategoryCount = { category: string; total: number; unread: number };
-type InboundStats = { categories: InboundCategoryCount[]; total: number; total_unread: number };
+type AdminKycSession = {
+  id: string;
+  provider: string;
+  provider_session_id: string | null;
+  status: string;
+  date_of_birth: string | null;
+  id_document_url: string | null;
+  selfie_url: string | null;
+  admin_notes: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  redirect_url: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
 
 type PagedResult<T> = { items: T[]; total: number };
 
@@ -253,7 +256,7 @@ export default function AdminPage() {
   // User detail
   const [selectedUser, setSelectedUser] = useState<AdminUserDetail | null>(null);
   const [userDetailLoading, setUserDetailLoading] = useState(false);
-  const [userDetailTab, setUserDetailTab] = useState<"posts" | "subscribers">("posts");
+  const [userDetailTab, setUserDetailTab] = useState<"posts" | "subscribers" | "media" | "kyc">("posts");
   const [userPosts, setUserPosts] = useState<AdminUserPost[]>([]);
   const [userPostsTotal, setUserPostsTotal] = useState(0);
   const [userPostsPage, setUserPostsPage] = useState(1);
@@ -287,15 +290,23 @@ export default function AdminPage() {
   const [txTotal, setTxTotal] = useState(0);
   const [txPage, setTxPage] = useState(1);
 
-  /* ---- Inbox state ---- */
-  const [inboxEmails, setInboxEmails] = useState<InboundEmail[]>([]);
-  const [inboxTotal, setInboxTotal] = useState(0);
-  const [inboxPage, setInboxPage] = useState(1);
-  const [inboxStats, setInboxStats] = useState<InboundStats | null>(null);
-  const [inboxCategory, setInboxCategory] = useState<string | null>(null);
-  const [selectedEmail, setSelectedEmail] = useState<InboundEmailDetail | null>(null);
-  const [emailLoading, setEmailLoading] = useState(false);
-  const [syncing, setSyncing] = useState(false);
+  /* ---- Support Messages state ---- */
+  const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
+  const [supportTotal, setSupportTotal] = useState(0);
+  const [supportPage, setSupportPage] = useState(1);
+  const [supportUnread, setSupportUnread] = useState(0);
+  const [supportCategory, setSupportCategory] = useState<string | null>(null);
+  const [supportResolved, setSupportResolved] = useState<boolean | null>(false);
+  const [selectedMessage, setSelectedMessage] = useState<SupportMessage | null>(null);
+
+  /* ---- User media & KYC state ---- */
+  const [userMedia, setUserMedia] = useState<AdminMediaItem[]>([]);
+  const [userMediaTotal, setUserMediaTotal] = useState(0);
+  const [userMediaPage, setUserMediaPage] = useState(1);
+  const [userKyc, setUserKyc] = useState<AdminKycSession[]>([]);
+  const [kycReviewNotes, setKycReviewNotes] = useState("");
+  const [kycReviewing, setKycReviewing] = useState<string | null>(null);
+  const [deleteMediaConfirm, setDeleteMediaConfirm] = useState<string | null>(null);
 
   /* ---- Moderation state ---- */
   type ModerationItem = {
@@ -443,22 +454,24 @@ export default function AdminPage() {
     [handleApiError],
   );
 
-  /* ---- Fetch: inbox ---- */
+  /* ---- Fetch: support messages ---- */
   const fetchInbox = useCallback(
     async (pg = 1) => {
       try {
-        const query: Record<string, string | number> = { page: pg, page_size: PAGE_SIZE };
-        if (inboxCategory) query.category = inboxCategory;
-        const data = await apiFetch<PagedResult<InboundEmail>>("/admin/inbound/emails", { method: "GET", query });
-        setInboxEmails(data.items);
-        setInboxTotal(data.total);
-        setInboxPage(pg);
+        const query: Record<string, string | number | boolean> = { page: pg, page_size: PAGE_SIZE };
+        if (supportCategory) query.category = supportCategory;
+        if (supportResolved !== null) query.resolved = supportResolved;
+        const data = await apiFetch<{ items: SupportMessage[]; total: number; unread_count: number }>("/admin/support-messages", { method: "GET", query });
+        setSupportMessages(data.items);
+        setSupportTotal(data.total);
+        setSupportUnread(data.unread_count);
+        setSupportPage(pg);
         setError(null);
       } catch (err) {
         handleApiError(err);
       }
     },
-    [inboxCategory, handleApiError],
+    [supportCategory, supportResolved, handleApiError],
   );
 
   const fetchModeration = useCallback(async (page = modPage) => {
@@ -495,37 +508,83 @@ export default function AdminPage() {
   };
 
   const fetchInboxStats = useCallback(async () => {
-    try {
-      const data = await apiFetch<InboundStats>("/admin/inbound/emails/stats", { method: "GET" });
-      setInboxStats(data);
-    } catch {
-      // stats are non-critical
-    }
+    // Stats are fetched inline with support-messages endpoint
   }, []);
 
-  const openEmail = async (emailId: string) => {
-    setEmailLoading(true);
-    try {
-      const data = await apiFetch<InboundEmailDetail>(`/admin/inbound/emails/${emailId}`, { method: "GET" });
-      setSelectedEmail(data);
-      setInboxEmails((prev) => prev.map((e) => (e.id === emailId ? { ...e, is_read: true } : e)));
-    } catch (err) {
-      handleApiError(err);
-    } finally {
-      setEmailLoading(false);
+  const openSupportMessage = async (msg: SupportMessage) => {
+    setSelectedMessage(msg);
+    if (!msg.is_read) {
+      try {
+        await apiFetch(`/admin/support-messages/${msg.id}/read`, { method: "POST" });
+        setSupportMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, is_read: true } : m)));
+        setSupportUnread((c) => Math.max(0, c - 1));
+      } catch { /* non-critical */ }
     }
   };
 
-  const syncInbox = async () => {
-    setSyncing(true);
+  const resolveSupportMessage = async (msgId: string) => {
+    setActionLoading(msgId);
     try {
-      await apiFetch("/admin/inbound/sync", { method: "POST" });
-      fetchInbox();
-      fetchInboxStats();
+      await apiFetch(`/admin/support-messages/${msgId}/resolve`, { method: "POST" });
+      setSupportMessages((prev) => prev.map((m) => (m.id === msgId ? { ...m, resolved: true, is_read: true } : m)));
+      setSelectedMessage(null);
     } catch (err) {
       handleApiError(err);
     } finally {
-      setSyncing(false);
+      setActionLoading(null);
+    }
+  };
+
+  const fetchUserMedia = async (userId: string, pg = 1) => {
+    try {
+      const data = await apiFetch<{ items: AdminMediaItem[]; total: number }>(`/admin/users/${userId}/media`, {
+        method: "GET",
+        query: { page: pg, page_size: PAGE_SIZE },
+      });
+      setUserMedia(data.items);
+      setUserMediaTotal(data.total);
+      setUserMediaPage(pg);
+    } catch (err) {
+      handleApiError(err);
+    }
+  };
+
+  const deleteMedia = async (mediaId: string) => {
+    setActionLoading(mediaId);
+    try {
+      await apiFetch(`/admin/media/${mediaId}`, { method: "DELETE" });
+      setUserMedia((prev) => prev.filter((m) => m.id !== mediaId));
+      setUserMediaTotal((t) => t - 1);
+      setDeleteMediaConfirm(null);
+    } catch (err) {
+      handleApiError(err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const fetchUserKyc = async (userId: string) => {
+    try {
+      const data = await apiFetch<{ items: AdminKycSession[]; total: number }>(`/admin/users/${userId}/kyc`, { method: "GET" });
+      setUserKyc(data.items);
+    } catch (err) {
+      handleApiError(err);
+    }
+  };
+
+  const reviewKyc = async (sessionId: string, action: "approve" | "reject") => {
+    try {
+      setKycReviewing(sessionId);
+      await apiFetch(`/admin/kyc/${sessionId}/review`, {
+        method: "POST",
+        body: { action, notes: kycReviewNotes || null },
+      });
+      setKycReviewNotes("");
+      if (selectedUser) fetchUserKyc(selectedUser.user_id);
+    } catch (err) {
+      handleApiError(err);
+    } finally {
+      setKycReviewing(null);
     }
   };
 
@@ -687,7 +746,7 @@ export default function AdminPage() {
             onClick={() => {
               setTab(t);
               setSelectedUser(null);
-              setSelectedEmail(null);
+              setSelectedMessage(null);
             }}
             className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               tab === t
@@ -700,10 +759,10 @@ export default function AdminPage() {
             {t === "transactions" && <><Icon name="payments" className="icon-base" /> Transactions ({txTotal})</>}
             {t === "inbox" && (
               <>
-                <Icon name="inbox" className="icon-base" /> Inbox
-                {inboxStats && inboxStats.total_unread > 0 && (
+                <Icon name="inbox" className="icon-base" /> Support
+                {supportUnread > 0 && (
                   <span className="ml-1.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">
-                    {inboxStats.total_unread}
+                    {supportUnread}
                   </span>
                 )}
               </>
@@ -1414,29 +1473,40 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                {/* Sub-tabs: Posts | Subscribers */}
+                {/* Sub-tabs: Posts | Subscribers | Media | KYC */}
                 {selectedUser.role === "creator" && (
                   <>
-                    <div className="flex gap-2 border-b border-border">
-                      {(["posts", "subscribers"] as const).map((st) => (
+                    <div className="flex gap-2 border-b border-border overflow-x-auto">
+                      {(
+                        [
+                          { key: "posts" as const, label: `Posts (${selectedUser.post_count})` },
+                          { key: "subscribers" as const, label: `Subscribers (${selectedUser.subscriber_count})` },
+                          { key: "media" as const, label: `Media (${userMediaTotal})` },
+                          ...(isSuperAdmin ? [{ key: "kyc" as const, label: `KYC (${userKyc.length})` }] : []),
+                        ]
+                      ).map(({ key, label }) => (
                         <button
-                          key={st}
+                          key={key}
                           type="button"
                           onClick={() => {
-                            setUserDetailTab(st);
-                            if (st === "subscribers" && userSubs.length === 0) {
+                            setUserDetailTab(key);
+                            if (key === "subscribers" && userSubs.length === 0) {
                               fetchUserSubscribers(selectedUser.user_id);
                             }
+                            if (key === "media" && userMedia.length === 0) {
+                              fetchUserMedia(selectedUser.user_id);
+                            }
+                            if (key === "kyc" && userKyc.length === 0) {
+                              fetchUserKyc(selectedUser.user_id);
+                            }
                           }}
-                          className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
-                            userDetailTab === st
+                          className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
+                            userDetailTab === key
                               ? "border-primary text-foreground"
                               : "border-transparent text-muted-foreground hover:text-foreground"
                           }`}
                         >
-                          {st === "posts"
-                            ? `Posts (${selectedUser.post_count})`
-                            : `Subscribers (${selectedUser.subscriber_count})`}
+                          {label}
                         </button>
                       ))}
                     </div>
@@ -1550,6 +1620,202 @@ export default function AdminPage() {
                           total={userSubsTotal}
                           onPageChange={(pg) => fetchUserSubscribers(selectedUser.user_id, pg)}
                         />
+                      </div>
+                    )}
+
+                    {/* Media sub-tab */}
+                    {userDetailTab === "media" && (
+                      <div className="space-y-3">
+                        {userMedia.length === 0 ? (
+                          <p className="py-4 text-center text-sm text-muted-foreground">No media files.</p>
+                        ) : (
+                          <div className="overflow-x-auto rounded-lg border border-border">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b border-border bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
+                                  <th className="px-4 py-3 font-semibold">File</th>
+                                  <th className="px-4 py-3 font-semibold">Type</th>
+                                  <th className="px-4 py-3 font-semibold">Size</th>
+                                  <th className="px-4 py-3 font-semibold">Date</th>
+                                  <th className="px-4 py-3 font-semibold">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border">
+                                {userMedia.map((m) => (
+                                  <tr key={m.id} className="text-foreground transition-colors hover:bg-white/[0.03]">
+                                    <td className="px-4 py-3 max-w-[250px] truncate text-xs font-mono text-muted-foreground" title={m.object_key}>
+                                      {m.object_key.split("/").pop() || m.object_key}
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap">
+                                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                                        m.content_type.startsWith("video") ? "bg-purple-500/15 text-purple-400" : "bg-blue-500/15 text-blue-400"
+                                      }`}>
+                                        {m.content_type.startsWith("video") ? "Video" : m.content_type.startsWith("image") ? "Image" : m.content_type}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
+                                      {formatBytes(m.size_bytes)}
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
+                                      {new Date(m.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap">
+                                      {deleteMediaConfirm === m.id ? (
+                                        <div className="flex items-center gap-1">
+                                          <Button
+                                            size="sm"
+                                            variant="destructive"
+                                            disabled={actionLoading === m.id}
+                                            onClick={() => deleteMedia(m.id)}
+                                          >
+                                            {actionLoading === m.id ? <Spinner className="h-4 w-4" /> : "Confirm"}
+                                          </Button>
+                                          <Button size="sm" variant="ghost" onClick={() => setDeleteMediaConfirm(null)}>
+                                            Cancel
+                                          </Button>
+                                        </div>
+                                      ) : (
+                                        <Button size="sm" variant="destructive" onClick={() => setDeleteMediaConfirm(m.id)}>
+                                          <Icon name="delete" className="icon-sm" /> Delete
+                                        </Button>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                        <Pagination
+                          page={userMediaPage}
+                          pageSize={PAGE_SIZE}
+                          total={userMediaTotal}
+                          onPageChange={(pg) => fetchUserMedia(selectedUser.user_id, pg)}
+                        />
+                      </div>
+                    )}
+
+                    {/* KYC sub-tab (super_admin only) */}
+                    {userDetailTab === "kyc" && isSuperAdmin && (
+                      <div className="space-y-3">
+                        {userKyc.length === 0 ? (
+                          <p className="py-4 text-center text-sm text-muted-foreground">No KYC sessions found.</p>
+                        ) : (
+                          <div className="space-y-4">
+                            {userKyc.map((k) => (
+                              <div key={k.id} className="rounded-lg border border-border p-4 space-y-3">
+                                {/* Status badge and date */}
+                                <div className="flex items-center justify-between">
+                                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                    k.status === "APPROVED" ? "bg-emerald-500/15 text-emerald-400"
+                                    : k.status === "REJECTED" ? "bg-red-500/15 text-red-400"
+                                    : k.status === "SUBMITTED" ? "bg-amber-500/15 text-amber-400"
+                                    : "bg-muted text-muted-foreground"
+                                  }`}>
+                                    {k.status}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {k.created_at ? new Date(k.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "\u2014"}
+                                  </span>
+                                </div>
+
+                                {/* Metadata */}
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                  {k.date_of_birth && (
+                                    <div>
+                                      <span className="text-muted-foreground">Date of Birth:</span>{" "}
+                                      <span className="text-foreground font-medium">{k.date_of_birth}</span>
+                                    </div>
+                                  )}
+                                  <div>
+                                    <span className="text-muted-foreground">Provider:</span>{" "}
+                                    <span className="text-foreground font-medium">{k.provider}</span>
+                                  </div>
+                                </div>
+
+                                {/* Document images */}
+                                {(k.id_document_url || k.selfie_url) && (
+                                  <div className="grid grid-cols-2 gap-3">
+                                    {k.id_document_url && (
+                                      <div>
+                                        <p className="text-xs text-muted-foreground mb-1">ID Document</p>
+                                        <a href={k.id_document_url} target="_blank" rel="noopener noreferrer">
+                                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                                          <img
+                                            src={k.id_document_url}
+                                            alt="ID Document"
+                                            className="rounded-lg border border-border object-cover max-h-48 w-full"
+                                          />
+                                        </a>
+                                      </div>
+                                    )}
+                                    {k.selfie_url && (
+                                      <div>
+                                        <p className="text-xs text-muted-foreground mb-1">Selfie</p>
+                                        <a href={k.selfie_url} target="_blank" rel="noopener noreferrer">
+                                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                                          <img
+                                            src={k.selfie_url}
+                                            alt="Selfie"
+                                            className="rounded-lg border border-border object-cover max-h-48 w-full"
+                                          />
+                                        </a>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Admin notes */}
+                                {k.admin_notes && (
+                                  <div className="rounded bg-muted/50 p-2 text-xs">
+                                    <span className="text-muted-foreground">Admin Notes:</span>{" "}
+                                    <span className="text-foreground">{k.admin_notes}</span>
+                                  </div>
+                                )}
+
+                                {/* Review controls (SUBMITTED sessions only) */}
+                                {k.status === "SUBMITTED" && (
+                                  <div className="space-y-2 border-t border-border pt-3">
+                                    <textarea
+                                      placeholder="Review notes (optional)..."
+                                      value={kycReviewNotes}
+                                      onChange={(e) => setKycReviewNotes(e.target.value)}
+                                      className="w-full rounded-md border border-border bg-background p-2 text-sm"
+                                      rows={2}
+                                    />
+                                    <div className="flex gap-2">
+                                      <Button
+                                        size="sm"
+                                        onClick={() => reviewKyc(k.id, "approve")}
+                                        disabled={kycReviewing === k.id}
+                                        className="bg-emerald-600 hover:bg-emerald-700"
+                                      >
+                                        <Icon name="check" className="mr-1 icon-sm" />
+                                        Approve
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={() => reviewKyc(k.id, "reject")}
+                                        disabled={kycReviewing === k.id}
+                                      >
+                                        <Icon name="close" className="mr-1 icon-sm" />
+                                        Reject
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Reviewed info */}
+                                {k.reviewed_at && (
+                                  <div className="text-xs text-muted-foreground">
+                                    Reviewed {new Date(k.reviewed_at).toLocaleString()}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </>
@@ -1691,156 +1957,112 @@ export default function AdminPage() {
       {/* ============================================================ */}
       {tab === "inbox" && (
         <div className="space-y-4">
-          {/* Category filter bar + sync button */}
+          {/* Category filter bar */}
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => { setInboxCategory(null); setSelectedEmail(null); }}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                !inboxCategory
-                  ? "bg-foreground text-background"
-                  : "bg-muted text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              All ({inboxStats?.total ?? 0})
-            </button>
-            {inboxStats?.categories.map((cat) => (
+            {(["all", "general", "billing", "account", "content_report", "partnerships", "privacy"] as const).map((cat) => (
               <button
-                key={cat.category}
+                key={cat}
                 type="button"
-                onClick={() => { setInboxCategory(cat.category); setSelectedEmail(null); }}
+                onClick={() => { setSupportCategory(cat === "all" ? null : cat); setSelectedMessage(null); }}
                 className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                  inboxCategory === cat.category
+                  (cat === "all" && !supportCategory) || supportCategory === cat
                     ? "bg-foreground text-background"
                     : "bg-muted text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {CATEGORY_LABELS[cat.category] || cat.category} ({cat.total})
-                {cat.unread > 0 && (
-                  <span className="ml-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-white">
-                    {cat.unread}
-                  </span>
-                )}
+                {cat === "all" ? `All (${supportTotal})` : (CATEGORY_LABELS[cat] || cat)}
               </button>
             ))}
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={syncInbox}
-              disabled={syncing}
-              className="ml-auto"
-            >
-              {syncing ? <><Spinner className="icon-sm" /> Syncing...</> : <><Icon name="sync" className="icon-sm" /> Sync from Resend</>}
-            </Button>
+            <div className="ml-auto flex gap-2">
+              <button
+                type="button"
+                onClick={() => setSupportResolved(supportResolved === false ? null : false)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  supportResolved === false
+                    ? "bg-amber-500/20 text-amber-400"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Open
+              </button>
+              <button
+                type="button"
+                onClick={() => setSupportResolved(supportResolved === true ? null : true)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  supportResolved === true
+                    ? "bg-emerald-500/20 text-emerald-400"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Resolved
+              </button>
+            </div>
           </div>
 
-          {selectedEmail ? (
-            /* Email detail view */
+          {selectedMessage ? (
+            /* Message detail view */
             <Card className="overflow-hidden">
               <div className="border-b border-border px-4 py-3">
                 <button
                   type="button"
-                  onClick={() => setSelectedEmail(null)}
+                  onClick={() => setSelectedMessage(null)}
                   className="mb-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
                 >
-                  <Icon name="arrow_back" className="icon-xs" /> Back to inbox
+                  <Icon name="arrow_back" className="icon-xs" /> Back to messages
                 </button>
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <h2 className="text-lg font-semibold text-foreground">
-                      {selectedEmail.subject || "(no subject)"}
+                      {selectedMessage.subject}
                     </h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      From: <span className="text-foreground">{selectedEmail.from_address}</span>
+                      From: <span className="text-foreground">{selectedMessage.email}</span>
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      To: {selectedEmail.to_addresses.join(", ")}
-                      {selectedEmail.cc_addresses.length > 0 && (
-                        <> · CC: {selectedEmail.cc_addresses.join(", ")}</>
-                      )}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(selectedEmail.received_at).toLocaleString()}
+                      {new Date(selectedMessage.created_at).toLocaleString()}
+                      {selectedMessage.ip_address && <> · IP: {selectedMessage.ip_address}</>}
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
-                    <span className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase ${CATEGORY_COLORS[selectedEmail.category] || CATEGORY_COLORS.unknown}`}>
-                      {CATEGORY_LABELS[selectedEmail.category] || selectedEmail.category}
+                    <span className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase ${CATEGORY_COLORS[selectedMessage.category] || CATEGORY_COLORS.unknown}`}>
+                      {CATEGORY_LABELS[selectedMessage.category] || selectedMessage.category}
                     </span>
-                    {selectedEmail.spf_result && (
-                      <span className={`text-[10px] ${selectedEmail.spf_result === "pass" ? "text-emerald-400" : "text-red-400"}`}>
-                        SPF: {selectedEmail.spf_result}
-                      </span>
-                    )}
-                    {selectedEmail.dkim_result && (
-                      <span className={`text-[10px] ${selectedEmail.dkim_result === "pass" ? "text-emerald-400" : "text-red-400"}`}>
-                        DKIM: {selectedEmail.dkim_result}
-                      </span>
-                    )}
-                    {selectedEmail.forwarded_to && (
-                      <span className="text-[10px] text-muted-foreground">
-                        Fwd: {selectedEmail.forwarded_to}
-                      </span>
+                    {selectedMessage.resolved ? (
+                      <span className="text-[10px] text-emerald-400">Resolved</span>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={actionLoading === selectedMessage.id}
+                        onClick={() => resolveSupportMessage(selectedMessage.id)}
+                      >
+                        <Icon name="check_circle" className="icon-sm" /> Resolve
+                      </Button>
                     )}
                   </div>
                 </div>
               </div>
-              {/* Attachments */}
-              {selectedEmail.attachment_count > 0 && (
-                <div className="border-b border-border bg-muted/30 px-4 py-2">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    {selectedEmail.attachment_count} attachment{selectedEmail.attachment_count > 1 ? "s" : ""}
-                  </p>
-                  <div className="mt-1 flex flex-wrap gap-2">
-                    {selectedEmail.attachments_meta.map((a) => (
-                      <span
-                        key={a.id}
-                        className="inline-flex items-center gap-1 rounded border border-border bg-background px-2 py-1 text-xs"
-                      >
-                        {a.filename} ({formatBytes(a.size)})
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {/* Body */}
               <CardContent className="p-4">
-                {emailLoading ? (
-                  <Skeleton className="h-40 w-full" />
-                ) : selectedEmail.html_body ? (
-                  <div
-                    className="prose prose-invert max-w-none text-sm [&_a]:text-primary"
-                    dangerouslySetInnerHTML={{ __html: selectedEmail.html_body }}
-                  />
-                ) : (
-                  <pre className="whitespace-pre-wrap text-sm text-foreground">
-                    {selectedEmail.text_body || "(empty)"}
-                  </pre>
-                )}
+                <pre className="whitespace-pre-wrap text-sm text-foreground">
+                  {selectedMessage.message}
+                </pre>
               </CardContent>
             </Card>
           ) : (
-            /* Email list view */
+            /* Message list view */
             <div className="space-y-2">
-              {inboxEmails.length === 0 && (
+              {supportMessages.length === 0 && (
                 <p className="py-8 text-center text-sm text-muted-foreground">
-                  No emails received yet.{" "}
-                  <button
-                    type="button"
-                    onClick={syncInbox}
-                    className="text-primary underline"
-                  >
-                    Sync now
-                  </button>
+                  No support messages yet.
                 </p>
               )}
-              {inboxEmails.map((e) => (
+              {supportMessages.map((m: SupportMessage) => (
                 <button
-                  key={e.id}
+                  key={m.id}
                   type="button"
-                  onClick={() => openEmail(e.id)}
+                  onClick={() => openSupportMessage(m)}
                   className={`w-full rounded-lg border px-4 py-3 text-left transition-colors hover:bg-white/5 ${
-                    e.is_read
+                    m.is_read
                       ? "border-border bg-card"
                       : "border-primary/20 bg-primary/5"
                   }`}
@@ -1848,45 +2070,42 @@ export default function AdminPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        {!e.is_read && (
+                        {!m.is_read && (
                           <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />
                         )}
-                        <span className={`text-sm truncate ${e.is_read ? "text-foreground" : "font-semibold text-foreground"}`}>
-                          {e.from_address}
+                        <span className={`text-sm truncate ${m.is_read ? "text-foreground" : "font-semibold text-foreground"}`}>
+                          {m.email}
                         </span>
-                        <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase leading-none ${CATEGORY_COLORS[e.category] || CATEGORY_COLORS.unknown}`}>
-                          {CATEGORY_LABELS[e.category] || e.category}
+                        <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase leading-none ${CATEGORY_COLORS[m.category] || CATEGORY_COLORS.unknown}`}>
+                          {CATEGORY_LABELS[m.category] || m.category}
                         </span>
+                        {m.resolved && (
+                          <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase leading-none bg-emerald-500/15 text-emerald-400">
+                            Resolved
+                          </span>
+                        )}
                       </div>
-                      <p className={`mt-0.5 text-sm truncate ${e.is_read ? "text-foreground/80" : "font-medium text-foreground"}`}>
-                        {e.subject || "(no subject)"}
+                      <p className={`mt-0.5 text-sm truncate ${m.is_read ? "text-foreground/80" : "font-medium text-foreground"}`}>
+                        {m.subject}
                       </p>
                       <p className="mt-0.5 text-xs text-muted-foreground truncate">
-                        {e.snippet || "\u2014"}
+                        {m.message.slice(0, 120)}
                       </p>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {new Date(e.received_at).toLocaleDateString("en-US", {
+                        {new Date(m.created_at).toLocaleDateString("en-US", {
                           month: "short",
                           day: "numeric",
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
                       </span>
-                      {e.attachment_count > 0 && (
-                        <span className="text-[10px] text-muted-foreground">
-                          {e.attachment_count} file{e.attachment_count > 1 ? "s" : ""}
-                        </span>
-                      )}
-                      {e.forwarded_to && (
-                        <span className="text-[10px] text-emerald-400">Forwarded</span>
-                      )}
                     </div>
                   </div>
                 </button>
               ))}
-              <Pagination page={inboxPage} pageSize={PAGE_SIZE} total={inboxTotal} onPageChange={(pg) => fetchInbox(pg)} />
+              <Pagination page={supportPage} pageSize={PAGE_SIZE} total={supportTotal} onPageChange={(pg) => fetchInbox(pg)} />
             </div>
           )}
         </div>

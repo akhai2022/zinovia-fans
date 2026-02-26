@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
 import { kycComplete } from "@/lib/onboardingApi";
+import { MediaService } from "@/features/media/api";
 import { useTranslation, interpolate } from "@/lib/i18n";
 import "@/lib/api";
 
@@ -224,7 +225,7 @@ export default function KycVerifyPage() {
   }, [idFile, addToast, t]);
 
   const onSubmit = useCallback(async () => {
-    if (!selfieFile) {
+    if (!selfieFile || !idFile || !dob) {
       addToast(t.kyc.toastSelfieRequired, "error");
       return;
     }
@@ -234,9 +235,36 @@ export default function KycVerifyPage() {
     }
     setSubmitting(true);
     try {
-      await kycComplete(sessionId, "APPROVED");
+      // Upload ID document and selfie to S3 in parallel
+      const uploadFile = async (file: File, prefix: string): Promise<string> => {
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
+        const objectKey = `kyc/${prefix}/${Date.now()}-${safeName}`;
+        const contentType = file.type || "image/jpeg";
+        const { asset_id, upload_url } = await MediaService.mediaUploadUrl({
+          object_key: objectKey,
+          content_type: contentType,
+          size_bytes: file.size,
+        });
+        await fetch(upload_url, {
+          method: "PUT",
+          headers: { "Content-Type": contentType },
+          body: file,
+        });
+        return asset_id;
+      };
+
+      const [idDocMediaId, selfieMediaId] = await Promise.all([
+        uploadFile(idFile, "id-document"),
+        uploadFile(selfieFile, "selfie"),
+      ]);
+
+      await kycComplete(sessionId, "APPROVED", {
+        date_of_birth: dob,
+        id_document_media_id: idDocMediaId,
+        selfie_media_id: selfieMediaId,
+      });
       setDone(true);
-      addToast(t.kyc.toastVerified, "success");
+      addToast(t.kyc.toastSubmitted ?? t.kyc.toastVerified, "success");
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : t.kyc.toastVerificationFailed;
@@ -244,7 +272,7 @@ export default function KycVerifyPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [selfieFile, sessionId, addToast, t]);
+  }, [selfieFile, idFile, dob, sessionId, addToast, t]);
 
   if (!sessionId) {
     return (
@@ -270,10 +298,10 @@ export default function KycVerifyPage() {
         <Card className="w-full max-w-md border-border shadow-premium-md">
           <CardHeader className="text-center">
             <CardTitle className="font-display text-premium-h3">
-              {t.kyc.verificationCompleteTitle}
+              {t.kyc.submittedTitle ?? t.kyc.verificationCompleteTitle}
             </CardTitle>
             <CardDescription>
-              {t.kyc.verificationCompleteDescription}
+              {t.kyc.submittedDescription ?? t.kyc.verificationCompleteDescription}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 sm:flex-row sm:justify-center">

@@ -118,10 +118,21 @@ export async function getKycStatus(): Promise<KycStatusResponse> {
 
 export async function kycComplete(
   sessionId: string,
-  status: "APPROVED" | "REJECTED"
+  status: "APPROVED" | "REJECTED",
+  documents?: {
+    date_of_birth?: string;
+    id_document_media_id?: string;
+    selfie_media_id?: string;
+  },
 ): Promise<KycCompleteResponse> {
   return fetchJson("/kyc/complete", {
     method: "POST",
-    jsonBody: { session_id: sessionId, status },
+    jsonBody: {
+      session_id: sessionId,
+      status,
+      ...(documents?.date_of_birth && { date_of_birth: documents.date_of_birth }),
+      ...(documents?.id_document_media_id && { id_document_media_id: documents.id_document_media_id }),
+      ...(documents?.selfie_media_id && { selfie_media_id: documents.selfie_media_id }),
+    },
   });
 }
