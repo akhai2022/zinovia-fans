@@ -1,4 +1,4 @@
-export const SUPPORTED_LOCALES = ["en", "es", "fr", "de", "pt", "tr", "ro", "pl", "it"] as const;
+export const SUPPORTED_LOCALES = ["en", "es", "fr", "de", "pt", "tr", "ro", "pl", "it", "ru", "ar"] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = "en";
 export const LOCALE_COOKIE = "zinovia_locale";
@@ -26,6 +26,11 @@ export const COUNTRY_TO_LOCALE: Record<string, Locale> = {
   PL: "pl",
   // Italian
   IT: "it", SM: "it",
+  // Russian
+  RU: "ru", BY: "ru", KZ: "ru", KG: "ru",
+  // Arabic
+  AE: "ar", SA: "ar", QA: "ar", BH: "ar", KW: "ar", OM: "ar",
+  EG: "ar", JO: "ar", LB: "ar", IQ: "ar", MA: "ar", TN: "ar",
   // Swiss users: default to German
   CH: "de",
   // Canadian users: default to English (large French minority, but English majority)
@@ -43,4 +48,9 @@ export const LOCALE_NAMES: Record<Locale, string> = {
   ro: "Română",
   pl: "Polski",
   it: "Italiano",
+  ru: "Русский",
+  ar: "العربية",
 };
+
+/** RTL locales. */
+export const RTL_LOCALES: ReadonlySet<Locale> = new Set(["ar"]);

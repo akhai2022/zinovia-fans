@@ -12,6 +12,8 @@ const loaders: Record<Locale, () => Promise<Dictionary>> = {
   ro: () => import("./ro").then((m) => m.ro),
   pl: () => import("./pl").then((m) => m.pl),
   it: () => import("./it").then((m) => m.it),
+  ru: () => import("./ru").then((m) => m.ru),
+  ar: () => import("./ar").then((m) => m.ar),
 };
 
 /** Resolve the dictionary for a given locale. Falls back to English. */

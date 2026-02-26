@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { MediaService } from "@/features/media/api";
 import { blurhashToDataURL } from "@/lib/blurhash";
+import { cn } from "@/lib/utils";
 import "@/lib/api";
 
 /** Session-only cache: assetId -> { url, blurhash?, dominantColor? }. */
@@ -112,12 +113,12 @@ export function PostMediaImage({
       : { background: "var(--muted)" };
 
   if (!url) {
-    return <div ref={containerRef} className={className} style={placeholderStyle} aria-hidden />;
+    return <div ref={containerRef} className={cn("overflow-hidden", className)} style={placeholderStyle} aria-hidden />;
   }
 
   return (
-    <div className="relative h-full w-full">
-      <img src={url} alt="" loading="lazy" decoding="async" className={className} referrerPolicy="no-referrer" />
+    <div className={cn("relative overflow-hidden", className)}>
+      <img src={url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
       {watermark && (
         <div
           className="absolute bottom-1.5 right-1.5 flex items-center opacity-90"
