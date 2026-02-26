@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0f"/>
+      <stop offset="50%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#0f0a1a"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <pattern id="grid" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="white" stroke-width="0.5" opacity="0.05"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="500" fill="url(#bg)"/>
+  <rect width="800" height="500" fill="url(#grid)"/>
+  <circle cx="200" cy="150" r="180" fill="#8b5cf6" opacity="0.08"/>
+  <circle cx="650" cy="400" r="150" fill="#3b82f6" opacity="0.08"/>
+  <text x="720" y="130" text-anchor="end" font-family="system-ui, sans-serif" font-size="120" font-weight="800" fill="white" opacity="0.08">02</text>
+  <!-- Main card -->
+  <rect x="170" y="45" width="460" height="385" rx="16" fill="white" opacity="0.08" stroke="white" stroke-opacity="0.15" stroke-width="1"/>
+  <!-- Header -->
+  <text x="400" y="88" text-anchor="middle" font-family="system-ui, sans-serif" font-size="22" font-weight="700" fill="white" opacity="0.9">Identity Verification</text>
+  <text x="400" y="110" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.5">Secure KYC to protect your account</text>
+  <!-- ID Document upload -->
+  <text x="208" y="142" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="white" opacity="0.75">Government-Issued ID</text>
+  <rect x="198" y="150" width="195" height="130" rx="12" fill="white" opacity="0.06" stroke="white" stroke-opacity="0.18" stroke-width="1" stroke-dasharray="6 3"/>
+  <!-- ID card icon -->
+  <rect x="255" y="175" width="80" height="50" rx="6" fill="none" stroke="#8b5cf6" stroke-width="1.5" opacity="0.5"/>
+  <rect x="265" y="185" width="25" height="25" rx="3" fill="#8b5cf6" opacity="0.2"/>
+  <rect x="298" y="188" width="28" height="4" rx="2" fill="white" opacity="0.3"/>
+  <rect x="298" y="197" width="20" height="4" rx="2" fill="white" opacity="0.2"/>
+  <!-- Upload arrow -->
+  <line x1="295" y1="240" x2="295" y2="230" stroke="#8b5cf6" stroke-width="1.5" opacity="0.6"/>
+  <polyline points="289,234 295,228 301,234" fill="none" stroke="#8b5cf6" stroke-width="1.5" opacity="0.6"/>
+  <text x="295" y="255" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="white" opacity="0.4">Drag &amp; drop or click</text>
+  <text x="295" y="270" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.3">PNG, JPG up to 10MB</text>
+  <!-- Selfie upload -->
+  <text x="418" y="142" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="white" opacity="0.75">Selfie Verification</text>
+  <rect x="407" y="150" width="195" height="130" rx="12" fill="white" opacity="0.06" stroke="white" stroke-opacity="0.18" stroke-width="1" stroke-dasharray="6 3"/>
+  <!-- Camera icon -->
+  <rect x="478" y="180" width="48" height="34" rx="6" fill="none" stroke="#3b82f6" stroke-width="1.5" opacity="0.5"/>
+  <circle cx="502" cy="197" r="10" fill="none" stroke="#3b82f6" stroke-width="1.5" opacity="0.5"/>
+  <circle cx="502" cy="197" r="4" fill="#3b82f6" opacity="0.3"/>
+  <rect x="494" y="176" width="16" height="6" rx="2" fill="none" stroke="#3b82f6" stroke-width="1" opacity="0.4"/>
+  <!-- Upload arrow -->
+  <line x1="504" y1="240" x2="504" y2="230" stroke="#3b82f6" stroke-width="1.5" opacity="0.6"/>
+  <polyline points="498,234 504,228 510,234" fill="none" stroke="#3b82f6" stroke-width="1.5" opacity="0.6"/>
+  <text x="504" y="255" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="white" opacity="0.4">Take or upload selfie</text>
+  <text x="504" y="270" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.3">Must match your ID</text>
+  <!-- Shield icon -->
+  <g transform="translate(365, 295)">
+    <path d="M35 4L10 16V34C10 50 21 64 35 68C49 64 60 50 60 34V16L35 4Z" fill="url(#accent)" opacity="0.2" stroke="#8b5cf6" stroke-width="1.5" stroke-opacity="0.5"/>
+    <path d="M27 37L33 43L45 29" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+  </g>
+  <text x="400" y="385" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.45">256-bit encrypted &amp; auto-deleted after review</text>
+  <!-- Submit button -->
+  <rect x="290" y="395" width="220" height="40" rx="10" fill="url(#accent)" opacity="0.65"/>
+  <text x="400" y="420" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="white" opacity="0.95">Submit Verification</text>
+  <!-- Title -->
+  <text x="400" y="470" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" font-weight="600" fill="white" opacity="0.9">ID Verification</text>
+</svg>

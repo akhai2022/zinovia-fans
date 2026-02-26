@@ -68,9 +68,18 @@ export default function ConversationPage() {
   const sendText = async () => {
     if (!text.trim()) return;
     setComposerError(null);
-    const created = await sendMessage(conversationId, { type: "TEXT", text: text.trim() });
-    setMessages((prev) => [...prev, created]);
-    setText("");
+    try {
+      const created = await sendMessage(conversationId, { type: "TEXT", text: text.trim() });
+      setMessages((prev) => [...prev, created]);
+      setText("");
+    } catch (err: unknown) {
+      const detail = (err as { detail?: string })?.detail;
+      if (detail === "subscription_required") {
+        setComposerError(t.messages.subscriptionRequired);
+      } else {
+        setComposerError(detail || "Failed to send message.");
+      }
+    }
   };
 
   const sendMedia = async () => {
@@ -97,9 +106,18 @@ export default function ConversationPage() {
         lock: { price_cents: cents, currency: DEFAULT_CURRENCY },
       };
     }
-    const created = await sendMessage(conversationId, body);
-    setMessages((prev) => [...prev, created]);
-    setSelectedVault([]);
+    try {
+      const created = await sendMessage(conversationId, body);
+      setMessages((prev) => [...prev, created]);
+      setSelectedVault([]);
+    } catch (err: unknown) {
+      const detail = (err as { detail?: string })?.detail;
+      if (detail === "subscription_required") {
+        setComposerError(t.messages.subscriptionRequired);
+      } else {
+        setComposerError(detail || "Failed to send media.");
+      }
+    }
   };
 
   const viewMedia = async (messageMediaId: string) => {

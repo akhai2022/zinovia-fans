@@ -8,10 +8,16 @@ import {
   apiFetch,
   getResetToken,
   extractCookies,
+  isE2EEnabled,
 } from "./helpers";
 
 const PASSWORD = "E2ePassOld123!";
 const NEW_PASSWORD = "E2ePassNew456!";
+let e2eAvailable = false;
+
+test.beforeAll(async () => {
+  e2eAvailable = await isE2EEnabled();
+});
 
 test.describe("Forgot Password & Reset", () => {
   const email = uniqueEmail("pwreset");
@@ -41,11 +47,13 @@ test.describe("Forgot Password & Reset", () => {
   });
 
   test("reset token is available via dev endpoint", async () => {
+    test.skip(!e2eAvailable, "Dev endpoint not available in production");
     const token = await getResetToken(email);
     expect(token).toBeTruthy();
   });
 
   test("reset-password with valid token succeeds", async () => {
+    test.skip(!e2eAvailable, "Dev endpoint not available in production");
     const token = await getResetToken(email);
     expect(token).toBeTruthy();
 
@@ -57,6 +65,7 @@ test.describe("Forgot Password & Reset", () => {
   });
 
   test("login with new password works", async () => {
+    test.skip(!e2eAvailable, "Requires password reset via dev endpoint");
     const res = await apiFetch("/auth/login", {
       method: "POST",
       body: { email, password: NEW_PASSWORD },
@@ -84,6 +93,7 @@ test.describe("Change Password (authenticated)", () => {
   });
 
   test("change password with correct current password succeeds", async () => {
+    test.skip(!e2eAvailable, "Requires email verification for login");
     const login = await apiFetch("/auth/login", {
       method: "POST",
       body: { email, password: PASSWORD },

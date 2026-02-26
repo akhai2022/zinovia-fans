@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0f"/>
+      <stop offset="50%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#0f0a1a"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <pattern id="grid" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="white" stroke-width="0.5" opacity="0.05"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="500" fill="url(#bg)"/>
+  <rect width="800" height="500" fill="url(#grid)"/>
+  <circle cx="200" cy="150" r="180" fill="#8b5cf6" opacity="0.08"/>
+  <circle cx="650" cy="400" r="150" fill="#3b82f6" opacity="0.08"/>
+  <text x="720" y="130" text-anchor="end" font-family="system-ui, sans-serif" font-size="120" font-weight="800" fill="white" opacity="0.08">06</text>
+  <!-- Main card -->
+  <rect x="130" y="30" width="540" height="400" rx="16" fill="white" opacity="0.08" stroke="white" stroke-opacity="0.15" stroke-width="1"/>
+  <!-- Header -->
+  <text x="400" y="68" text-anchor="middle" font-family="system-ui, sans-serif" font-size="20" font-weight="700" fill="white" opacity="0.9">Media Vault</text>
+  <text x="400" y="88" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.5">24 files  |  142 MB used</text>
+  <!-- Folder tabs -->
+  <rect x="160" y="100" width="80" height="28" rx="6" fill="url(#accent)" opacity="0.4"/>
+  <text x="200" y="118" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="600" fill="white" opacity="0.9">All Files</text>
+  <rect x="248" y="100" width="80" height="28" rx="6" fill="white" opacity="0.06"/>
+  <text x="288" y="118" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.5">Photos</text>
+  <rect x="336" y="100" width="80" height="28" rx="6" fill="white" opacity="0.06"/>
+  <text x="376" y="118" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.5">Videos</text>
+  <!-- Upload drop zone (right side) -->
+  <rect x="505" y="100" width="140" height="28" rx="6" fill="url(#accent)" opacity="0.3" stroke="#8b5cf6" stroke-opacity="0.4" stroke-width="1"/>
+  <text x="575" y="118" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="500" fill="white" opacity="0.8">+ Upload Files</text>
+  <!-- Media grid: 4 columns x 2 rows of thumbnails -->
+  <!-- Row 1 -->
+  <rect x="160" y="140" width="110" height="110" rx="8" fill="#8b5cf6" opacity="0.15" stroke="white" stroke-opacity="0.12" stroke-width="1"/>
+  <rect x="168" y="148" width="94" height="68" rx="4" fill="white" opacity="0.08"/>
+  <text x="215" y="230" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.5">photo_01.jpg</text>
+  <text x="215" y="242" text-anchor="middle" font-family="system-ui, sans-serif" font-size="8" fill="white" opacity="0.3">2.4 MB</text>
+  <rect x="280" y="140" width="110" height="110" rx="8" fill="#3b82f6" opacity="0.15" stroke="white" stroke-opacity="0.12" stroke-width="1"/>
+  <rect x="288" y="148" width="94" height="68" rx="4" fill="white" opacity="0.08"/>
+  <!-- Play icon for video -->
+  <polygon points="325,175 325,190 340,182" fill="white" opacity="0.4"/>
+  <text x="335" y="230" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.5">video_03.mp4</text>
+  <text x="335" y="242" text-anchor="middle" font-family="system-ui, sans-serif" font-size="8" fill="white" opacity="0.3">24.1 MB</text>
+  <rect x="400" y="140" width="110" height="110" rx="8" fill="#8b5cf6" opacity="0.12" stroke="white" stroke-opacity="0.12" stroke-width="1"/>
+  <rect x="408" y="148" width="94" height="68" rx="4" fill="white" opacity="0.08"/>
+  <text x="455" y="230" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.5">photo_04.jpg</text>
+  <text x="455" y="242" text-anchor="middle" font-family="system-ui, sans-serif" font-size="8" fill="white" opacity="0.3">3.1 MB</text>
+  <rect x="520" y="140" width="110" height="110" rx="8" fill="#3b82f6" opacity="0.12" stroke="white" stroke-opacity="0.12" stroke-width="1"/>
+  <rect x="528" y="148" width="94" height="68" rx="4" fill="white" opacity="0.08"/>
+  <text x="575" y="230" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.5">photo_05.jpg</text>
+  <text x="575" y="242" text-anchor="middle" font-family="system-ui, sans-serif" font-size="8" fill="white" opacity="0.3">1.8 MB</text>
+  <!-- Row 2 -->
+  <rect x="160" y="260" width="110" height="110" rx="8" fill="#3b82f6" opacity="0.15" stroke="white" stroke-opacity="0.12" stroke-width="1"/>
+  <rect x="168" y="268" width="94" height="68" rx="4" fill="white" opacity="0.08"/>
+  <polygon points="205,295 205,310 220,302" fill="white" opacity="0.4"/>
+  <text x="215" y="350" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.5">video_06.mp4</text>
+  <text x="215" y="362" text-anchor="middle" font-family="system-ui, sans-serif" font-size="8" fill="white" opacity="0.3">18.5 MB</text>
+  <rect x="280" y="260" width="110" height="110" rx="8" fill="#8b5cf6" opacity="0.12" stroke="white" stroke-opacity="0.12" stroke-width="1"/>
+  <rect x="288" y="268" width="94" height="68" rx="4" fill="white" opacity="0.08"/>
+  <text x="335" y="350" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.5">photo_07.jpg</text>
+  <text x="335" y="362" text-anchor="middle" font-family="system-ui, sans-serif" font-size="8" fill="white" opacity="0.3">4.2 MB</text>
+  <rect x="400" y="260" width="110" height="110" rx="8" fill="#8b5cf6" opacity="0.15" stroke="white" stroke-opacity="0.12" stroke-width="1"/>
+  <rect x="408" y="268" width="94" height="68" rx="4" fill="white" opacity="0.08"/>
+  <text x="455" y="350" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.5">photo_08.jpg</text>
+  <text x="455" y="362" text-anchor="middle" font-family="system-ui, sans-serif" font-size="8" fill="white" opacity="0.3">2.9 MB</text>
+  <!-- Upload drop zone -->
+  <rect x="520" y="260" width="110" height="110" rx="8" fill="white" opacity="0.04" stroke="white" stroke-opacity="0.15" stroke-width="1" stroke-dasharray="5 3"/>
+  <line x1="575" y1="300" x2="575" y2="325" stroke="white" stroke-width="1.5" opacity="0.3"/>
+  <line x1="562" y1="312" x2="588" y2="312" stroke="white" stroke-width="1.5" opacity="0.3"/>
+  <text x="575" y="350" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.4">Drop files</text>
+  <!-- Title -->
+  <text x="400" y="470" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" font-weight="600" fill="white" opacity="0.9">Media Vault</text>
+</svg>

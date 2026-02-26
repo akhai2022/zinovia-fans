@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0f"/>
+      <stop offset="50%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#0f0a1a"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <pattern id="grid" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="white" stroke-width="0.5" opacity="0.05"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="500" fill="url(#bg)"/>
+  <rect width="800" height="500" fill="url(#grid)"/>
+  <circle cx="200" cy="150" r="180" fill="#8b5cf6" opacity="0.08"/>
+  <circle cx="650" cy="400" r="150" fill="#3b82f6" opacity="0.08"/>
+  <text x="720" y="130" text-anchor="end" font-family="system-ui, sans-serif" font-size="120" font-weight="800" fill="white" opacity="0.08">03</text>
+  <!-- Main card -->
+  <rect x="175" y="35" width="450" height="400" rx="16" fill="white" opacity="0.08" stroke="white" stroke-opacity="0.15" stroke-width="1"/>
+  <!-- Banner area -->
+  <rect x="195" y="55" width="410" height="90" rx="10" fill="url(#accent)" opacity="0.2" stroke="white" stroke-opacity="0.1" stroke-width="1"/>
+  <text x="400" y="105" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.4">Click to upload banner image</text>
+  <!-- Avatar circle overlapping banner -->
+  <circle cx="400" cy="145" r="38" fill="#1a1a2e" stroke="white" stroke-opacity="0.2" stroke-width="2"/>
+  <circle cx="400" cy="145" r="36" fill="url(#accent)" opacity="0.25"/>
+  <!-- Camera icon on avatar -->
+  <rect x="388" y="137" width="24" height="16" rx="3" fill="none" stroke="white" stroke-width="1.2" opacity="0.6"/>
+  <circle cx="400" cy="145" r="5" fill="none" stroke="white" stroke-width="1.2" opacity="0.6"/>
+  <!-- Display Name field -->
+  <text x="215" y="208" font-family="system-ui, sans-serif" font-size="11" font-weight="500" fill="white" opacity="0.6">Display Name</text>
+  <rect x="205" y="214" width="190" height="36" rx="8" fill="white" opacity="0.08" stroke="white" stroke-opacity="0.18" stroke-width="1"/>
+  <text x="220" y="237" font-family="system-ui, sans-serif" font-size="13" fill="white" opacity="0.7">Jessica Rose</text>
+  <!-- Handle field -->
+  <text x="415" y="208" font-family="system-ui, sans-serif" font-size="11" font-weight="500" fill="white" opacity="0.6">Handle</text>
+  <rect x="405" y="214" width="190" height="36" rx="8" fill="white" opacity="0.08" stroke="white" stroke-opacity="0.18" stroke-width="1"/>
+  <text x="420" y="237" font-family="system-ui, sans-serif" font-size="13" fill="white" opacity="0.5">@jessicarose</text>
+  <!-- Bio field -->
+  <text x="215" y="272" font-family="system-ui, sans-serif" font-size="11" font-weight="500" fill="white" opacity="0.6">Bio</text>
+  <rect x="205" y="278" width="390" height="70" rx="8" fill="white" opacity="0.08" stroke="white" stroke-opacity="0.18" stroke-width="1"/>
+  <text x="220" y="300" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.5">Welcome to my page! I share exclusive</text>
+  <text x="220" y="316" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.5">content, behind-the-scenes, and more...</text>
+  <text x="580" y="340" text-anchor="end" font-family="system-ui, sans-serif" font-size="10" fill="white" opacity="0.3">120/500</text>
+  <!-- Location field -->
+  <text x="215" y="370" font-family="system-ui, sans-serif" font-size="11" font-weight="500" fill="white" opacity="0.6">Location</text>
+  <rect x="205" y="376" width="190" height="36" rx="8" fill="white" opacity="0.08" stroke="white" stroke-opacity="0.18" stroke-width="1"/>
+  <text x="220" y="399" font-family="system-ui, sans-serif" font-size="13" fill="white" opacity="0.5">Los Angeles, CA</text>
+  <!-- Save button -->
+  <rect x="415" y="376" width="180" height="36" rx="10" fill="url(#accent)" opacity="0.65"/>
+  <text x="505" y="399" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="white" opacity="0.95">Save Profile</text>
+  <!-- Title -->
+  <text x="400" y="470" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" font-weight="600" fill="white" opacity="0.9">Profile Setup</text>
+</svg>

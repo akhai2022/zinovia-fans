@@ -68,11 +68,7 @@ export function ImageUploadField({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = "";
-
+  const uploadSingleFile = async (file: File) => {
     if (file.size > MAX_IMAGE_BYTES) {
       setErrorMessage("Image is too large (max 25 MB).");
       setStatus("error");
@@ -119,6 +115,21 @@ export function ImageUploadField({
     }
   };
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    e.target.value = "";
+
+    if (allowMultiple && files.length > 1) {
+      // Upload all selected files sequentially
+      for (const file of Array.from(files)) {
+        await uploadSingleFile(file);
+      }
+    } else {
+      await uploadSingleFile(files[0]);
+    }
+  };
+
   return (
     <div className="space-y-2">
       <Label>Image</Label>
@@ -130,6 +141,7 @@ export function ImageUploadField({
         aria-label="Choose image"
         onChange={handleFileSelect}
         disabled={disabled}
+        multiple={allowMultiple}
       />
       <div className="flex flex-wrap items-center gap-2">
         <Button
@@ -143,8 +155,10 @@ export function ImageUploadField({
           {status === "uploading"
             ? `Uploading ${progress}%`
             : status === "done" && allowMultiple
-              ? "Add another image"
-              : "Choose image"}
+              ? "Add more images"
+              : allowMultiple
+                ? "Choose images"
+                : "Choose image"}
         </Button>
         {status === "done" && !allowMultiple && (
           <span className="text-sm text-muted-foreground">Uploaded</span>

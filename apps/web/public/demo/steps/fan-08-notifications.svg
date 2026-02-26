@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0f"/>
+      <stop offset="50%" stop-color="#0f1a1a"/>
+      <stop offset="100%" stop-color="#0a1a0f"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <pattern id="grid" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="white" stroke-width="0.5" opacity="0.05"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="500" fill="url(#bg)"/>
+  <rect width="800" height="500" fill="url(#grid)"/>
+  <circle cx="200" cy="150" r="180" fill="#10b981" opacity="0.08"/>
+  <circle cx="650" cy="400" r="150" fill="#06b6d4" opacity="0.08"/>
+  <text x="720" y="130" text-anchor="end" font-family="system-ui, sans-serif" font-size="120" font-weight="800" fill="white" opacity="0.08">08</text>
+  <!-- Main container -->
+  <rect x="180" y="30" width="440" height="405" rx="16" fill="white" opacity="0.08" stroke="white" stroke-opacity="0.15" stroke-width="1"/>
+  <!-- Header with bell icon -->
+  <g transform="translate(365, 48)">
+    <path d="M25 4C18 4 12 10 12 17V26L8 30V32H42V30L38 26V17C38 10 32 4 25 4Z" fill="none" stroke="#10b981" stroke-width="1.5" opacity="0.6"/>
+    <circle cx="25" cy="38" r="4" fill="#10b981" opacity="0.5"/>
+  </g>
+  <!-- Notification count badge -->
+  <circle cx="415" cy="52" r="8" fill="#ef4444" opacity="0.8"/>
+  <text x="415" y="56" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" font-weight="700" fill="white" opacity="0.95">5</text>
+  <text x="400" y="100" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="white" opacity="0.9">Notifications</text>
+  <!-- Filter tabs -->
+  <rect x="250" y="110" width="60" height="24" rx="6" fill="url(#accent)" opacity="0.4"/>
+  <text x="280" y="126" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="500" fill="white" opacity="0.9">All</text>
+  <rect x="316" y="110" width="80" height="24" rx="6" fill="white" opacity="0.06"/>
+  <text x="356" y="126" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="white" opacity="0.5">Unread</text>
+  <rect x="402" y="110" width="80" height="24" rx="6" fill="white" opacity="0.06"/>
+  <text x="442" y="126" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="white" opacity="0.5">Posts</text>
+  <!-- Notification 1 (unread - has accent left border) -->
+  <rect x="205" y="148" width="390" height="56" rx="8" fill="white" opacity="0.08"/>
+  <rect x="205" y="148" width="3" height="56" rx="1.5" fill="#10b981" opacity="0.7"/>
+  <circle cx="232" cy="176" r="14" fill="#10b981" opacity="0.35"/>
+  <text x="232" y="181" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="600" fill="white" opacity="0.7">JR</text>
+  <text x="258" y="170" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.8"><tspan font-weight="600">Jessica Rose</tspan> posted new content</text>
+  <text x="258" y="187" font-family="system-ui, sans-serif" font-size="10" fill="white" opacity="0.4">New BTS from today's shoot! The golden hour...</text>
+  <text x="578" y="170" text-anchor="end" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.35">2m ago</text>
+  <!-- Blue dot for unread -->
+  <circle cx="585" cy="176" r="4" fill="#10b981" opacity="0.7"/>
+  <!-- Notification 2 (unread) -->
+  <rect x="205" y="212" width="390" height="56" rx="8" fill="white" opacity="0.08"/>
+  <rect x="205" y="212" width="3" height="56" rx="1.5" fill="#10b981" opacity="0.7"/>
+  <circle cx="232" cy="240" r="14" fill="#06b6d4" opacity="0.35"/>
+  <text x="232" y="245" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="600" fill="white" opacity="0.7">MK</text>
+  <text x="258" y="234" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.8"><tspan font-weight="600">Maria Kim</tspan> sent you a message</text>
+  <text x="258" y="251" font-family="system-ui, sans-serif" font-size="10" fill="white" opacity="0.4">Thanks for subscribing! Welcome to...</text>
+  <text x="578" y="234" text-anchor="end" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.35">15m ago</text>
+  <circle cx="585" cy="240" r="4" fill="#10b981" opacity="0.7"/>
+  <!-- Notification 3 (read) -->
+  <rect x="205" y="276" width="390" height="56" rx="8" fill="white" opacity="0.04"/>
+  <circle cx="232" cy="304" r="14" fill="#10b981" opacity="0.25"/>
+  <text x="232" y="309" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="600" fill="white" opacity="0.5">JR</text>
+  <text x="258" y="298" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.6"><tspan font-weight="600">Jessica Rose</tspan> went live</text>
+  <text x="258" y="315" font-family="system-ui, sans-serif" font-size="10" fill="white" opacity="0.3">Q&amp;A session starting now!</text>
+  <text x="578" y="298" text-anchor="end" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.3">1h ago</text>
+  <!-- Notification 4 (read) -->
+  <rect x="205" y="340" width="390" height="56" rx="8" fill="white" opacity="0.04"/>
+  <circle cx="232" cy="368" r="14" fill="#06b6d4" opacity="0.2"/>
+  <text x="232" y="373" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="600" fill="white" opacity="0.5">SL</text>
+  <text x="258" y="362" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.6"><tspan font-weight="600">Sophie Lee</tspan> posted new content</text>
+  <text x="258" y="379" font-family="system-ui, sans-serif" font-size="10" fill="white" opacity="0.3">Check out my latest travel diary from Bali!</text>
+  <text x="578" y="362" text-anchor="end" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.3">3h ago</text>
+  <!-- Notification 5 (read) -->
+  <rect x="205" y="404" width="390" height="30" rx="8" fill="white" opacity="0.03"/>
+  <text x="400" y="424" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.35">View all notifications...</text>
+  <!-- Title -->
+  <text x="400" y="470" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" font-weight="600" fill="white" opacity="0.9">Notifications</text>
+</svg>

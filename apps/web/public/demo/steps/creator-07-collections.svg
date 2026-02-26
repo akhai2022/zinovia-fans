@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0f"/>
+      <stop offset="50%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#0f0a1a"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <pattern id="grid" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="white" stroke-width="0.5" opacity="0.05"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="500" fill="url(#bg)"/>
+  <rect width="800" height="500" fill="url(#grid)"/>
+  <circle cx="200" cy="150" r="180" fill="#8b5cf6" opacity="0.08"/>
+  <circle cx="650" cy="400" r="150" fill="#3b82f6" opacity="0.08"/>
+  <text x="720" y="130" text-anchor="end" font-family="system-ui, sans-serif" font-size="120" font-weight="800" fill="white" opacity="0.08">07</text>
+  <!-- Header -->
+  <text x="400" y="55" text-anchor="middle" font-family="system-ui, sans-serif" font-size="20" font-weight="700" fill="white" opacity="0.9">Collections</text>
+  <text x="400" y="75" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.5">Organize your content into themed collections</text>
+  <!-- Collection Card 1 -->
+  <rect x="110" y="95" width="200" height="290" rx="14" fill="white" opacity="0.08" stroke="white" stroke-opacity="0.15" stroke-width="1"/>
+  <!-- Thumbnail area -->
+  <rect x="122" y="107" width="176" height="130" rx="10" fill="#8b5cf6" opacity="0.2"/>
+  <!-- Mini grid inside thumbnail -->
+  <rect x="128" y="113" width="82" height="58" rx="4" fill="white" opacity="0.1"/>
+  <rect x="214" y="113" width="78" height="58" rx="4" fill="white" opacity="0.08"/>
+  <rect x="128" y="175" width="78" height="56" rx="4" fill="white" opacity="0.08"/>
+  <rect x="210" y="175" width="82" height="56" rx="4" fill="white" opacity="0.1"/>
+  <!-- Collection info -->
+  <text x="135" y="260" font-family="system-ui, sans-serif" font-size="15" font-weight="600" fill="white" opacity="0.85">Behind the Scenes</text>
+  <text x="135" y="280" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.45">Exclusive BTS content from</text>
+  <text x="135" y="294" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.45">my photoshoots</text>
+  <text x="135" y="318" font-family="system-ui, sans-serif" font-size="11" fill="#8b5cf6" opacity="0.7">12 posts</text>
+  <!-- Drag handle dots -->
+  <circle cx="282" y="368" r="2" fill="white" opacity="0.3"/>
+  <circle cx="290" y="368" r="2" fill="white" opacity="0.3"/>
+  <circle cx="298" y="368" r="2" fill="white" opacity="0.3"/>
+  <!-- Collection Card 2 -->
+  <rect x="325" y="95" width="200" height="290" rx="14" fill="white" opacity="0.08" stroke="#8b5cf6" stroke-opacity="0.3" stroke-width="1.5"/>
+  <rect x="337" y="107" width="176" height="130" rx="10" fill="#3b82f6" opacity="0.2"/>
+  <rect x="343" y="113" width="82" height="58" rx="4" fill="white" opacity="0.1"/>
+  <rect x="429" y="113" width="78" height="58" rx="4" fill="white" opacity="0.08"/>
+  <rect x="343" y="175" width="78" height="56" rx="4" fill="white" opacity="0.08"/>
+  <rect x="425" y="175" width="82" height="56" rx="4" fill="white" opacity="0.1"/>
+  <text x="350" y="260" font-family="system-ui, sans-serif" font-size="15" font-weight="600" fill="white" opacity="0.85">Travel Diaries</text>
+  <text x="350" y="280" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.45">Adventures around the</text>
+  <text x="350" y="294" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.45">world with exclusive photos</text>
+  <text x="350" y="318" font-family="system-ui, sans-serif" font-size="11" fill="#3b82f6" opacity="0.7">8 posts</text>
+  <!-- Collection Card 3 -->
+  <rect x="540" y="95" width="200" height="290" rx="14" fill="white" opacity="0.08" stroke="white" stroke-opacity="0.15" stroke-width="1"/>
+  <rect x="552" y="107" width="176" height="130" rx="10" fill="#8b5cf6" opacity="0.15"/>
+  <rect x="558" y="113" width="82" height="58" rx="4" fill="white" opacity="0.1"/>
+  <rect x="644" y="113" width="78" height="58" rx="4" fill="white" opacity="0.08"/>
+  <rect x="558" y="175" width="78" height="56" rx="4" fill="white" opacity="0.08"/>
+  <rect x="640" y="175" width="82" height="56" rx="4" fill="white" opacity="0.1"/>
+  <text x="565" y="260" font-family="system-ui, sans-serif" font-size="15" font-weight="600" fill="white" opacity="0.85">Workout Routines</text>
+  <text x="565" y="280" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.45">Full workout videos and</text>
+  <text x="565" y="294" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.45">fitness tips</text>
+  <text x="565" y="318" font-family="system-ui, sans-serif" font-size="11" fill="#8b5cf6" opacity="0.7">15 posts</text>
+  <!-- New Collection button -->
+  <rect x="300" y="400" width="200" height="38" rx="10" fill="url(#accent)" opacity="0.55"/>
+  <text x="400" y="424" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="white" opacity="0.95">+ New Collection</text>
+  <!-- Title -->
+  <text x="400" y="470" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" font-weight="600" fill="white" opacity="0.9">Collections</text>
+</svg>

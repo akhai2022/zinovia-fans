@@ -14,6 +14,7 @@ from sqlalchemy.orm import selectinload
 from app.core.errors import AppError
 from app.core.settings import get_settings
 from app.modules.auth.constants import ADMIN_ROLE, SUPER_ADMIN_ROLE
+from app.modules.billing.service import is_active_subscriber
 from app.modules.creators.constants import CREATOR_ROLE
 from app.modules.creators.service import get_creator_by_handle_any
 from app.modules.messaging.constants import (
@@ -59,6 +60,11 @@ async def get_or_create_conversation(
         fan_user_id = current_user_id
         if creator_user_id == fan_user_id:
             raise AppError(status_code=400, detail="cannot_message_self")
+
+    # Fans must have an active subscription to message a creator
+    if fan_user_id == current_user_id:
+        if not await is_active_subscriber(session, fan_user_id, creator_user_id):
+            raise AppError(status_code=403, detail="subscription_required")
 
     result = await session.execute(
         select(Conversation).where(
@@ -206,6 +212,11 @@ async def create_message(
         raise AppError(status_code=404, detail="conversation_not_found")
 
     sender_role = SENDER_ROLE_CREATOR if user_role in (CREATOR_ROLE, ADMIN_ROLE, SUPER_ADMIN_ROLE) else SENDER_ROLE_FAN
+
+    # Fans must have an active subscription to send messages
+    if sender_role == SENDER_ROLE_FAN:
+        if not await is_active_subscriber(session, conv.fan_user_id, conv.creator_user_id):
+            raise AppError(status_code=403, detail="subscription_required")
 
     if type == MESSAGE_TYPE_TEXT:
         if not text or not text.strip():

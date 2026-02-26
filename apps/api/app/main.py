@@ -56,6 +56,8 @@ from app.modules.collections.router import router as collections_router
 from app.modules.contact.router import router as contact_router
 from app.modules.inbound.router import router as inbound_router
 from app.modules.inbound.router import webhook_router as inbound_webhook_router
+from app.modules.payouts.router import admin_router as payouts_admin_router
+from app.modules.payouts.router import creator_router as payouts_creator_router
 from app.modules.posts.router import feed_router, router as posts_router
 
 logger = logging.getLogger(__name__)
@@ -211,6 +213,8 @@ def create_app() -> FastAPI:
     app.include_router(ppv_router)
     app.include_router(billing_router, prefix="/billing", tags=["billing"])
     app.include_router(creator_earnings_router, prefix="/creator", tags=["creator"])
+    app.include_router(payouts_creator_router, prefix="/creator", tags=["payouts"])
+    app.include_router(payouts_admin_router, prefix="/admin", tags=["payouts-admin"])
     app.include_router(ledger_router, prefix="/ledger", tags=["ledger"])
     app.include_router(collections_router, prefix="/collections", tags=["collections"])
     app.include_router(admin_router, prefix="/admin", tags=["admin"])

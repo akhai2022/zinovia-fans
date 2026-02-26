@@ -285,12 +285,12 @@ export default function NewPostPage() {
                             <button
                               type="button"
                               onClick={() => removeUploadedImage(index)}
-                              className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                              className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-white sm:opacity-0 transition-opacity sm:group-hover:opacity-100"
                               aria-label={interpolate(t.newPost.removeImageAriaLabel, { index: index + 1 })}
                             >
                               <Icon name="close" className="icon-sm" />
                             </button>
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/40 to-transparent p-1 opacity-0 transition-opacity group-hover:opacity-100">
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/40 to-transparent p-1 sm:opacity-0 transition-opacity sm:group-hover:opacity-100">
                               <span className="text-[10px] text-white font-medium">
                                 {index + 1} / {uploadedImages.length}
                               </span>

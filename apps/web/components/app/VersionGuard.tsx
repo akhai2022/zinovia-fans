@@ -21,7 +21,7 @@ export function VersionGuard() {
     lastCheckRef.current = now;
 
     try {
-      const res = await fetch("/api/version", { cache: "no-store" });
+      const res = await fetch("/version", { cache: "no-store" });
       if (!res.ok) return;
       const data: { id: string } = await res.json();
       if (data.id !== INITIAL_BUILD_ID && data.id !== "dev") {

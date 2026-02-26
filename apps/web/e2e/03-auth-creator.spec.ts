@@ -8,9 +8,15 @@ import {
   apiFetch,
   getVerificationToken,
   extractCookies,
+  isE2EEnabled,
 } from "./helpers";
 
 const PASSWORD = "E2eCreator123!";
+let e2eAvailable = false;
+
+test.beforeAll(async () => {
+  e2eAvailable = await isE2EEnabled();
+});
 
 test.describe("Creator Registration & Verification", () => {
   const email = uniqueEmail("creator");
@@ -37,11 +43,13 @@ test.describe("Creator Registration & Verification", () => {
   });
 
   test("verification token available after registration", async () => {
+    test.skip(!e2eAvailable, "Dev endpoint not available in production");
     const token = await getVerificationToken(email);
     expect(token).toBeTruthy();
   });
 
   test("verify-email transitions to EMAIL_VERIFIED and sets cookie", async () => {
+    test.skip(!e2eAvailable, "Dev endpoint not available in production");
     const token = await getVerificationToken(email);
     expect(token).toBeTruthy();
 
@@ -60,6 +68,7 @@ test.describe("Creator Registration & Verification", () => {
   });
 
   test("creator login returns session with creator role", async () => {
+    test.skip(!e2eAvailable, "Requires email verification via dev endpoint");
     const login = await apiFetch("/auth/login", {
       method: "POST",
       body: { email, password: PASSWORD },
@@ -86,12 +95,14 @@ test.describe("Creator Onboarding State", () => {
   });
 
   test("onboarding state is CREATED before verification", async () => {
+    test.skip(!e2eAvailable, "Dev endpoint not available in production");
     const tokens = await apiFetch(`/auth/dev/tokens?email=${encodeURIComponent(email)}`);
     expect(tokens.ok).toBe(true);
     expect(tokens.body.onboarding_state).toBe("CREATED");
   });
 
   test("after verify-email, state is EMAIL_VERIFIED", async () => {
+    test.skip(!e2eAvailable, "Dev endpoint not available in production");
     const token = await getVerificationToken(email);
     expect(token).toBeTruthy();
 

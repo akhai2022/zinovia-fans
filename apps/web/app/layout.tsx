@@ -4,7 +4,6 @@ import { cookies } from "next/headers";
 import { Inter, Space_Grotesk } from "next/font/google";
 import { ApiBaseSync } from "@/components/app/ApiBaseSync";
 import { ApiHealthBanner } from "@/components/app/ApiHealthBanner";
-import { VersionGuard } from "@/components/app/VersionGuard";
 import { Navbar } from "@/components/app/Navbar";
 import { Footer } from "@/components/app/Footer";
 import { ToastProvider } from "@/components/ui/toast";
@@ -12,12 +11,12 @@ import { getSession } from "@/lib/api/auth";
 import { SessionProvider } from "@/lib/hooks/useSession";
 import { I18nProvider } from "@/lib/i18n/context";
 import { getDictionary } from "@/lib/i18n/dictionaries";
-import { DEFAULT_LOCALE, LOCALE_COOKIE, SUPPORTED_LOCALES, type Locale } from "@/lib/i18n/config";
+import { DEFAULT_LOCALE, LOCALE_COOKIE, RTL_LOCALES, SUPPORTED_LOCALES, type Locale } from "@/lib/i18n/config";
 // Validate critical env vars at startup (server-side only, logs warnings).
 import "@/lib/envCheck";
 
 const inter = Inter({
-  subsets: ["latin"],
+  subsets: ["latin", "cyrillic"],
   variable: "--font-sans",
   display: "swap",
   weight: ["400", "500", "600", "700"],
@@ -49,6 +48,8 @@ export const metadata = {
       ro: SITE_URL,
       pl: SITE_URL,
       it: SITE_URL,
+      ru: SITE_URL,
+      ar: SITE_URL,
       "x-default": SITE_URL,
     },
   },
@@ -130,7 +131,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   ];
 
   return (
-    <html lang={locale} className={`${inter.variable} ${spaceGrotesk.variable} scroll-smooth`}>
+    <html lang={locale} dir={RTL_LOCALES.has(locale) ? "rtl" : "ltr"} className={`${inter.variable} ${spaceGrotesk.variable} scroll-smooth`}>
       <head>
         <link rel="preconnect" href="https://api.zinovia.ai" />
         <link rel="dns-prefetch" href="https://api.zinovia.ai" />
@@ -145,7 +146,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             <ToastProvider>
               <ApiBaseSync />
               <ApiHealthBanner />
-              <VersionGuard />
               <Navbar initialSession={session.user} sessionUnavailable={session.unavailable} />
               {children}
               <Footer />

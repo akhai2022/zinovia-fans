@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0f"/>
+      <stop offset="50%" stop-color="#0f1a1a"/>
+      <stop offset="100%" stop-color="#0a1a0f"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <linearGradient id="blur-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0f1a1a" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#0f1a1a" stop-opacity="0.9"/>
+    </linearGradient>
+    <pattern id="grid" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="white" stroke-width="0.5" opacity="0.05"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="500" fill="url(#bg)"/>
+  <rect width="800" height="500" fill="url(#grid)"/>
+  <circle cx="200" cy="150" r="180" fill="#10b981" opacity="0.08"/>
+  <circle cx="650" cy="400" r="150" fill="#06b6d4" opacity="0.08"/>
+  <text x="720" y="130" text-anchor="end" font-family="system-ui, sans-serif" font-size="120" font-weight="800" fill="white" opacity="0.08">05</text>
+  <!-- Post card -->
+  <rect x="210" y="30" width="380" height="410" rx="16" fill="white" opacity="0.08" stroke="white" stroke-opacity="0.15" stroke-width="1"/>
+  <!-- Post header -->
+  <circle cx="242" cy="58" r="14" fill="#10b981" opacity="0.35"/>
+  <text x="242" y="63" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="600" fill="white" opacity="0.7">JR</text>
+  <text x="266" y="55" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="white" opacity="0.85">Jessica Rose</text>
+  <text x="266" y="70" font-family="system-ui, sans-serif" font-size="10" fill="white" opacity="0.4">1 hour ago</text>
+  <!-- PPV badge -->
+  <rect x="510" y="44" width="60" height="22" rx="6" fill="url(#accent)" opacity="0.5"/>
+  <text x="540" y="59" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" font-weight="600" fill="white" opacity="0.95">PPV</text>
+  <!-- Teaser caption -->
+  <text x="232" y="98" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.7">My most exclusive set yet! 15 unreleased photos</text>
+  <text x="232" y="114" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.7">from the Malibu shoot. You don't want to miss this...</text>
+  <!-- Locked content area -->
+  <rect x="230" y="128" width="340" height="220" rx="12" fill="url(#accent)" opacity="0.08"/>
+  <!-- Blur overlay effect -->
+  <rect x="230" y="128" width="340" height="220" rx="12" fill="url(#blur-gradient)"/>
+  <!-- Blurred "image" shapes underneath -->
+  <rect x="250" y="145" width="140" height="95" rx="6" fill="white" opacity="0.04"/>
+  <rect x="400" y="145" width="150" height="95" rx="6" fill="white" opacity="0.03"/>
+  <rect x="250" y="248" width="100" height="85" rx="6" fill="white" opacity="0.03"/>
+  <rect x="358" y="248" width="90" height="85" rx="6" fill="white" opacity="0.04"/>
+  <rect x="456" y="248" width="94" height="85" rx="6" fill="white" opacity="0.03"/>
+  <!-- Lock icon -->
+  <g transform="translate(375, 195)">
+    <rect x="0" y="14" width="50" height="38" rx="6" fill="white" opacity="0.15" stroke="white" stroke-width="1.5" stroke-opacity="0.3"/>
+    <path d="M10 14V8C10 2 15 -2 25 -2C35 -2 40 2 40 8V14" fill="none" stroke="white" stroke-width="2" stroke-opacity="0.4" stroke-linecap="round"/>
+    <circle cx="25" cy="30" r="5" fill="white" opacity="0.5"/>
+    <line x1="25" y1="35" x2="25" y2="42" stroke="white" stroke-width="2" opacity="0.4"/>
+  </g>
+  <text x="400" y="265" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="white" opacity="0.7">Premium Content</text>
+  <text x="400" y="283" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.4">15 photos  |  Exclusive</text>
+  <!-- Locked content count -->
+  <text x="400" y="325" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.5">This content is locked</text>
+  <!-- Unlock button -->
+  <rect x="280" y="356" width="240" height="48" rx="12" fill="url(#accent)" opacity="0.7"/>
+  <text x="400" y="385" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" font-weight="700" fill="white" opacity="0.95">Unlock for $4.99</text>
+  <!-- Already purchased note -->
+  <text x="400" y="425" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="white" opacity="0.35">Secure payment via CCBill</text>
+  <!-- Title -->
+  <text x="400" y="470" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" font-weight="600" fill="white" opacity="0.9">Pay-Per-View</text>
+</svg>

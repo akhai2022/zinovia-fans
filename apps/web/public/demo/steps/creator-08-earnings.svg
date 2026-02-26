@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0f"/>
+      <stop offset="50%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#0f0a1a"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <pattern id="grid" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="white" stroke-width="0.5" opacity="0.05"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="500" fill="url(#bg)"/>
+  <rect width="800" height="500" fill="url(#grid)"/>
+  <circle cx="200" cy="150" r="180" fill="#8b5cf6" opacity="0.08"/>
+  <circle cx="650" cy="400" r="150" fill="#3b82f6" opacity="0.08"/>
+  <text x="720" y="130" text-anchor="end" font-family="system-ui, sans-serif" font-size="120" font-weight="800" fill="white" opacity="0.08">08</text>
+  <!-- Stats cards row -->
+  <!-- Total Earnings card -->
+  <rect x="120" y="45" width="175" height="90" rx="12" fill="white" opacity="0.08" stroke="white" stroke-opacity="0.15" stroke-width="1"/>
+  <text x="140" y="72" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.5">Total Earnings</text>
+  <text x="140" y="100" font-family="system-ui, sans-serif" font-size="28" font-weight="700" fill="white" opacity="0.85">$4,827</text>
+  <text x="140" y="120" font-family="system-ui, sans-serif" font-size="10" fill="#10b981" opacity="0.8">+12.5% this month</text>
+  <!-- Active Subscribers card -->
+  <rect x="312" y="45" width="175" height="90" rx="12" fill="white" opacity="0.08" stroke="white" stroke-opacity="0.15" stroke-width="1"/>
+  <text x="332" y="72" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.5">Active Subscribers</text>
+  <text x="332" y="100" font-family="system-ui, sans-serif" font-size="28" font-weight="700" fill="white" opacity="0.85">247</text>
+  <text x="332" y="120" font-family="system-ui, sans-serif" font-size="10" fill="#10b981" opacity="0.8">+18 new this week</text>
+  <!-- PPV Revenue card -->
+  <rect x="504" y="45" width="175" height="90" rx="12" fill="white" opacity="0.08" stroke="white" stroke-opacity="0.15" stroke-width="1"/>
+  <text x="524" y="72" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.5">PPV Revenue</text>
+  <text x="524" y="100" font-family="system-ui, sans-serif" font-size="28" font-weight="700" fill="white" opacity="0.85">$892</text>
+  <text x="524" y="120" font-family="system-ui, sans-serif" font-size="10" fill="#10b981" opacity="0.8">32 unlocks</text>
+  <!-- Chart area -->
+  <rect x="120" y="150" width="560" height="240" rx="14" fill="white" opacity="0.08" stroke="white" stroke-opacity="0.15" stroke-width="1"/>
+  <text x="150" y="178" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="white" opacity="0.8">Monthly Revenue</text>
+  <!-- Period tabs -->
+  <rect x="480" y="162" width="50" height="22" rx="4" fill="white" opacity="0.06"/>
+  <text x="505" y="177" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="white" opacity="0.4">7d</text>
+  <rect x="535" y="162" width="50" height="22" rx="4" fill="url(#accent)" opacity="0.4"/>
+  <text x="560" y="177" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="white" opacity="0.8">30d</text>
+  <rect x="590" y="162" width="50" height="22" rx="4" fill="white" opacity="0.06"/>
+  <text x="615" y="177" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="white" opacity="0.4">90d</text>
+  <!-- Y axis labels -->
+  <text x="155" y="210" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.35">$2k</text>
+  <text x="155" y="250" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.35">$1.5k</text>
+  <text x="155" y="290" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.35">$1k</text>
+  <text x="155" y="330" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.35">$500</text>
+  <text x="155" y="370" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.35">$0</text>
+  <!-- Grid lines -->
+  <line x1="180" y1="206" x2="650" y2="206" stroke="white" stroke-width="0.5" opacity="0.06"/>
+  <line x1="180" y1="246" x2="650" y2="246" stroke="white" stroke-width="0.5" opacity="0.06"/>
+  <line x1="180" y1="286" x2="650" y2="286" stroke="white" stroke-width="0.5" opacity="0.06"/>
+  <line x1="180" y1="326" x2="650" y2="326" stroke="white" stroke-width="0.5" opacity="0.06"/>
+  <line x1="180" y1="366" x2="650" y2="366" stroke="white" stroke-width="0.5" opacity="0.08"/>
+  <!-- Bar chart -->
+  <rect x="195" y="286" width="35" height="80" rx="4" fill="url(#accent)" opacity="0.45"/>
+  <rect x="250" y="260" width="35" height="106" rx="4" fill="url(#accent)" opacity="0.5"/>
+  <rect x="305" y="310" width="35" height="56" rx="4" fill="url(#accent)" opacity="0.4"/>
+  <rect x="360" y="240" width="35" height="126" rx="4" fill="url(#accent)" opacity="0.55"/>
+  <rect x="415" y="220" width="35" height="146" rx="4" fill="url(#accent)" opacity="0.6"/>
+  <rect x="470" y="250" width="35" height="116" rx="4" fill="url(#accent)" opacity="0.5"/>
+  <rect x="525" y="210" width="35" height="156" rx="4" fill="url(#accent)" opacity="0.65"/>
+  <rect x="580" y="230" width="35" height="136" rx="4" fill="url(#accent)" opacity="0.55"/>
+  <!-- X axis labels -->
+  <text x="212" y="383" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.4">Jun</text>
+  <text x="267" y="383" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.4">Jul</text>
+  <text x="322" y="383" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.4">Aug</text>
+  <text x="377" y="383" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.4">Sep</text>
+  <text x="432" y="383" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.4">Oct</text>
+  <text x="487" y="383" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.4">Nov</text>
+  <text x="542" y="383" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.4">Dec</text>
+  <text x="597" y="383" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.4">Jan</text>
+  <!-- Title -->
+  <text x="400" y="470" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" font-weight="600" fill="white" opacity="0.9">Earnings Dashboard</text>
+</svg>

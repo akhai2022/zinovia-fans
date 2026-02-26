@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0f"/>
+      <stop offset="50%" stop-color="#0f1a1a"/>
+      <stop offset="100%" stop-color="#0a1a0f"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <pattern id="grid" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="white" stroke-width="0.5" opacity="0.05"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="500" fill="url(#bg)"/>
+  <rect width="800" height="500" fill="url(#grid)"/>
+  <circle cx="200" cy="150" r="180" fill="#10b981" opacity="0.08"/>
+  <circle cx="650" cy="400" r="150" fill="#06b6d4" opacity="0.08"/>
+  <text x="720" y="130" text-anchor="end" font-family="system-ui, sans-serif" font-size="120" font-weight="800" fill="white" opacity="0.08">04</text>
+  <!-- Feed title -->
+  <text x="400" y="42" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" font-weight="600" fill="white" opacity="0.7">Your Feed</text>
+  <!-- Post Card 1 -->
+  <rect x="210" y="55" width="380" height="185" rx="14" fill="white" opacity="0.08" stroke="white" stroke-opacity="0.15" stroke-width="1"/>
+  <!-- Post header -->
+  <circle cx="240" cy="80" r="14" fill="#10b981" opacity="0.35"/>
+  <text x="240" y="85" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="600" fill="white" opacity="0.7">JR</text>
+  <text x="264" y="77" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="white" opacity="0.85">Jessica Rose</text>
+  <circle cx="348" cy="73" r="3" fill="#10b981" opacity="0.7"/>
+  <text x="264" y="92" font-family="system-ui, sans-serif" font-size="10" fill="white" opacity="0.4">2 hours ago</text>
+  <!-- Post image placeholder -->
+  <rect x="228" y="100" width="165" height="100" rx="8" fill="url(#accent)" opacity="0.15"/>
+  <rect x="248" y="120" width="60" height="40" rx="4" fill="white" opacity="0.08"/>
+  <circle cx="270" cy="135" r="10" fill="white" opacity="0.06"/>
+  <polyline points="250,155 270,138 290,148 302,140 305,155" fill="none" stroke="white" stroke-width="1" opacity="0.2"/>
+  <!-- Caption next to image -->
+  <text x="405" y="118" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.7">New BTS from today's</text>
+  <text x="405" y="134" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.7">shoot! The golden hour</text>
+  <text x="405" y="150" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.7">light was amazing...</text>
+  <text x="405" y="170" font-family="system-ui, sans-serif" font-size="10" fill="#10b981" opacity="0.6">#photography #bts</text>
+  <!-- Like/comment row -->
+  <text x="240" y="222" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.5">&#9825; 142 likes</text>
+  <text x="340" y="222" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.5">&#128172; 23 comments</text>
+  <!-- Post Card 2 -->
+  <rect x="210" y="252" width="380" height="185" rx="14" fill="white" opacity="0.08" stroke="white" stroke-opacity="0.15" stroke-width="1"/>
+  <!-- Post header -->
+  <circle cx="240" cy="277" r="14" fill="#06b6d4" opacity="0.35"/>
+  <text x="240" y="282" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="600" fill="white" opacity="0.7">MK</text>
+  <text x="264" y="274" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="white" opacity="0.85">Maria Kim</text>
+  <text x="264" y="289" font-family="system-ui, sans-serif" font-size="10" fill="white" opacity="0.4">5 hours ago</text>
+  <!-- Post image placeholder -->
+  <rect x="228" y="297" width="165" height="100" rx="8" fill="#06b6d4" opacity="0.15"/>
+  <!-- Play button (video) -->
+  <circle cx="310" cy="347" r="16" fill="white" opacity="0.15"/>
+  <polygon points="305,340 305,355 318,347" fill="white" opacity="0.5"/>
+  <!-- Caption -->
+  <text x="405" y="315" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.7">Full workout routine</text>
+  <text x="405" y="331" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.7">is up! 30 min HIIT</text>
+  <text x="405" y="347" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.7">session. Let's crush</text>
+  <text x="405" y="363" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.7">those goals together!</text>
+  <text x="405" y="383" font-family="system-ui, sans-serif" font-size="10" fill="#06b6d4" opacity="0.6">#fitness #hiit</text>
+  <!-- Like/comment row -->
+  <text x="240" y="420" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.5">&#9825; 89 likes</text>
+  <text x="340" y="420" font-family="system-ui, sans-serif" font-size="11" fill="white" opacity="0.5">&#128172; 12 comments</text>
+  <!-- Title -->
+  <text x="400" y="470" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" font-weight="600" fill="white" opacity="0.9">Content Feed</text>
+</svg>

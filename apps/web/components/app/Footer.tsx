@@ -29,6 +29,7 @@ export function Footer() {
     { href: "/pricing", label: "Pricing" },
     { href: "/compare", label: "Compare" },
     { href: "/about", label: "About" },
+    { href: "/demo", label: t.nav.demo },
     { href: "/help", label: t.footer.help },
     { href: "/contact", label: t.footer.contact },
     { href: "/privacy", label: t.footer.privacy },

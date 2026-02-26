@@ -8,9 +8,15 @@ import {
   apiFetch,
   getVerificationToken,
   extractCookies,
+  isE2EEnabled,
 } from "./helpers";
 
 const PASSWORD = "E2eTestPass123!";
+let e2eAvailable = false;
+
+test.beforeAll(async () => {
+  e2eAvailable = await isE2EEnabled();
+});
 
 test.describe("Fan Signup & Verification", () => {
   const email = uniqueEmail("fan");
@@ -26,11 +32,13 @@ test.describe("Fan Signup & Verification", () => {
   });
 
   test("verification token retrievable via dev endpoint", async () => {
+    test.skip(!e2eAvailable, "Dev endpoint not available in production");
     const token = await getVerificationToken(email);
     expect(token).toBeTruthy();
   });
 
   test("verify email via API sets session cookie", async () => {
+    test.skip(!e2eAvailable, "Dev endpoint not available in production");
     const token = await getVerificationToken(email);
     expect(token).toBeTruthy();
 
@@ -46,6 +54,7 @@ test.describe("Fan Signup & Verification", () => {
   });
 
   test("login after verification succeeds @smoke", { tag: "@smoke" }, async () => {
+    test.skip(!e2eAvailable, "Requires email verification via dev endpoint");
     const res = await apiFetch("/auth/login", {
       method: "POST",
       body: { email, password: PASSWORD },
@@ -57,6 +66,7 @@ test.describe("Fan Signup & Verification", () => {
   });
 
   test("/auth/me returns user data with cookies", async () => {
+    test.skip(!e2eAvailable, "Requires email verification via dev endpoint");
     const login = await apiFetch("/auth/login", {
       method: "POST",
       body: { email, password: PASSWORD },
@@ -82,6 +92,7 @@ test.describe("Fan Login via UI", () => {
   });
 
   test("login form submits and redirects away from /login", async ({ page }) => {
+    test.skip(!e2eAvailable, "Requires email verification via dev endpoint");
     await page.goto("/login");
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill(PASSWORD);

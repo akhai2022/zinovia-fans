@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0f"/>
+      <stop offset="50%" stop-color="#0f1a1a"/>
+      <stop offset="100%" stop-color="#0a1a0f"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <pattern id="grid" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="white" stroke-width="0.5" opacity="0.05"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="500" fill="url(#bg)"/>
+  <rect width="800" height="500" fill="url(#grid)"/>
+  <circle cx="200" cy="150" r="180" fill="#10b981" opacity="0.08"/>
+  <circle cx="650" cy="400" r="150" fill="#06b6d4" opacity="0.08"/>
+  <text x="720" y="130" text-anchor="end" font-family="system-ui, sans-serif" font-size="120" font-weight="800" fill="white" opacity="0.08">06</text>
+  <!-- Chat container -->
+  <rect x="130" y="35" width="540" height="400" rx="16" fill="white" opacity="0.08" stroke="white" stroke-opacity="0.15" stroke-width="1"/>
+  <!-- Chat header -->
+  <rect x="130" y="35" width="540" height="55" rx="16" fill="white" opacity="0.06"/>
+  <rect x="130" y="70" width="540" height="20" fill="white" opacity="0.06"/>
+  <!-- Creator avatar in header -->
+  <circle cx="172" cy="62" r="16" fill="#10b981" opacity="0.4"/>
+  <text x="172" y="67" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="white" opacity="0.8">JR</text>
+  <text x="200" y="58" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="white" opacity="0.85">Jessica Rose</text>
+  <!-- Online dot -->
+  <circle cx="296" cy="54" r="3" fill="#10b981" opacity="0.8"/>
+  <text x="304" y="58" font-family="system-ui, sans-serif" font-size="10" fill="white" opacity="0.45">Online</text>
+  <text x="200" y="75" font-family="system-ui, sans-serif" font-size="10" fill="white" opacity="0.35">Creator</text>
+  <!-- Outgoing message (right, emerald) -->
+  <rect x="370" y="105" width="260" height="45" rx="12" fill="url(#accent)" opacity="0.3"/>
+  <text x="385" y="125" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.8">Hey Jessica! Love your new</text>
+  <text x="385" y="140" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.8">collection, it's incredible!</text>
+  <text x="615" y="140" text-anchor="end" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.4">3:12 PM</text>
+  <!-- Incoming message (left) -->
+  <rect x="160" y="165" width="260" height="60" rx="12" fill="white" opacity="0.1"/>
+  <text x="175" y="185" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.7">Aww thank you so much! That</text>
+  <text x="175" y="201" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.7">means the world to me. I have</text>
+  <text x="175" y="217" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.7">even more planned for next week!</text>
+  <text x="405" y="217" text-anchor="end" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.3">3:14 PM</text>
+  <!-- Outgoing -->
+  <rect x="420" y="240" width="210" height="35" rx="12" fill="url(#accent)" opacity="0.3"/>
+  <text x="435" y="263" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.8">Can't wait! So excited!</text>
+  <text x="615" y="263" text-anchor="end" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.4">3:15 PM</text>
+  <!-- Incoming -->
+  <rect x="160" y="290" width="280" height="48" rx="12" fill="white" opacity="0.1"/>
+  <text x="175" y="310" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.7">Also, I'm doing a special Q&amp;A</text>
+  <text x="175" y="326" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.7">session this Friday. Don't miss it!</text>
+  <text x="425" y="326" text-anchor="end" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.3">3:16 PM</text>
+  <!-- Outgoing -->
+  <rect x="440" y="352" width="190" height="35" rx="12" fill="url(#accent)" opacity="0.3"/>
+  <text x="455" y="375" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.8">I'll be there for sure!</text>
+  <text x="615" y="375" text-anchor="end" font-family="system-ui, sans-serif" font-size="9" fill="white" opacity="0.4">3:17 PM</text>
+  <!-- Message input -->
+  <rect x="150" y="395" width="430" height="40" rx="20" fill="white" opacity="0.08" stroke="white" stroke-opacity="0.18" stroke-width="1"/>
+  <text x="175" y="420" font-family="system-ui, sans-serif" font-size="13" fill="white" opacity="0.35">Type a message...</text>
+  <!-- Send button -->
+  <rect x="590" y="395" width="60" height="40" rx="20" fill="url(#accent)" opacity="0.6"/>
+  <text x="620" y="420" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="white" opacity="0.9">Send</text>
+  <!-- Title -->
+  <text x="400" y="470" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" font-weight="600" fill="white" opacity="0.9">Messages</text>
+</svg>

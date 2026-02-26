@@ -92,7 +92,7 @@ export default function SignupPage() {
     displayName: z.string().min(1, t.signup.validationDisplayNameRequired),
   });
 
-  const [accountType, setAccountType] = useState<AccountType>("fan");
+  const [accountType, setAccountType] = useState<AccountType>("creator");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -155,57 +155,85 @@ export default function SignupPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Account type selector */}
+          {/* Account type selector — clear separation */}
           <fieldset className="mb-6">
             <legend className="mb-3 text-sm font-medium text-foreground">{t.signup.joinAs}</legend>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                data-testid="signup-type-fan"
-                onClick={() => setAccountType("fan")}
-                className={`group relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 text-center transition-all ${
-                  accountType === "fan"
-                    ? "border-primary bg-primary/5 shadow-sm"
-                    : "border-border hover:border-muted-foreground/30"
-                }`}
-              >
-                <div className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
-                  accountType === "fan" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                }`}>
-                  <Icon name="favorite" className="icon-lg" />
-                </div>
-                <span className="text-sm font-semibold text-foreground">{t.signup.fan}</span>
-                <span className="text-xs leading-tight text-muted-foreground">
-                  {t.signup.fanDescription}
-                </span>
-                {accountType === "fan" && (
-                  <div className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                    <Icon name="check" className="icon-xs" />
-                  </div>
-                )}
-              </button>
+            <div className="flex flex-col gap-3">
+              {/* Creator option — recommended, shown first */}
               <button
                 type="button"
                 data-testid="signup-type-creator"
                 onClick={() => setAccountType("creator")}
-                className={`group relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 text-center transition-all ${
+                className={`group relative flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all ${
                   accountType === "creator"
-                    ? "border-primary bg-primary/5 shadow-sm"
+                    ? "border-primary bg-primary/5 shadow-md ring-1 ring-primary/20"
                     : "border-border hover:border-muted-foreground/30"
                 }`}
               >
-                <div className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
-                  accountType === "creator" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                <div className={`mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-colors ${
+                  accountType === "creator" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
                 }`}>
                   <Icon name="auto_awesome" className="icon-lg" />
                 </div>
-                <span className="text-sm font-semibold text-foreground">{t.signup.creator}</span>
-                <span className="text-xs leading-tight text-muted-foreground">
-                  {t.signup.creatorDescription}
-                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-foreground">{t.signup.creator}</span>
+                    <span className="inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                      Recommended
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    {t.signup.creatorDescription}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground/80">
+                    <span className="flex items-center gap-1"><Icon name="monetization_on" className="icon-xs" /> Earn money</span>
+                    <span className="flex items-center gap-1"><Icon name="photo_library" className="icon-xs" /> Post content</span>
+                    <span className="flex items-center gap-1"><Icon name="group" className="icon-xs" /> Build audience</span>
+                  </div>
+                </div>
                 {accountType === "creator" && (
-                  <div className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                    <Icon name="check" className="icon-xs" />
+                  <div className="absolute -top-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
+                    <Icon name="check" className="icon-sm" />
+                  </div>
+                )}
+              </button>
+
+              {/* Divider */}
+              <div className="flex items-center gap-3 px-1">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground/60">or</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              {/* Fan option */}
+              <button
+                type="button"
+                data-testid="signup-type-fan"
+                onClick={() => setAccountType("fan")}
+                className={`group relative flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all ${
+                  accountType === "fan"
+                    ? "border-primary bg-primary/5 shadow-md ring-1 ring-primary/20"
+                    : "border-border hover:border-muted-foreground/30"
+                }`}
+              >
+                <div className={`mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-colors ${
+                  accountType === "fan" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+                }`}>
+                  <Icon name="favorite" className="icon-lg" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-bold text-foreground">{t.signup.fan}</span>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    {t.signup.fanDescription}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground/80">
+                    <span className="flex items-center gap-1"><Icon name="subscriptions" className="icon-xs" /> Subscribe</span>
+                    <span className="flex items-center gap-1"><Icon name="chat" className="icon-xs" /> Message creators</span>
+                  </div>
+                </div>
+                {accountType === "fan" && (
+                  <div className="absolute -top-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
+                    <Icon name="check" className="icon-sm" />
                   </div>
                 )}
               </button>

@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0f"/>
+      <stop offset="50%" stop-color="#0f1a1a"/>
+      <stop offset="100%" stop-color="#0a1a0f"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <pattern id="grid" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="white" stroke-width="0.5" opacity="0.05"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="500" fill="url(#bg)"/>
+  <rect width="800" height="500" fill="url(#grid)"/>
+  <circle cx="200" cy="150" r="180" fill="#10b981" opacity="0.08"/>
+  <circle cx="650" cy="400" r="150" fill="#06b6d4" opacity="0.08"/>
+  <text x="720" y="130" text-anchor="end" font-family="system-ui, sans-serif" font-size="120" font-weight="800" fill="white" opacity="0.08">03</text>
+  <!-- Profile card -->
+  <rect x="190" y="30" width="420" height="410" rx="16" fill="white" opacity="0.08" stroke="white" stroke-opacity="0.15" stroke-width="1"/>
+  <!-- Banner -->
+  <rect x="205" y="45" width="390" height="100" rx="10" fill="url(#accent)" opacity="0.2"/>
+  <!-- Decorative elements on banner -->
+  <circle cx="300" cy="85" r="30" fill="white" opacity="0.05"/>
+  <circle cx="500" cy="75" r="20" fill="white" opacity="0.04"/>
+  <!-- Avatar -->
+  <circle cx="400" cy="145" r="40" fill="#0f1a1a" stroke="white" stroke-opacity="0.2" stroke-width="2.5"/>
+  <circle cx="400" cy="145" r="38" fill="url(#accent)" opacity="0.3"/>
+  <text x="400" y="153" text-anchor="middle" font-family="system-ui, sans-serif" font-size="22" font-weight="600" fill="white" opacity="0.8">JR</text>
+  <!-- Online dot -->
+  <circle cx="428" cy="170" r="6" fill="#10b981" opacity="0.9" stroke="#0f1a1a" stroke-width="2"/>
+  <!-- Verified badge -->
+  <circle cx="428" cy="125" r="8" fill="#10b981" opacity="0.7"/>
+  <path d="M424,125 L427,128 L433,122" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.9"/>
+  <!-- Name and handle -->
+  <text x="400" y="206" text-anchor="middle" font-family="system-ui, sans-serif" font-size="20" font-weight="700" fill="white" opacity="0.9">Jessica Rose</text>
+  <text x="400" y="226" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" fill="white" opacity="0.45">@jessicarose</text>
+  <!-- Bio -->
+  <text x="400" y="252" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.6">Photographer &amp; model. Sharing exclusive behind-the-scenes</text>
+  <text x="400" y="268" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="white" opacity="0.6">content, travel diaries, and creative projects.</text>
+  <!-- Stats row -->
+  <rect x="225" y="282" width="350" height="45" rx="8" fill="white" opacity="0.05"/>
+  <text x="300" y="302" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="white" opacity="0.8">247</text>
+  <text x="300" y="318" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="white" opacity="0.4">Posts</text>
+  <text x="400" y="302" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="white" opacity="0.8">1.2k</text>
+  <text x="400" y="318" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="white" opacity="0.4">Fans</text>
+  <text x="500" y="302" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="white" opacity="0.8">48</text>
+  <text x="500" y="318" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="white" opacity="0.4">Media</text>
+  <!-- Dividers between stats -->
+  <line x1="350" y1="295" x2="350" y2="322" stroke="white" stroke-width="1" opacity="0.1"/>
+  <line x1="450" y1="295" x2="450" y2="322" stroke="white" stroke-width="1" opacity="0.1"/>
+  <!-- Price tag -->
+  <text x="400" y="350" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" fill="white" opacity="0.55">$9.99 / month</text>
+  <!-- Subscribe button -->
+  <rect x="270" y="362" width="260" height="46" rx="12" fill="url(#accent)" opacity="0.7"/>
+  <text x="400" y="390" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" font-weight="600" fill="white" opacity="0.95">Subscribe Now</text>
+  <!-- Message button -->
+  <rect x="270" y="416" width="260" height="36" rx="10" fill="white" opacity="0.08" stroke="white" stroke-opacity="0.18" stroke-width="1"/>
+  <text x="400" y="439" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" fill="white" opacity="0.65">Send Message</text>
+  <!-- Title -->
+  <text x="400" y="470" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" font-weight="600" fill="white" opacity="0.9">Creator Profile</text>
+</svg>

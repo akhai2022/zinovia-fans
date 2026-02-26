@@ -38,6 +38,7 @@ export function Navbar({
     { href: "/", label: t.nav.home, icon: "home" },
     { href: "/creators", label: t.nav.creators, icon: "group" },
     { href: "/search", label: t.common.search, icon: "search" },
+    { href: "/demo", label: t.nav.demo, icon: "play_circle" },
   ];
 
   const isCreator = user?.role === "creator" || user?.role === "admin" || user?.role === "super_admin";
