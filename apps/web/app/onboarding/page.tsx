@@ -29,6 +29,8 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState(true);
 
+  const [kycTransition, setKycTransition] = useState(false);
+
   useEffect(() => {
     getOnboardingStatus()
       .then((s) => {
@@ -41,16 +43,21 @@ export default function OnboardingPage() {
           s.state !== "KYC_SUBMITTED" &&
           s.state !== "KYC_REJECTED"
         ) {
+          // Show a brief transitional screen before redirecting
+          setKycTransition(true);
           setLoading(true);
           const idempotencyKey = uuidClient();
-          createKycSession(idempotencyKey)
-            .then((res) => {
-              window.location.href = res.redirect_url;
-            })
-            .catch((err) => {
-              setError(getApiErrorMessage(err).message);
-              setLoading(false);
-            });
+          setTimeout(() => {
+            createKycSession(idempotencyKey)
+              .then((res) => {
+                window.location.href = res.redirect_url;
+              })
+              .catch((err) => {
+                setError(getApiErrorMessage(err).message);
+                setLoading(false);
+                setKycTransition(false);
+              });
+          }, 1500);
         }
       })
       .catch(() => router.replace("/login?next=/onboarding"))
@@ -77,6 +84,26 @@ export default function OnboardingPage() {
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           <p className="text-sm text-muted-foreground">{t.onboarding.loading}</p>
         </div>
+      </Page>
+    );
+  }
+
+  // Transitional screen while auto-starting KYC
+  if (kycTransition) {
+    return (
+      <Page className="flex min-h-[60vh] items-center justify-center hero-bg">
+        <Card className="w-full max-w-md border-border shadow-premium-md">
+          <CardContent className="flex flex-col items-center gap-4 py-10">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+              <Icon name="verified_user" className="text-3xl text-primary animate-pulse" />
+            </div>
+            <div className="text-center">
+              <p className="font-display text-lg font-semibold text-foreground">Setting up your verification...</p>
+              <p className="mt-1 text-sm text-muted-foreground">Takes under 60 seconds.</p>
+            </div>
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          </CardContent>
+        </Card>
       </Page>
     );
   }
@@ -190,7 +217,7 @@ export default function OnboardingPage() {
               <Icon name="hourglass_top" className="mx-auto mb-1 text-2xl text-amber-400" />
               <p className="text-sm font-medium text-amber-400">Verification under review</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Your documents are being reviewed. This usually takes a few hours. You will be notified once approved.
+                Usually reviewed within 24 hours. We&apos;ll notify you instantly once approved.
               </p>
             </div>
           )}
@@ -226,22 +253,27 @@ export default function OnboardingPage() {
           )}
 
           {allDone && (
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                onClick={() => router.push("/settings/profile")}
-                className="flex-1"
-                size="lg"
-              >
-                <Icon name="person" className="mr-1.5 icon-sm" />{t.onboarding.setUpProfile}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => router.push("/creator/post/new")}
-                className="flex-1"
-                size="lg"
-              >
-                <Icon name="edit_square" className="mr-1.5 icon-sm" />{t.onboarding.createFirstPost}
-              </Button>
+            <div className="space-y-3">
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  onClick={() => router.push("/creator/post/new")}
+                  className="flex-1"
+                  size="lg"
+                >
+                  <Icon name="edit_square" className="mr-1.5 icon-sm" />{t.onboarding.createFirstPost}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => router.push("/settings/profile")}
+                  className="flex-1"
+                  size="lg"
+                >
+                  <Icon name="person" className="mr-1.5 icon-sm" />{t.onboarding.setUpProfile}
+                </Button>
+              </div>
+              <p className="text-center text-xs text-muted-foreground">
+                Most creators publish their first post in under 2 minutes.
+              </p>
             </div>
           )}
 

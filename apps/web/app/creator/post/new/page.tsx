@@ -547,6 +547,14 @@ export default function NewPostPage() {
                 <Switch id="nsfw" checked={nsfw} onCheckedChange={setNsfw} />
               </div>
 
+              {/* Defaults info */}
+              <div className="flex items-start gap-2 rounded-lg bg-primary/5 border border-primary/10 px-3 py-2">
+                <Icon name="info" className="text-sm text-primary/60 mt-0.5 shrink-0" />
+                <p className="text-[11px] text-muted-foreground">
+                  PPV and NSFW are enabled by default to maximize your earnings. You can change these settings for each post.
+                </p>
+              </div>
+
               {/* Schedule */}
               <div className="rounded-brand border border-border p-4 space-y-3">
                 <div className="flex items-center justify-between">

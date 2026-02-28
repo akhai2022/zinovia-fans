@@ -304,16 +304,15 @@ export default function KycVerifyPage() {
               {t.kyc.submittedDescription ?? t.kyc.verificationCompleteDescription}
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <Button onClick={() => router.push("/settings/profile")}>
-              <Icon name="person" className="mr-1.5 icon-sm" />{t.kyc.setUpProfile}
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => router.push("/creator/post/new")}
-            >
-              <Icon name="edit_square" className="mr-1.5 icon-sm" />{t.kyc.createFirstPost}
-            </Button>
+          <CardContent className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+              <Button onClick={() => router.push("/onboarding")}>
+                <Icon name="arrow_forward" className="mr-1.5 icon-sm" />Continue
+              </Button>
+            </div>
+            <p className="text-center text-xs text-muted-foreground">
+              We&apos;ll notify you instantly once your verification is approved.
+            </p>
           </CardContent>
         </Card>
       </Page>
@@ -332,16 +331,29 @@ export default function KycVerifyPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Progress bar */}
-          <div className="flex gap-1">
-            {[1, 2, 3].map((s) => (
-              <div
-                key={s}
-                className={`h-1.5 flex-1 rounded-full ${
-                  s <= step ? "bg-brand" : "bg-muted"
-                }`}
-              />
-            ))}
+          {/* Progress bar with step labels */}
+          <div className="space-y-2">
+            <div className="flex gap-1">
+              {[1, 2, 3].map((s) => (
+                <div
+                  key={s}
+                  className={`h-1.5 flex-1 rounded-full ${
+                    s <= step ? "bg-brand" : "bg-muted"
+                  }`}
+                />
+              ))}
+            </div>
+            <div className="flex justify-between text-[10px] text-muted-foreground">
+              <span className={step >= 1 ? "text-brand font-medium" : ""}>Date of birth</span>
+              <span className={step >= 2 ? "text-brand font-medium" : ""}>ID document</span>
+              <span className={step >= 3 ? "text-brand font-medium" : ""}>Selfie</span>
+            </div>
+          </div>
+
+          {/* Trust banner */}
+          <div className="flex items-center gap-2 rounded-lg bg-emerald-500/5 border border-emerald-500/20 px-3 py-2">
+            <Icon name="lock" className="text-sm text-emerald-400 shrink-0" />
+            <p className="text-[11px] text-emerald-300/80">Encrypted &amp; secure. Never shared. Required for payouts.</p>
           </div>
 
           {/* Step 1: Age verification */}
@@ -363,6 +375,7 @@ export default function KycVerifyPage() {
               <Button onClick={onNextAge} className="w-full">
                 <Icon name="arrow_forward" className="mr-1.5 icon-sm" />{t.kyc.continueButton}
               </Button>
+              <p className="text-center text-[11px] text-muted-foreground">Takes under 60 seconds.</p>
             </div>
           )}
 
