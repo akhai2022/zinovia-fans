@@ -38,6 +38,12 @@ class AdminCreatorAction(BaseModel):
     reason: str | None = None
 
 
+class AdminPostMediaOut(BaseModel):
+    media_id: str
+    content_type: str
+    download_url: str | None = None
+
+
 class AdminPostOut(BaseModel):
     id: UUID
     creator_user_id: str
@@ -48,6 +54,7 @@ class AdminPostOut(BaseModel):
     nsfw: bool
     status: str
     created_at: datetime
+    media: list[AdminPostMediaOut] = []
 
 
 class AdminPostPage(BaseModel):

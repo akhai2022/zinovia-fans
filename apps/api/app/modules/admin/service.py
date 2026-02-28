@@ -11,7 +11,8 @@ from app.modules.auth.constants import ADMIN_ROLE
 from app.modules.auth.models import Profile, User
 from app.modules.billing.models import Subscription
 from app.modules.ledger.models import LedgerEvent
-from app.modules.posts.models import Post
+from app.modules.media.models import MediaObject
+from app.modules.posts.models import Post, PostMedia
 from app.shared.pagination import normalize_pagination
 
 logger = logging.getLogger(__name__)
@@ -138,7 +139,10 @@ async def list_posts_admin(
     page: int = 1,
     page_size: int = DEFAULT_PAGE_SIZE,
 ) -> tuple[list[dict], int]:
-    """Admin: list all posts for moderation."""
+    """Admin: list all posts for moderation, including media thumbnails."""
+    from app.modules.media.service import generate_signed_download
+    from app.modules.media.storage import get_storage_client
+
     page, page_size, offset, limit = normalize_pagination(
         page, page_size,
         default_size=DEFAULT_PAGE_SIZE,
@@ -158,6 +162,29 @@ async def list_posts_admin(
         .limit(limit)
     )
     rows = (await session.execute(q)).all()
+
+    # Collect post IDs to batch-fetch media
+    post_ids = [post.id for post, _ in rows]
+    media_map: dict[str, list[dict]] = {}
+    if post_ids:
+        mq = (
+            select(PostMedia.post_id, MediaObject.id, MediaObject.object_key, MediaObject.content_type)
+            .join(MediaObject, MediaObject.id == PostMedia.media_asset_id)
+            .where(PostMedia.post_id.in_(post_ids))
+            .order_by(PostMedia.post_id, PostMedia.position)
+        )
+        media_rows = (await session.execute(mq)).all()
+        storage = get_storage_client()
+        for pm_post_id, mo_id, obj_key, ctype in media_rows:
+            pid = str(pm_post_id)
+            if pid not in media_map:
+                media_map[pid] = []
+            media_map[pid].append({
+                "media_id": str(mo_id),
+                "content_type": ctype,
+                "download_url": generate_signed_download(storage, obj_key),
+            })
+
     items = []
     for post, profile in rows:
         items.append({
@@ -170,6 +197,7 @@ async def list_posts_admin(
             "nsfw": post.nsfw,
             "status": post.status,
             "created_at": post.created_at,
+            "media": media_map.get(str(post.id), []),
         })
     return items, total
 

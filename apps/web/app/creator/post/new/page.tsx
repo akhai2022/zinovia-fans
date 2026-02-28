@@ -53,9 +53,9 @@ export default function NewPostPage() {
   ];
 
   const [caption, setCaption] = useState("");
-  const [visibility, setVisibility] = useState<"PUBLIC" | "FOLLOWERS" | "SUBSCRIBERS" | "PPV">("PUBLIC");
+  const [visibility, setVisibility] = useState<"PUBLIC" | "FOLLOWERS" | "SUBSCRIBERS" | "PPV">("PPV");
   const [priceCents, setPriceCents] = useState<number>(500);
-  const [nsfw, setNsfw] = useState(false);
+  const [nsfw, setNsfw] = useState(true);
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [videoAssetId, setVideoAssetId] = useState<string | null>(null);
   const [assetIdsInput, setAssetIdsInput] = useState("");

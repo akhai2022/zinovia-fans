@@ -33,19 +33,24 @@ export default function VerifyEmailPage() {
     if (fromQuery) {
       setToken(fromQuery);
       // Auto-verify when token comes from URL (email link click)
+      // User should NEVER see a form — just spinner then redirect
       setAutoVerifying(true);
       setLoading(true);
       const idempotencyKey = uuidClient();
       verifyEmail(fromQuery, idempotencyKey)
         .then((res) => {
           // API sets session cookie — redirect directly, no login needed
-          const next = res.role === "creator" ? "/onboarding" : "/feed";
+          const state = res.state || "";
+          let next = "/onboarding";
+          if (res.role === "fan") next = "/feed";
+          else if (state === "KYC_APPROVED") next = "/settings/profile";
+          else if (state.startsWith("KYC_")) next = "/onboarding";
           window.location.href = next;
         })
-        .catch((err) => {
-          setError(getApiErrorMessage(err).message);
-          setAutoVerifying(false);
-          setLoading(false);
+        .catch(() => {
+          // On any error (already verified, expired, etc.) redirect to onboarding
+          // The user will log in from there if needed — never show a form
+          window.location.href = "/onboarding";
         });
     }
   }, [searchParams, router]);

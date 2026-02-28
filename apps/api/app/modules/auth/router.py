@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import logging
 from uuid import UUID
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy import select
@@ -199,24 +202,28 @@ async def verify_email(
         user = await consume_email_verification_token(session, payload.token)
         if not user:
             raise AppError(status_code=400, detail="invalid_or_expired_token")
+
+        # If already past CREATED state, just auto-login (don't error)
         if user.onboarding_state != CREATED:
-            raise AppError(status_code=400, detail="invalid_state_for_verification")
-        await transition_creator_state(
-            session,
-            user.id,
-            "EMAIL_VERIFIED",
-            "email_verified",
-            {"token_consumed": True},
-        )
-        await log_audit_event(
-            session,
-            action=ACTION_VERIFY_EMAIL,
-            actor_id=user.id,
-            resource_type="user",
-            resource_id=str(user.id),
-            ip_address=client_ip,
-            auto_commit=False,
-        )
+            logger.info("verify-email: user %s already in state %s, auto-login only", user.id, user.onboarding_state)
+        else:
+            await transition_creator_state(
+                session,
+                user.id,
+                "EMAIL_VERIFIED",
+                "email_verified",
+                {"token_consumed": True},
+            )
+            await log_audit_event(
+                session,
+                action=ACTION_VERIFY_EMAIL,
+                actor_id=user.id,
+                resource_type="user",
+                resource_id=str(user.id),
+                ip_address=client_ip,
+                auto_commit=False,
+            )
+
         # Auto-login: set session cookie so user doesn't have to sign in again
         from datetime import UTC, datetime as _dt
         user.last_login_at = _dt.now(UTC)
@@ -235,7 +242,8 @@ async def verify_email(
         if settings.cookie_domain:
             csrf_cookie_kwargs["domain"] = settings.cookie_domain
         response.set_cookie("csrf_token", csrf_token, **csrf_cookie_kwargs)  # type: ignore[arg-type]
-        return {"creator_id": str(user.id), "state": "EMAIL_VERIFIED", "role": user.role}
+        final_state = user.onboarding_state or "EMAIL_VERIFIED"
+        return {"creator_id": str(user.id), "state": final_state, "role": user.role}
     result, _ = await get_or_create_idempotency_response(
         session=session,
         key=idempotency_key,

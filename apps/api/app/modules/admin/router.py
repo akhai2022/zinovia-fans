@@ -752,12 +752,17 @@ async def list_user_media(
     )
     rows = (await session.execute(q)).scalars().all()
 
+    from app.modules.media.service import generate_signed_download
+    from app.modules.media.storage import get_storage_client
+
+    storage = get_storage_client()
     items = [
         {
             "id": str(m.id),
             "object_key": m.object_key,
             "content_type": m.content_type,
             "size_bytes": m.size_bytes,
+            "download_url": generate_signed_download(storage, m.object_key),
             "created_at": m.created_at.isoformat() if m.created_at else None,
         }
         for m in rows

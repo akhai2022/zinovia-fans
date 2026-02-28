@@ -81,6 +81,12 @@ type AdminUserSubscriber = {
   created_at: string;
 };
 
+type AdminPostMedia = {
+  media_id: string;
+  content_type: string;
+  download_url: string | null;
+};
+
 type AdminPost = {
   id: string;
   creator_user_id: string;
@@ -91,6 +97,7 @@ type AdminPost = {
   nsfw: boolean;
   status: string;
   created_at: string;
+  media: AdminPostMedia[];
 };
 
 type AdminTransaction = {
@@ -126,6 +133,7 @@ type AdminMediaItem = {
   object_key: string;
   content_type: string;
   size_bytes: number;
+  download_url: string | null;
   created_at: string;
 };
 
@@ -312,6 +320,7 @@ export default function AdminPage() {
   const [kycReviewNotes, setKycReviewNotes] = useState<Record<string, string>>({});
   const [kycReviewing, setKycReviewing] = useState<string | null>(null);
   const [deleteMediaConfirm, setDeleteMediaConfirm] = useState<string | null>(null);
+  const [deletePostMediaConfirm, setDeletePostMediaConfirm] = useState<string | null>(null);
 
   /* ---- Global KYC tab state ---- */
   const [globalKyc, setGlobalKyc] = useState<AdminKycSession[]>([]);
@@ -568,6 +577,25 @@ export default function AdminPage() {
       setUserMedia((prev) => prev.filter((m) => m.id !== mediaId));
       setUserMediaTotal((t) => t - 1);
       setDeleteMediaConfirm(null);
+    } catch (err) {
+      handleApiError(err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const deletePostMedia = async (mediaId: string) => {
+    setActionLoading(mediaId);
+    try {
+      await apiFetch(`/admin/media/${mediaId}`, { method: "DELETE" });
+      // Remove this media from the post in local state
+      setPosts((prev) =>
+        prev.map((p) => ({
+          ...p,
+          media: p.media.filter((m) => m.media_id !== mediaId),
+        }))
+      );
+      setDeletePostMediaConfirm(null);
     } catch (err) {
       handleApiError(err);
     } finally {
@@ -1670,67 +1698,101 @@ export default function AdminPage() {
                       </div>
                     )}
 
-                    {/* Media sub-tab */}
+                    {/* Media sub-tab — visual grid with thumbnails */}
                     {userDetailTab === "media" && (
                       <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">{userMediaTotal} media file{userMediaTotal !== 1 ? "s" : ""}</p>
+                        </div>
                         {userMedia.length === 0 ? (
-                          <p className="py-4 text-center text-sm text-muted-foreground">No media files.</p>
+                          <div className="flex flex-col items-center gap-2 py-10">
+                            <Icon name="photo_library" className="text-4xl text-muted-foreground/40" />
+                            <p className="text-sm text-muted-foreground">No media files.</p>
+                          </div>
                         ) : (
-                          <div className="overflow-x-auto rounded-lg border border-border">
-                            <table className="w-full text-sm">
-                              <thead>
-                                <tr className="border-b border-border bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
-                                  <th className="px-4 py-3 font-semibold">File</th>
-                                  <th className="px-4 py-3 font-semibold">Type</th>
-                                  <th className="px-4 py-3 font-semibold">Size</th>
-                                  <th className="px-4 py-3 font-semibold">Date</th>
-                                  <th className="px-4 py-3 font-semibold">Actions</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-border">
-                                {userMedia.map((m) => (
-                                  <tr key={m.id} className="text-foreground transition-colors hover:bg-white/[0.03]">
-                                    <td className="px-4 py-3 max-w-[250px] truncate text-xs font-mono text-muted-foreground" title={m.object_key}>
+                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                            {userMedia.map((m) => {
+                              const isImage = m.content_type.startsWith("image");
+                              const isVideo = m.content_type.startsWith("video");
+                              return (
+                                <div key={m.id} className="group relative overflow-hidden rounded-lg border border-border bg-card">
+                                  {/* Thumbnail */}
+                                  <div className="relative aspect-square bg-muted/30">
+                                    {isImage && m.download_url ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img
+                                        src={m.download_url}
+                                        alt={m.object_key.split("/").pop() || "media"}
+                                        className="h-full w-full object-cover"
+                                        loading="lazy"
+                                      />
+                                    ) : isVideo ? (
+                                      <div className="flex h-full w-full items-center justify-center">
+                                        <Icon name="play_circle" className="text-4xl text-purple-400" />
+                                      </div>
+                                    ) : (
+                                      <div className="flex h-full w-full items-center justify-center">
+                                        <Icon name="insert_drive_file" className="text-4xl text-muted-foreground/50" />
+                                      </div>
+                                    )}
+                                    {/* Hover overlay with open in new tab */}
+                                    {m.download_url && (
+                                      <a
+                                        href={m.download_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
+                                      >
+                                        <Icon name="open_in_new" className="text-2xl text-white" />
+                                      </a>
+                                    )}
+                                    {/* Type badge */}
+                                    <span className={`absolute left-1.5 top-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                                      isVideo ? "bg-purple-500/80 text-white" : "bg-blue-500/80 text-white"
+                                    }`}>
+                                      {isVideo ? "Video" : "Image"}
+                                    </span>
+                                  </div>
+                                  {/* Info bar */}
+                                  <div className="space-y-1.5 p-2">
+                                    <p className="truncate text-[11px] font-mono text-muted-foreground" title={m.object_key}>
                                       {m.object_key.split("/").pop() || m.object_key}
-                                    </td>
-                                    <td className="px-4 py-3 whitespace-nowrap">
-                                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                                        m.content_type.startsWith("video") ? "bg-purple-500/15 text-purple-400" : "bg-blue-500/15 text-blue-400"
-                                      }`}>
-                                        {m.content_type.startsWith("video") ? "Video" : m.content_type.startsWith("image") ? "Image" : m.content_type}
+                                    </p>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-[10px] text-muted-foreground">
+                                        {formatBytes(m.size_bytes)} &middot; {new Date(m.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                                       </span>
-                                    </td>
-                                    <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
-                                      {formatBytes(m.size_bytes)}
-                                    </td>
-                                    <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
-                                      {new Date(m.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                                    </td>
-                                    <td className="px-4 py-3 whitespace-nowrap">
                                       {deleteMediaConfirm === m.id ? (
                                         <div className="flex items-center gap-1">
                                           <Button
                                             size="sm"
                                             variant="destructive"
+                                            className="h-6 px-2 text-[10px]"
                                             disabled={actionLoading === m.id}
                                             onClick={() => deleteMedia(m.id)}
                                           >
-                                            {actionLoading === m.id ? <Spinner className="h-4 w-4" /> : "Confirm"}
+                                            {actionLoading === m.id ? <Spinner className="h-3 w-3" /> : "Yes"}
                                           </Button>
-                                          <Button size="sm" variant="ghost" onClick={() => setDeleteMediaConfirm(null)}>
-                                            Cancel
+                                          <Button size="sm" variant="ghost" className="h-6 px-1 text-[10px]" onClick={() => setDeleteMediaConfirm(null)}>
+                                            No
                                           </Button>
                                         </div>
                                       ) : (
-                                        <Button size="sm" variant="destructive" onClick={() => setDeleteMediaConfirm(m.id)}>
-                                          <Icon name="delete" className="icon-sm" /> Delete
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-6 w-6 p-0 text-destructive hover:bg-destructive/10"
+                                          onClick={() => setDeleteMediaConfirm(m.id)}
+                                          title="Delete media"
+                                        >
+                                          <Icon name="delete" className="icon-sm" />
                                         </Button>
                                       )}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                         <Pagination
@@ -1936,14 +1998,84 @@ export default function AdminPage() {
             </p>
           )}
           {posts.map((p) => (
-            <Card key={p.id} className="p-4 transition-colors hover:bg-white/[0.02]">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <Card key={p.id} className="overflow-hidden transition-colors hover:bg-white/[0.02]">
+              {/* Media thumbnails */}
+              {p.media.length > 0 && (
+                <div className="grid grid-cols-3 gap-1 border-b border-border sm:grid-cols-4 md:grid-cols-6">
+                  {p.media.map((m) => {
+                    const isImage = m.content_type.startsWith("image");
+                    const isVideo = m.content_type.startsWith("video");
+                    return (
+                      <div key={m.media_id} className="group relative aspect-square bg-muted/30">
+                        {isImage && m.download_url ? (
+                          <img
+                            src={m.download_url}
+                            alt="post media"
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : isVideo ? (
+                          <div className="flex h-full w-full items-center justify-center bg-muted/20">
+                            <Icon name="play_circle" className="text-3xl text-purple-400" />
+                          </div>
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-muted/20">
+                            <Icon name="insert_drive_file" className="text-3xl text-muted-foreground/50" />
+                          </div>
+                        )}
+                        {/* Type badge */}
+                        <span className={`absolute left-1 top-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
+                          isVideo ? "bg-purple-500/80 text-white" : "bg-blue-500/80 text-white"
+                        }`}>
+                          {isVideo ? "Vid" : "Img"}
+                        </span>
+                        {/* Hover overlay: view + delete */}
+                        <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
+                          {m.download_url && (
+                            <a href={m.download_url} target="_blank" rel="noopener noreferrer" className="rounded-full bg-white/20 p-1.5 hover:bg-white/30">
+                              <Icon name="open_in_new" className="text-base text-white" />
+                            </a>
+                          )}
+                          {deletePostMediaConfirm === m.media_id ? (
+                            <div className="flex gap-1">
+                              <button
+                                className="rounded-full bg-red-600 px-2 py-1 text-[10px] font-bold text-white hover:bg-red-700"
+                                disabled={actionLoading === m.media_id}
+                                onClick={() => deletePostMedia(m.media_id)}
+                              >
+                                {actionLoading === m.media_id ? "..." : "Yes"}
+                              </button>
+                              <button
+                                className="rounded-full bg-white/20 px-2 py-1 text-[10px] font-bold text-white hover:bg-white/30"
+                                onClick={() => setDeletePostMediaConfirm(null)}
+                              >
+                                No
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              className="rounded-full bg-red-600/80 p-1.5 hover:bg-red-600"
+                              onClick={() => setDeletePostMediaConfirm(m.media_id)}
+                              title="Delete this media"
+                            >
+                              <Icon name="delete" className="text-base text-white" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {/* Post info */}
+              <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-foreground">
                     {p.type} post by @{p.creator_handle || "unknown"}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {p.visibility} · {p.status} · NSFW: {p.nsfw ? "Yes" : "No"}{" "}
+                    · {p.media.length} file{p.media.length !== 1 ? "s" : ""}{" "}
                     · {new Date(p.created_at).toLocaleDateString()}
                   </p>
                   {p.caption && (

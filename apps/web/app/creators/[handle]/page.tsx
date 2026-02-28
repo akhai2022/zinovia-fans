@@ -19,6 +19,7 @@ import { interpolate } from "@/lib/i18n";
 import { SubscribeCheckoutButton } from "@/features/billing/components/SubscribeCheckoutButton";
 import { MessageButton } from "@/features/messaging/MessageButton";
 import { TipButton } from "@/features/payments/TipButton";
+import { getSession } from "@/lib/api/auth";
 import { CreatorPostsSection } from "./CreatorPostsSection";
 
 const SITE_URL = "https://zinovia.ai";
@@ -113,6 +114,8 @@ export default async function CreatorProfilePage({
   const handle = normalizeHandle(rawHandle);
   const cookieHeader = cookies().toString();
   const { dictionary: t } = await getServerDictionary();
+  const session = await getSession(cookieHeader);
+  const viewerUserId = session.user?.id ?? null;
   let creator: CreatorProfile;
   try {
     creator = await apiFetchServer<CreatorProfile>(`/creators/${encodeURIComponent(handle)}`, {
@@ -175,6 +178,8 @@ export default async function CreatorProfilePage({
     },
   ];
 
+  const isOwn = viewerUserId === creator.user_id;
+
   return (
     <Page className="max-w-6xl space-y-6 pb-10">
       <script
@@ -182,7 +187,25 @@ export default async function CreatorProfilePage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(creatorJsonLd) }}
       />
       <div className="-mx-4 overflow-hidden rounded-2xl border border-border sm:-mx-6 md:mx-0">
-        {creator.banner_media_id ? (
+        {isOwn ? (
+          <Link href="/settings/profile" className="group relative block" title="Change banner">
+            {creator.banner_media_id ? (
+              <PostMediaImage
+                assetId={creator.banner_media_id}
+                variant="full"
+                className="h-40 w-full object-cover sm:h-56"
+              />
+            ) : (
+              <div className="h-40 w-full bg-gradient-to-br from-primary/20 via-accent/10 to-surface-alt sm:h-56" />
+            )}
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+              <span className="flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                Change banner
+              </span>
+            </div>
+          </Link>
+        ) : creator.banner_media_id ? (
           <PostMediaImage
             assetId={creator.banner_media_id}
             variant="full"
@@ -194,14 +217,30 @@ export default async function CreatorProfilePage({
       </div>
       <div className="relative rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="absolute -top-10 left-6">
-          <CreatorAvatarAsset
-            assetId={creator.avatar_media_id ?? null}
-            displayName={creator.display_name}
-            handle={creator.handle}
-            size="lg"
-            withRing
-            isOnline={creator.is_online}
-          />
+          {isOwn ? (
+            <Link href="/settings/profile" className="group relative block" title="Change avatar">
+              <CreatorAvatarAsset
+                assetId={creator.avatar_media_id ?? null}
+                displayName={creator.display_name}
+                handle={creator.handle}
+                size="lg"
+                withRing
+                isOnline={creator.is_online}
+              />
+              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              </div>
+            </Link>
+          ) : (
+            <CreatorAvatarAsset
+              assetId={creator.avatar_media_id ?? null}
+              displayName={creator.display_name}
+              handle={creator.handle}
+              size="lg"
+              withRing
+              isOnline={creator.is_online}
+            />
+          )}
         </div>
         <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -215,36 +254,57 @@ export default async function CreatorProfilePage({
             </div>
           </div>
           <div className="flex flex-col items-stretch gap-3 sm:items-end">
-            {/* Primary CTA: Subscribe (or Subscribed badge) */}
-            {creator.is_subscriber ? (
-              <Badge variant="subscriber" className="flex items-center justify-center gap-1.5 px-4 py-2 text-sm">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                {t.creatorProfile.subscribedBadge}
-              </Badge>
-            ) : (
-              <div className="flex flex-col items-stretch gap-1 sm:items-end">
-                <SubscribeCheckoutButton
-                  creatorId={creator.user_id}
-                  creatorHandle={creator.handle}
-                  price={creator.subscription_price ?? undefined}
-                  currency={creator.subscription_currency ?? undefined}
-                  isSubscriber={creator.is_subscriber}
-                />
-                {creator.subscription_price && (
-                  <p className="text-center text-xs text-muted-foreground sm:text-right">
-                    {t.creatorProfile.cancelAnytime}
-                  </p>
-                )}
+            {/* Edit profile button (own profile) */}
+            {isOwn && (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/settings/profile" className="flex items-center gap-1.5">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    Edit Profile
+                  </Link>
+                </Button>
+                <Button size="sm" asChild>
+                  <Link href="/creator/post/new" className="flex items-center gap-1.5">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                    New Post
+                  </Link>
+                </Button>
               </div>
             )}
-            {/* Secondary actions: Follow + Message + Tip */}
-            <div className="flex gap-2">
-              <FollowButton creatorId={creator.user_id} initialFollowing={creator.is_following ?? false} />
-              <MessageButton creatorId={creator.user_id} />
-              <TipButton creatorId={creator.user_id} creatorHandle={creator.handle} />
-            </div>
+            {/* Primary CTA: Subscribe (or Subscribed badge) — hidden for own profile */}
+            {!isOwn && (
+              creator.is_subscriber ? (
+                <Badge variant="subscriber" className="flex items-center justify-center gap-1.5 px-4 py-2 text-sm">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  {t.creatorProfile.subscribedBadge}
+                </Badge>
+              ) : (
+                <div className="flex flex-col items-stretch gap-1 sm:items-end">
+                  <SubscribeCheckoutButton
+                    creatorId={creator.user_id}
+                    creatorHandle={creator.handle}
+                    price={creator.subscription_price ?? undefined}
+                    currency={creator.subscription_currency ?? undefined}
+                    isSubscriber={creator.is_subscriber}
+                  />
+                  {creator.subscription_price && (
+                    <p className="text-center text-xs text-muted-foreground sm:text-right">
+                      {t.creatorProfile.cancelAnytime}
+                    </p>
+                  )}
+                </div>
+              )
+            )}
+            {/* Secondary actions: Follow + Message + Tip — hidden for own profile */}
+            {!isOwn && (
+              <div className="flex gap-2">
+                <FollowButton creatorId={creator.user_id} initialFollowing={creator.is_following ?? false} />
+                <MessageButton creatorId={creator.user_id} />
+                <TipButton creatorId={creator.user_id} creatorHandle={creator.handle} />
+              </div>
+            )}
           </div>
         </div>
         {creator.bio && (
@@ -252,7 +312,7 @@ export default async function CreatorProfilePage({
             <BioExpand text={creator.bio} />
           </div>
         )}
-        {!creator.is_subscriber && creator.subscription_price && (
+        {!isOwn && !creator.is_subscriber && creator.subscription_price && (
           <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
             <p className="text-sm font-semibold text-foreground">
               {interpolate(t.creatorProfile.subscriptionPricePerMonth, { price: parseFloat(creator.subscription_price).toFixed(2), currency: (creator.subscription_currency || "EUR").toUpperCase() })}
