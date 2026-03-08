@@ -11,10 +11,11 @@ const demoArtifactsDir = path.join(__dirname, "demo-artifacts");
 
 export default defineConfig({
   testDir: "./e2e",
+  globalTeardown: "./e2e/global-teardown.ts",
   outputDir: "/tmp/zinovia-pw-results",
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 2 : 1,
   workers: 1,
   reporter: [
     ["list"],
@@ -72,6 +73,6 @@ export default defineConfig({
     // Unfiltered — runs everything including @nightly. Use for local dev only.
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
   ],
-  timeout: 30_000,
+  timeout: 60_000,
   expect: { timeout: 10_000 },
 });

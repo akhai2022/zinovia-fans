@@ -13,6 +13,7 @@ import {
   apiFetch,
   createVerifiedCreator,
   isE2EEnabled,
+  setCookiesOnContext,
   API_BASE,
   extractCookies,
 } from "./helpers";
@@ -35,13 +36,7 @@ test.describe("Creator profile & settings @regression", () => {
 
   test("CPS-001: settings/profile page loads for creator", async ({ page, context }) => {
     test.skip(!e2eAvailable, "E2E bypass required");
-    const url = new URL(API_BASE);
-    const parsed = cookies.split(";").map((c) => c.trim()).filter(Boolean).map((pair) => {
-      const [name, ...rest] = pair.split("=");
-      return { name: name.trim(), value: rest.join("=").trim(), domain: url.hostname, path: "/" };
-    });
-    await context.addCookies(parsed);
-    await context.addCookies(parsed.map((c) => ({ ...c, domain: "localhost" })));
+    await setCookiesOnContext(context, cookies);
 
     await safeGoto(page, "/settings/profile");
     const body = await page.textContent("body");
@@ -85,13 +80,7 @@ test.describe("Creator profile & settings @regression", () => {
 
   test("CPS-004: settings/security page loads for creator", async ({ page, context }) => {
     test.skip(!e2eAvailable, "E2E bypass required");
-    const url = new URL(API_BASE);
-    const parsed = cookies.split(";").map((c) => c.trim()).filter(Boolean).map((pair) => {
-      const [name, ...rest] = pair.split("=");
-      return { name: name.trim(), value: rest.join("=").trim(), domain: url.hostname, path: "/" };
-    });
-    await context.addCookies(parsed);
-    await context.addCookies(parsed.map((c) => ({ ...c, domain: "localhost" })));
+    await setCookiesOnContext(context, cookies);
 
     await safeGoto(page, "/settings/security");
     const body = await page.textContent("body");
@@ -100,13 +89,7 @@ test.describe("Creator profile & settings @regression", () => {
 
   test("CPS-005: creator/vault page loads @regression", async ({ page, context }) => {
     test.skip(!e2eAvailable, "E2E bypass required");
-    const url = new URL(API_BASE);
-    const parsed = cookies.split(";").map((c) => c.trim()).filter(Boolean).map((pair) => {
-      const [name, ...rest] = pair.split("=");
-      return { name: name.trim(), value: rest.join("=").trim(), domain: url.hostname, path: "/" };
-    });
-    await context.addCookies(parsed);
-    await context.addCookies(parsed.map((c) => ({ ...c, domain: "localhost" })));
+    await setCookiesOnContext(context, cookies);
 
     await safeGoto(page, "/creator/vault");
     const body = await page.textContent("body");
@@ -115,13 +98,7 @@ test.describe("Creator profile & settings @regression", () => {
 
   test("CPS-006: creator/earnings page loads @regression", async ({ page, context }) => {
     test.skip(!e2eAvailable, "E2E bypass required");
-    const url = new URL(API_BASE);
-    const parsed = cookies.split(";").map((c) => c.trim()).filter(Boolean).map((pair) => {
-      const [name, ...rest] = pair.split("=");
-      return { name: name.trim(), value: rest.join("=").trim(), domain: url.hostname, path: "/" };
-    });
-    await context.addCookies(parsed);
-    await context.addCookies(parsed.map((c) => ({ ...c, domain: "localhost" })));
+    await setCookiesOnContext(context, cookies);
 
     await safeGoto(page, "/creator/earnings");
     const body = await page.textContent("body");
@@ -130,13 +107,7 @@ test.describe("Creator profile & settings @regression", () => {
 
   test("CPS-007: creator/collections page loads @regression", async ({ page, context }) => {
     test.skip(!e2eAvailable, "E2E bypass required");
-    const url = new URL(API_BASE);
-    const parsed = cookies.split(";").map((c) => c.trim()).filter(Boolean).map((pair) => {
-      const [name, ...rest] = pair.split("=");
-      return { name: name.trim(), value: rest.join("=").trim(), domain: url.hostname, path: "/" };
-    });
-    await context.addCookies(parsed);
-    await context.addCookies(parsed.map((c) => ({ ...c, domain: "localhost" })));
+    await setCookiesOnContext(context, cookies);
 
     await safeGoto(page, "/creator/collections");
     const body = await page.textContent("body");
@@ -144,17 +115,16 @@ test.describe("Creator profile & settings @regression", () => {
   });
 
   test("CPS-008: fan cannot access /creator/post/new", async ({ page }) => {
-    // As anonymous, should redirect to login or get 403 from CDN
-    const response = await page.goto("/creator/post/new");
-    const status = response?.status() ?? 0;
+    // As anonymous, should redirect to login
+    await safeGoto(page, "/creator/post/new");
     const url = page.url();
     const body = await page.textContent("body");
     const restricted =
       url.includes("/login") ||
-      status === 403 ||
       body?.toLowerCase().includes("sign in") ||
       body?.toLowerCase().includes("log in") ||
-      body?.toLowerCase().includes("blocked");
+      body?.toLowerCase().includes("denied") ||
+      body?.toLowerCase().includes("not authorized");
     expect(restricted).toBe(true);
   });
 });

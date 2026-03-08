@@ -22,6 +22,7 @@ import {
   createVerifiedCreator,
   isE2EEnabled,
   loginViaUI,
+  setCookiesOnContext,
   API_BASE,
 } from "./helpers";
 import { extractCsrf } from "./ai-helpers";
@@ -99,13 +100,7 @@ test.describe("Creator Demo Journey @demo", () => {
     test.skip(!cookies && !e2eAvailable, "Creator setup failed");
 
     if (cookies) {
-      const url = new URL(API_BASE);
-      const parsed = cookies.split(";").map((c) => c.trim()).filter(Boolean).map((pair) => {
-        const [name, ...rest] = pair.split("=");
-        return { name: name.trim(), value: rest.join("=").trim(), domain: url.hostname, path: "/" };
-      });
-      await context.addCookies(parsed);
-      await context.addCookies(parsed.map((c) => ({ ...c, domain: "localhost" })));
+      await setCookiesOnContext(context, cookies);
     }
 
     // Check if onboarding page exists
@@ -123,13 +118,7 @@ test.describe("Creator Demo Journey @demo", () => {
   test("DEMO-C03: Creator edits profile settings @demo", async ({ page, context }) => {
     test.skip(!cookies, "Creator not logged in");
 
-    const url = new URL(API_BASE);
-    const parsed = cookies.split(";").map((c) => c.trim()).filter(Boolean).map((pair) => {
-      const [name, ...rest] = pair.split("=");
-      return { name: name.trim(), value: rest.join("=").trim(), domain: url.hostname, path: "/" };
-    });
-    await context.addCookies(parsed);
-    await context.addCookies(parsed.map((c) => ({ ...c, domain: "localhost" })));
+    await setCookiesOnContext(context, cookies);
 
     await safeGoto(page, "/settings/profile");
     await page.waitForLoadState("domcontentloaded");
@@ -160,13 +149,7 @@ test.describe("Creator Demo Journey @demo", () => {
   test("DEMO-C04: Creator creates a text post @demo", async ({ page, context }) => {
     test.skip(!cookies, "Creator not logged in");
 
-    const url = new URL(API_BASE);
-    const parsed = cookies.split(";").map((c) => c.trim()).filter(Boolean).map((pair) => {
-      const [name, ...rest] = pair.split("=");
-      return { name: name.trim(), value: rest.join("=").trim(), domain: url.hostname, path: "/" };
-    });
-    await context.addCookies(parsed);
-    await context.addCookies(parsed.map((c) => ({ ...c, domain: "localhost" })));
+    await setCookiesOnContext(context, cookies);
 
     // Navigate to post creation
     await safeGoto(page, "/creator/post/new");
@@ -178,7 +161,7 @@ test.describe("Creator Demo Journey @demo", () => {
     // Fill in caption
     const caption = page.locator("#caption");
     if ((await caption.count()) > 0) {
-      await caption.fill("Excited to share my first post! 🎉 Stay tuned for more.");
+      await caption.fill("Excited to share my first post! Stay tuned for more.");
       await page.screenshot({
         path: path.join(DEMO_DIR, "creator-04-post-filled.png"),
       });
@@ -216,13 +199,7 @@ test.describe("Creator Demo Journey @demo", () => {
   test("DEMO-C05: Creator views vault @demo", async ({ page, context }) => {
     test.skip(!cookies, "Creator not logged in");
 
-    const url = new URL(API_BASE);
-    const parsed = cookies.split(";").map((c) => c.trim()).filter(Boolean).map((pair) => {
-      const [name, ...rest] = pair.split("=");
-      return { name: name.trim(), value: rest.join("=").trim(), domain: url.hostname, path: "/" };
-    });
-    await context.addCookies(parsed);
-    await context.addCookies(parsed.map((c) => ({ ...c, domain: "localhost" })));
+    await setCookiesOnContext(context, cookies);
 
     await safeGoto(page, "/creator/vault");
     await page.waitForLoadState("domcontentloaded");
@@ -238,13 +215,7 @@ test.describe("Creator Demo Journey @demo", () => {
   test("DEMO-C06: Creator views earnings page @demo", async ({ page, context }) => {
     test.skip(!cookies, "Creator not logged in");
 
-    const url = new URL(API_BASE);
-    const parsed = cookies.split(";").map((c) => c.trim()).filter(Boolean).map((pair) => {
-      const [name, ...rest] = pair.split("=");
-      return { name: name.trim(), value: rest.join("=").trim(), domain: url.hostname, path: "/" };
-    });
-    await context.addCookies(parsed);
-    await context.addCookies(parsed.map((c) => ({ ...c, domain: "localhost" })));
+    await setCookiesOnContext(context, cookies);
 
     await safeGoto(page, "/creator/earnings");
     await page.waitForLoadState("domcontentloaded");
@@ -260,13 +231,7 @@ test.describe("Creator Demo Journey @demo", () => {
   test("DEMO-C07: Creator explores AI Studio @demo", async ({ page, context }) => {
     test.skip(!cookies, "Creator not logged in");
 
-    const url = new URL(API_BASE);
-    const parsed = cookies.split(";").map((c) => c.trim()).filter(Boolean).map((pair) => {
-      const [name, ...rest] = pair.split("=");
-      return { name: name.trim(), value: rest.join("=").trim(), domain: url.hostname, path: "/" };
-    });
-    await context.addCookies(parsed);
-    await context.addCookies(parsed.map((c) => ({ ...c, domain: "localhost" })));
+    await setCookiesOnContext(context, cookies);
 
     await safeGoto(page, "/ai");
     await page.waitForLoadState("domcontentloaded");

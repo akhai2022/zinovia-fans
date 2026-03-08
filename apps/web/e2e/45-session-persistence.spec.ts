@@ -12,6 +12,7 @@ import {
   signupFan,
   apiFetch,
   extractCookies,
+  setCookiesOnContext,
   API_BASE,
 } from "./helpers";
 
@@ -42,13 +43,7 @@ test.describe("Session persistence @regression", () => {
 
   test("SES-002: page refresh preserves authentication", async ({ page, context }) => {
     test.skip(!cookies, "Signup failed");
-    const url = new URL(API_BASE);
-    const parsed = cookies.split(";").map((c) => c.trim()).filter(Boolean).map((pair) => {
-      const [name, ...rest] = pair.split("=");
-      return { name: name.trim(), value: rest.join("=").trim(), domain: url.hostname, path: "/" };
-    });
-    await context.addCookies(parsed);
-    await context.addCookies(parsed.map((c) => ({ ...c, domain: "localhost" })));
+    await setCookiesOnContext(context, cookies);
 
     await safeGoto(page, "/feed");
     await page.reload();
@@ -58,13 +53,7 @@ test.describe("Session persistence @regression", () => {
 
   test("SES-003: navigating between pages preserves session", async ({ page, context }) => {
     test.skip(!cookies, "Signup failed");
-    const url = new URL(API_BASE);
-    const parsed = cookies.split(";").map((c) => c.trim()).filter(Boolean).map((pair) => {
-      const [name, ...rest] = pair.split("=");
-      return { name: name.trim(), value: rest.join("=").trim(), domain: url.hostname, path: "/" };
-    });
-    await context.addCookies(parsed);
-    await context.addCookies(parsed.map((c) => ({ ...c, domain: "localhost" })));
+    await setCookiesOnContext(context, cookies);
 
     await safeGoto(page, "/feed");
     await safeGoto(page, "/notifications");
@@ -95,17 +84,15 @@ test.describe("Unauthorized access @smoke", () => {
     test(`SES-010: ${route} redirects or shows login for anonymous @smoke`, async ({
       page,
     }) => {
-      const response = await page.goto(route);
-      const status = response?.status() ?? 0;
+      await safeGoto(page, route);
       const url = page.url();
       const body = await page.textContent("body");
       const handled =
         url.includes("/login") ||
-        status === 403 ||
         body?.toLowerCase().includes("sign in") ||
         body?.toLowerCase().includes("log in") ||
-        body?.toLowerCase().includes("request could not be satisfied") ||
-        body?.toLowerCase().includes("blocked");
+        body?.toLowerCase().includes("denied") ||
+        body?.toLowerCase().includes("not authorized");
       expect(handled).toBe(true);
     });
   }

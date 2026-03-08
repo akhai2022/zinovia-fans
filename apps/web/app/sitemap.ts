@@ -74,6 +74,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Standalone feature pages
     { url: `${SITE_URL}/fast-payouts`, lastModified: now, changeFrequency: "monthly", priority: 0.7, alternates: alternates(`${SITE_URL}/fast-payouts`) },
     { url: `${SITE_URL}/content-protection`, lastModified: now, changeFrequency: "monthly", priority: 0.7, alternates: alternates(`${SITE_URL}/content-protection`) },
+    // AI Studio & AI tools
+    { url: `${SITE_URL}/ai`, lastModified: now, changeFrequency: "monthly", priority: 0.7, alternates: alternates(`${SITE_URL}/ai`) },
+    { url: `${SITE_URL}/ai/tools/remove-bg`, lastModified: now, changeFrequency: "monthly", priority: 0.5, alternates: alternates(`${SITE_URL}/ai/tools/remove-bg`) },
+    { url: `${SITE_URL}/ai/tools/cartoon-avatar`, lastModified: now, changeFrequency: "monthly", priority: 0.5, alternates: alternates(`${SITE_URL}/ai/tools/cartoon-avatar`) },
+    { url: `${SITE_URL}/ai/tools/animate-image`, lastModified: now, changeFrequency: "monthly", priority: 0.5, alternates: alternates(`${SITE_URL}/ai/tools/animate-image`) },
+    { url: `${SITE_URL}/ai/tools/auto-caption`, lastModified: now, changeFrequency: "monthly", priority: 0.5, alternates: alternates(`${SITE_URL}/ai/tools/auto-caption`) },
+    // Auth pages (indexable)
+    { url: `${SITE_URL}/signup`, lastModified: now, changeFrequency: "monthly", priority: 0.8, alternates: alternates(`${SITE_URL}/signup`) },
+    // Features hub
+    { url: `${SITE_URL}/features`, lastModified: now, changeFrequency: "monthly", priority: 0.7, alternates: alternates(`${SITE_URL}/features`) },
     // Alternatives section
     { url: `${SITE_URL}/alternatives`, lastModified: now, changeFrequency: "monthly", priority: 0.7, alternates: alternates(`${SITE_URL}/alternatives`) },
     { url: `${SITE_URL}/alternatives/onlyfans-alternatives`, lastModified: now, changeFrequency: "monthly", priority: 0.7, alternates: alternates(`${SITE_URL}/alternatives/onlyfans-alternatives`) },

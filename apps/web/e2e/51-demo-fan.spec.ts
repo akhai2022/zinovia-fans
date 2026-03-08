@@ -21,6 +21,7 @@ import {
   createVerifiedCreator,
   isE2EEnabled,
   loginViaUI,
+  setCookiesOnContext,
   e2eApi,
   API_BASE,
 } from "./helpers";
@@ -135,13 +136,7 @@ test.describe("Fan Demo Journey @demo", () => {
 
   test("DEMO-F03: Fan browses creator discovery @demo", async ({ page, context }) => {
     if (fanCookies) {
-      const url = new URL(API_BASE);
-      const parsed = fanCookies.split(";").map((c) => c.trim()).filter(Boolean).map((pair) => {
-        const [name, ...rest] = pair.split("=");
-        return { name: name.trim(), value: rest.join("=").trim(), domain: url.hostname, path: "/" };
-      });
-      await context.addCookies(parsed);
-      await context.addCookies(parsed.map((c) => ({ ...c, domain: "localhost" })));
+      await setCookiesOnContext(context, fanCookies);
     }
 
     await safeGoto(page, "/creators");
@@ -157,13 +152,7 @@ test.describe("Fan Demo Journey @demo", () => {
 
   test("DEMO-F04: Fan views a creator profile @demo", async ({ page, context }) => {
     if (fanCookies) {
-      const url = new URL(API_BASE);
-      const parsed = fanCookies.split(";").map((c) => c.trim()).filter(Boolean).map((pair) => {
-        const [name, ...rest] = pair.split("=");
-        return { name: name.trim(), value: rest.join("=").trim(), domain: url.hostname, path: "/" };
-      });
-      await context.addCookies(parsed);
-      await context.addCookies(parsed.map((c) => ({ ...c, domain: "localhost" })));
+      await setCookiesOnContext(context, fanCookies);
     }
 
     // Find a creator to view
@@ -191,13 +180,7 @@ test.describe("Fan Demo Journey @demo", () => {
   test("DEMO-F05: Fan views their feed @demo", async ({ page, context }) => {
     test.skip(!fanCookies, "Fan not logged in");
 
-    const url = new URL(API_BASE);
-    const parsed = fanCookies.split(";").map((c) => c.trim()).filter(Boolean).map((pair) => {
-      const [name, ...rest] = pair.split("=");
-      return { name: name.trim(), value: rest.join("=").trim(), domain: url.hostname, path: "/" };
-    });
-    await context.addCookies(parsed);
-    await context.addCookies(parsed.map((c) => ({ ...c, domain: "localhost" })));
+    await setCookiesOnContext(context, fanCookies);
 
     await safeGoto(page, "/feed");
     await page.waitForLoadState("domcontentloaded");
@@ -230,13 +213,7 @@ test.describe("Fan Demo Journey @demo", () => {
   test("DEMO-F07: Fan checks notifications @demo", async ({ page, context }) => {
     test.skip(!fanCookies, "Fan not logged in");
 
-    const url = new URL(API_BASE);
-    const parsed = fanCookies.split(";").map((c) => c.trim()).filter(Boolean).map((pair) => {
-      const [name, ...rest] = pair.split("=");
-      return { name: name.trim(), value: rest.join("=").trim(), domain: url.hostname, path: "/" };
-    });
-    await context.addCookies(parsed);
-    await context.addCookies(parsed.map((c) => ({ ...c, domain: "localhost" })));
+    await setCookiesOnContext(context, fanCookies);
 
     await safeGoto(page, "/notifications");
     await page.waitForLoadState("domcontentloaded");
@@ -252,13 +229,7 @@ test.describe("Fan Demo Journey @demo", () => {
   test("DEMO-F08: Fan views billing page @demo", async ({ page, context }) => {
     test.skip(!fanCookies, "Fan not logged in");
 
-    const url = new URL(API_BASE);
-    const parsed = fanCookies.split(";").map((c) => c.trim()).filter(Boolean).map((pair) => {
-      const [name, ...rest] = pair.split("=");
-      return { name: name.trim(), value: rest.join("=").trim(), domain: url.hostname, path: "/" };
-    });
-    await context.addCookies(parsed);
-    await context.addCookies(parsed.map((c) => ({ ...c, domain: "localhost" })));
+    await setCookiesOnContext(context, fanCookies);
 
     await safeGoto(page, "/billing/manage");
     await page.waitForLoadState("domcontentloaded");
@@ -274,13 +245,7 @@ test.describe("Fan Demo Journey @demo", () => {
   test("DEMO-F09: Fan uses search @demo", async ({ page, context }) => {
     test.skip(!fanCookies, "Fan not logged in");
 
-    const url = new URL(API_BASE);
-    const parsed = fanCookies.split(";").map((c) => c.trim()).filter(Boolean).map((pair) => {
-      const [name, ...rest] = pair.split("=");
-      return { name: name.trim(), value: rest.join("=").trim(), domain: url.hostname, path: "/" };
-    });
-    await context.addCookies(parsed);
-    await context.addCookies(parsed.map((c) => ({ ...c, domain: "localhost" })));
+    await setCookiesOnContext(context, fanCookies);
 
     await safeGoto(page, "/search");
     await page.waitForLoadState("domcontentloaded");

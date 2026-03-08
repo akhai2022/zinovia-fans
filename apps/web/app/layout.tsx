@@ -1,5 +1,5 @@
 import "./globals.css";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { cookies } from "next/headers";
 import { Inter, Space_Grotesk } from "next/font/google";
 import { ApiBaseSync } from "@/components/app/ApiBaseSync";
@@ -7,6 +7,7 @@ import { ApiHealthBanner } from "@/components/app/ApiHealthBanner";
 import { KycReminderBanner } from "@/components/app/KycReminderBanner";
 import { Navbar } from "@/components/app/Navbar";
 import { Footer } from "@/components/app/Footer";
+import { GoogleAnalytics } from "@/components/app/GoogleAnalytics";
 import { ToastProvider } from "@/components/ui/toast";
 import { getSession } from "@/lib/api/auth";
 import { SessionProvider } from "@/lib/hooks/useSession";
@@ -33,9 +34,9 @@ const spaceGrotesk = Space_Grotesk({
 const SITE_URL = "https://zinovia.ai";
 
 export const metadata = {
-  title: "Zinovia Fans — Premium Creator Subscription Platform",
+  title: "Zinovia Fans — AI-Powered Creator Subscription Platform",
   description:
-    "Subscribe to exclusive content from your favourite creators. Secure payouts, encrypted checkout, and private media delivery. For fans and creators.",
+    "Monetize your fanbase with subscriptions, tips, paid unlocks, and AI tools. 48-hour payouts, encrypted content delivery, and built-in AI safety. Join free.",
   metadataBase: new URL(SITE_URL),
   alternates: {
     canonical: SITE_URL,
@@ -55,9 +56,9 @@ export const metadata = {
     },
   },
   openGraph: {
-    title: "Zinovia Fans — Premium Creator Subscription Platform",
+    title: "Zinovia Fans — AI-Powered Creator Subscription Platform",
     description:
-      "Subscribe to exclusive content from your favourite creators. Secure payouts, encrypted checkout, and private media delivery.",
+      "Monetize your fanbase with subscriptions, tips, paid unlocks, and AI tools. 48-hour payouts and encrypted content delivery.",
     url: SITE_URL,
     siteName: "Zinovia Fans",
     locale: "en_US",
@@ -67,15 +68,15 @@ export const metadata = {
         url: "/assets/og-default.jpg",
         width: 1200,
         height: 630,
-        alt: "Zinovia Fans — Premium Creator Subscription Platform",
+        alt: "Zinovia Fans — AI-Powered Creator Subscription Platform",
       },
     ],
   },
   twitter: {
     card: "summary_large_image" as const,
-    title: "Zinovia Fans — Premium Creator Subscription Platform",
+    title: "Zinovia Fans — AI-Powered Creator Subscription Platform",
     description:
-      "Subscribe to exclusive content from your favourite creators. Secure payouts and private delivery.",
+      "Monetize your fanbase with subscriptions, tips, and AI tools. 48-hour payouts, encrypted delivery. Join free.",
     images: ["/assets/og-default.jpg"],
   },
   referrer: "origin-when-cross-origin",
@@ -107,7 +108,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       name: "Zinovia Fans",
       url: SITE_URL,
       description:
-        "Subscribe to exclusive content from your favourite creators. Secure payouts, encrypted checkout, and private media delivery.",
+        "AI-powered creator subscription platform. Monetize your fanbase with subscriptions, tips, paid unlocks, and AI tools.",
       publisher: { "@type": "Organization", name: "Zinovia", url: SITE_URL },
       potentialAction: {
         "@type": "SearchAction",
@@ -143,7 +144,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       applicationCategory: "SocialNetworkingApplication",
       operatingSystem: "Web",
       description:
-        "Creator subscription platform with 48-hour payouts, AI tools, and encrypted content delivery.",
+        "AI-powered creator subscription platform with 48-hour payouts, AI Studio tools, AI safety, creator analytics, and encrypted content delivery.",
       featureList: [
         "48-hour creator payouts",
         "AI-powered creator tools",
@@ -162,7 +163,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       "@type": "Product",
       name: "Zinovia Fans Creator Platform",
       description:
-        "Premium creator subscription platform with fast payouts, AI tools, content encryption, and multilingual support.",
+        "AI-powered creator subscription platform. Monetize your audience with subscriptions, tips, paid unlocks, AI Studio, AI safety, and creator analytics.",
       brand: { "@type": "Brand", name: "Zinovia" },
       url: SITE_URL,
       image: `${SITE_URL}/assets/og-default.jpg`,
@@ -215,8 +216,16 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(s){s.dataset.zone='10700280',s.src='https://gizokraijaw.net/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`,
+          }}
+        />
       </head>
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
+        <Suspense fallback={null}>
+          <GoogleAnalytics />
+        </Suspense>
         <SessionProvider user={session.user} unavailable={session.unavailable}>
           <I18nProvider locale={locale} dictionary={dictionary}>
             <ToastProvider>

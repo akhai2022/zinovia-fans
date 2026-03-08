@@ -20,6 +20,76 @@ export const E2E_SECRET = process.env.E2E_SECRET ?? "e2e-dev-secret";
 /** True when running against the real production deployment. */
 export const IS_PROD = API_BASE.includes("api.zinovia.ai");
 
+/* --------------- test account tracking --------------- */
+
+/** Tracks all test accounts created during the run for cleanup. */
+interface TestAccount {
+  email: string;
+  password: string;
+  cookies?: string;
+}
+const _testAccounts: TestAccount[] = [];
+
+/** Register a test account for cleanup at end of run. */
+export function trackTestAccount(email: string, password: string, cookies?: string): void {
+  _testAccounts.push({ email, password, cookies });
+}
+
+/** Get all tracked test accounts. */
+export function getTrackedAccounts(): TestAccount[] {
+  return [..._testAccounts];
+}
+
+/**
+ * Clean up all test accounts created during the run.
+ * Attempts: (1) E2E cleanup endpoint, (2) logout each session.
+ */
+export async function cleanupTestAccounts(): Promise<{ cleaned: number; failed: number }> {
+  let cleaned = 0;
+  let failed = 0;
+
+  // Try E2E bulk cleanup first (works in dev/staging)
+  const e2eCleanup = await e2eApi("/cleanup", {
+    query: { email_prefix: "e2e+" },
+  }).catch(() => null);
+  if (e2eCleanup?.ok) {
+    return { cleaned: _testAccounts.length, failed: 0 };
+  }
+
+  // Production fallback: logout each session individually
+  for (const account of _testAccounts) {
+    try {
+      if (account.cookies) {
+        await apiFetch("/auth/logout", {
+          method: "POST",
+          cookies: account.cookies,
+        });
+        cleaned++;
+      } else {
+        // Try to login and logout
+        const login = await apiFetch("/auth/login", {
+          method: "POST",
+          body: { email: account.email, password: account.password },
+        });
+        if (login.ok) {
+          const setCookie = login.headers.get("set-cookie") ?? "";
+          const cookies = extractCookies(setCookie);
+          await apiFetch("/auth/logout", {
+            method: "POST",
+            cookies,
+          });
+          cleaned++;
+        } else {
+          failed++;
+        }
+      }
+    } catch {
+      failed++;
+    }
+  }
+  return { cleaned, failed };
+}
+
 /* --------------- unique ids --------------- */
 
 const RUN_ID = Date.now().toString(36);
@@ -145,7 +215,9 @@ export async function signupFan(
     throw new Error(`Fan login failed: ${login.status} ${JSON.stringify(login.body)}`);
   }
   const setCookie = login.headers.get("set-cookie") ?? "";
-  return { cookies: extractCookies(setCookie) };
+  const cookies = extractCookies(setCookie);
+  trackTestAccount(email, password, cookies);
+  return { cookies };
 }
 
 /**
@@ -227,8 +299,10 @@ export async function createVerifiedCreator(
     throw new Error(`Creator login failed: ${login.status} ${JSON.stringify(login.body)}`);
   }
   const setCookie = login.headers.get("set-cookie") ?? "";
+  const cookies = extractCookies(setCookie);
+  trackTestAccount(email, password, cookies);
   return {
-    cookies: extractCookies(setCookie),
+    cookies,
     userId: forceResult.body?.user_id ?? login.body?.id,
   };
 }
@@ -263,8 +337,10 @@ export async function createAdminUser(
     throw new Error(`Admin login failed: ${login.status} ${JSON.stringify(login.body)}`);
   }
   const setCookie = login.headers.get("set-cookie") ?? "";
+  const cookies = extractCookies(setCookie);
+  trackTestAccount(email, password, cookies);
   return {
-    cookies: extractCookies(setCookie),
+    cookies,
     userId: forceResult.body?.user_id,
   };
 }
@@ -376,15 +452,15 @@ export async function activatePostPurchase(
  * (ERR_NETWORK_CHANGED, ERR_CONNECTION_RESET) that occur against remote hosts.
  */
 export async function safeGoto(page: Page, path: string): Promise<void> {
-  const maxAttempts = 3;
+  const maxAttempts = 5;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       const response = await page.goto(path);
       // Retry on CloudFront WAF 403 blocks (rate limiting / bot detection)
       if (response?.status() === 403 && attempt < maxAttempts) {
-        const body = await page.textContent("body").catch(() => "");
-        if (body?.includes("CloudFront") || body?.includes("Request blocked")) {
-          await page.waitForTimeout(1000 * attempt);
+        const html = await page.content().catch(() => "");
+        if (html.includes("cloudfront") || html.includes("CloudFront") || html.includes("Request blocked")) {
+          await page.waitForTimeout(3000 * attempt);
           continue;
         }
       }
@@ -397,7 +473,7 @@ export async function safeGoto(page: Page, path: string): Promise<void> {
          msg.includes("ERR_CONNECTION_RESET") ||
          msg.includes("ERR_NETWORK_IO_SUSPENDED"))
       ) {
-        await page.waitForTimeout(500 * attempt);
+        await page.waitForTimeout(2000 * attempt);
         continue;
       }
       throw err;

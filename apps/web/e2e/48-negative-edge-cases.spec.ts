@@ -204,18 +204,15 @@ test.describe("Permission boundaries @regression", () => {
   });
 
   test("NEG-030: fan cannot access /admin @smoke", async ({ page }) => {
-    const response = await page.goto("/admin");
-    const status = response?.status() ?? 0;
+    await safeGoto(page, "/admin");
     const url = page.url();
     const body = await page.textContent("body");
     const blocked =
       url.includes("/login") ||
-      status === 403 ||
       body?.toLowerCase().includes("sign in") ||
       body?.toLowerCase().includes("denied") ||
       body?.toLowerCase().includes("not authorized") ||
-      body?.toLowerCase().includes("403") ||
-      body?.toLowerCase().includes("blocked");
+      body?.toLowerCase().includes("403");
     expect(blocked).toBe(true);
   });
 
