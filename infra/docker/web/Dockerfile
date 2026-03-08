@@ -10,9 +10,6 @@ COPY package.json package-lock.json /app/
 COPY apps/web/package.json /app/apps/web/package.json
 COPY packages/contracts/package.json /app/packages/contracts/package.json
 RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
-# sharp is required for Next.js image optimization in standalone mode.
-# Install at root so it is resolvable via Node module resolution from apps/web.
-RUN npm install --legacy-peer-deps sharp
 
 # Build the app (produces .next with standalone output)
 FROM base AS builder
@@ -39,7 +36,8 @@ ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 
-# Copy the standalone server (includes minimal node_modules)
+# Copy the standalone server (includes minimal node_modules).
+# sharp is listed in apps/web/package.json so the file tracer includes it.
 COPY --from=builder /app/apps/web/.next/standalone /app
 
 # Copy static assets and public directory (not included in standalone by default)

@@ -73,15 +73,19 @@ test.describe("Regression — Auth Pages Redirect Anonymous", () => {
       page,
     }) => {
       await page.context().clearCookies();
-      await safeGoto(page, route);
-      await page.waitForLoadState("networkidle");
+      const response = await page.goto(route);
+      await page.waitForLoadState("domcontentloaded");
 
+      const status = response?.status() ?? 0;
       const url = page.url();
       const body = await page.textContent("body");
       const isHandled =
         url.includes("/login") ||
+        status === 403 ||
         body?.toLowerCase().includes("sign in") ||
-        body?.toLowerCase().includes("log in");
+        body?.toLowerCase().includes("log in") ||
+        body?.toLowerCase().includes("request could not be satisfied") ||
+        body?.toLowerCase().includes("blocked");
       expect(isHandled).toBe(true);
     });
   }

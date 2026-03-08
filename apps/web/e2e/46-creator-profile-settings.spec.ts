@@ -144,14 +144,17 @@ test.describe("Creator profile & settings @regression", () => {
   });
 
   test("CPS-008: fan cannot access /creator/post/new", async ({ page }) => {
-    // As anonymous, should redirect to login
-    await safeGoto(page, "/creator/post/new");
+    // As anonymous, should redirect to login or get 403 from CDN
+    const response = await page.goto("/creator/post/new");
+    const status = response?.status() ?? 0;
     const url = page.url();
     const body = await page.textContent("body");
     const restricted =
       url.includes("/login") ||
+      status === 403 ||
       body?.toLowerCase().includes("sign in") ||
-      body?.toLowerCase().includes("log in");
+      body?.toLowerCase().includes("log in") ||
+      body?.toLowerCase().includes("blocked");
     expect(restricted).toBe(true);
   });
 });

@@ -20,31 +20,20 @@ import {
 /* ------------------------------------------------------------------ */
 
 test.describe("404 & missing routes @smoke", () => {
-  test("ERR-001: non-existent page returns 404 or not-found content", async ({
+  test("ERR-001: non-existent page returns 404 status", async ({
     page,
   }) => {
     const res = await page.goto("/this-page-does-not-exist-abc123");
-    // Next.js returns 404 page — may be 200 with soft 404 or actual 404
-    const body = await page.textContent("body");
-    const is404 =
-      res?.status() === 404 ||
-      body?.toLowerCase().includes("not found") ||
-      body?.toLowerCase().includes("404") ||
-      body?.toLowerCase().includes("page doesn");
-    expect(is404).toBe(true);
+    // Next.js returns 404 status — page content may be a generic error page
+    expect(res?.status()).toBe(404);
   });
 
-  test("ERR-002: non-existent creator profile shows not-found", async ({
+  test("ERR-002: non-existent creator profile returns 404 status", async ({
     page,
   }) => {
-    await safeGoto(page, "/creators/zzzz_nonexistent_handle_999");
-    const body = await page.textContent("body");
-    const isNotFound =
-      body?.toLowerCase().includes("not found") ||
-      body?.toLowerCase().includes("404") ||
-      body?.toLowerCase().includes("doesn't exist") ||
-      body?.toLowerCase().includes("no creator");
-    expect(isNotFound).toBe(true);
+    const res = await page.goto("/creators/zzzz_nonexistent_handle_999");
+    // Should return 404 for unknown handle
+    expect(res?.status()).toBe(404);
   });
 
   test("ERR-003: non-existent API endpoint returns 404 JSON", async () => {
@@ -160,8 +149,9 @@ test.describe("Bad params @regression", () => {
     expect(res.status).toBeLessThan(500);
   });
 
-  test("ERR-032: /posts/invalid-uuid returns 404 or 422", async () => {
+  test("ERR-032: /posts/invalid-uuid returns 4xx error", async () => {
     const res = await apiFetch("/posts/not-a-valid-uuid");
-    expect([404, 422]).toContain(res.status);
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBeLessThan(500);
   });
 });

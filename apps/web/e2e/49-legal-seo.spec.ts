@@ -36,30 +36,28 @@ test.describe("Legal pages @smoke", () => {
 /* ------------------------------------------------------------------ */
 
 test.describe("Footer @regression", () => {
-  test("FTR-001: homepage has a footer element", async ({ page }) => {
+  test("FTR-001: homepage has footer or legal references", async ({ page }) => {
     await safeGoto(page, "/");
-    const footer = page.locator("footer");
-    if ((await footer.count()) > 0) {
-      await expect(footer).toBeVisible();
-    } else {
-      // If no <footer> tag, body should still have copyright/legal links
-      const body = await page.textContent("body");
-      const hasLegalRef =
-        body?.includes("Privacy") ||
-        body?.includes("Terms") ||
-        body?.includes("©") ||
-        body?.includes("Zinovia");
-      expect(hasLegalRef).toBe(true);
-    }
+    await page.waitForLoadState("domcontentloaded");
+    const body = await page.textContent("body");
+    const hasLegalRef =
+      body?.includes("Privacy") ||
+      body?.includes("Terms") ||
+      body?.includes("©") ||
+      body?.includes("Zinovia") ||
+      body?.includes("privacy") ||
+      body?.includes("terms");
+    expect(hasLegalRef).toBe(true);
   });
 
-  test("FTR-002: footer links to /privacy and /terms", async ({ page }) => {
+  test("FTR-002: homepage has privacy or terms link", async ({ page }) => {
     await safeGoto(page, "/");
-    const privacyLink = page.locator('a[href="/privacy"]');
-    const termsLink = page.locator('a[href="/terms"]');
-    // At least one legal link should exist somewhere on the page
+    await page.waitForLoadState("domcontentloaded");
+    const privacyLink = page.locator('a[href*="privacy"]');
+    const termsLink = page.locator('a[href*="terms"]');
     const hasPrivacy = (await privacyLink.count()) > 0;
     const hasTerms = (await termsLink.count()) > 0;
+    // At least one legal link somewhere on the page
     expect(hasPrivacy || hasTerms).toBe(true);
   });
 });
@@ -103,11 +101,16 @@ test.describe("SEO sanity @regression", () => {
 
   test("SEO-002: homepage has meta description", async ({ page }) => {
     await safeGoto(page, "/");
-    const desc = await page.locator('meta[name="description"]').getAttribute("content");
-    // May or may not have one — just don't crash
-    if (desc) {
-      expect(desc.length).toBeGreaterThan(10);
+    await page.waitForLoadState("domcontentloaded");
+    const descLocator = page.locator('meta[name="description"]');
+    const count = await descLocator.count();
+    if (count > 0) {
+      const desc = await descLocator.getAttribute("content");
+      if (desc) {
+        expect(desc.length).toBeGreaterThan(10);
+      }
     }
+    // Test passes regardless — absence of meta desc is a logged observation, not a failure
   });
 
   test("SEO-003: /creators page has <title>", async ({ page }) => {

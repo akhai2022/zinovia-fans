@@ -73,6 +73,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/features/analytics`, lastModified: now, changeFrequency: "monthly", priority: 0.6, alternates: alternates(`${SITE_URL}/features/analytics`) },
     // Standalone feature pages
     { url: `${SITE_URL}/fast-payouts`, lastModified: now, changeFrequency: "monthly", priority: 0.7, alternates: alternates(`${SITE_URL}/fast-payouts`) },
+    { url: `${SITE_URL}/content-protection`, lastModified: now, changeFrequency: "monthly", priority: 0.7, alternates: alternates(`${SITE_URL}/content-protection`) },
+    // Alternatives section
+    { url: `${SITE_URL}/alternatives`, lastModified: now, changeFrequency: "monthly", priority: 0.7, alternates: alternates(`${SITE_URL}/alternatives`) },
+    { url: `${SITE_URL}/alternatives/onlyfans-alternatives`, lastModified: now, changeFrequency: "monthly", priority: 0.7, alternates: alternates(`${SITE_URL}/alternatives/onlyfans-alternatives`) },
+    { url: `${SITE_URL}/alternatives/patreon-alternatives`, lastModified: now, changeFrequency: "monthly", priority: 0.7, alternates: alternates(`${SITE_URL}/alternatives/patreon-alternatives`) },
+    { url: `${SITE_URL}/alternatives/creator-platforms`, lastModified: now, changeFrequency: "monthly", priority: 0.7, alternates: alternates(`${SITE_URL}/alternatives/creator-platforms`) },
+    // Guides section
+    { url: `${SITE_URL}/guides`, lastModified: now, changeFrequency: "monthly", priority: 0.6, alternates: alternates(`${SITE_URL}/guides`) },
+    { url: `${SITE_URL}/guides/ai-tools-for-creators`, lastModified: now, changeFrequency: "monthly", priority: 0.6, alternates: alternates(`${SITE_URL}/guides/ai-tools-for-creators`) },
+    { url: `${SITE_URL}/guides/creator-platform-fees-compared`, lastModified: now, changeFrequency: "monthly", priority: 0.6, alternates: alternates(`${SITE_URL}/guides/creator-platform-fees-compared`) },
+    { url: `${SITE_URL}/guides/content-protection-for-creators`, lastModified: now, changeFrequency: "monthly", priority: 0.6, alternates: alternates(`${SITE_URL}/guides/content-protection-for-creators`) },
+    { url: `${SITE_URL}/guides/how-to-start-earning-as-creator`, lastModified: now, changeFrequency: "monthly", priority: 0.6, alternates: alternates(`${SITE_URL}/guides/how-to-start-earning-as-creator`) },
+    { url: `${SITE_URL}/guides/european-creator-platforms`, lastModified: now, changeFrequency: "monthly", priority: 0.6, alternates: alternates(`${SITE_URL}/guides/european-creator-platforms`) },
     // Niche landing pages
     { url: `${SITE_URL}/for/fitness-creators`, lastModified: now, changeFrequency: "monthly", priority: 0.6, alternates: alternates(`${SITE_URL}/for/fitness-creators`) },
     { url: `${SITE_URL}/for/musicians`, lastModified: now, changeFrequency: "monthly", priority: 0.6, alternates: alternates(`${SITE_URL}/for/musicians`) },
@@ -81,6 +94,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/for/cosplayers`, lastModified: now, changeFrequency: "monthly", priority: 0.6, alternates: alternates(`${SITE_URL}/for/cosplayers`) },
     { url: `${SITE_URL}/for/writers`, lastModified: now, changeFrequency: "monthly", priority: 0.6, alternates: alternates(`${SITE_URL}/for/writers`) },
     { url: `${SITE_URL}/for/educators`, lastModified: now, changeFrequency: "monthly", priority: 0.6, alternates: alternates(`${SITE_URL}/for/educators`) },
+    { url: `${SITE_URL}/for/fashion-creators`, lastModified: now, changeFrequency: "monthly", priority: 0.6, alternates: alternates(`${SITE_URL}/for/fashion-creators`) },
+    { url: `${SITE_URL}/for/travel-creators`, lastModified: now, changeFrequency: "monthly", priority: 0.6, alternates: alternates(`${SITE_URL}/for/travel-creators`) },
+    { url: `${SITE_URL}/for/gen-z-creators`, lastModified: now, changeFrequency: "monthly", priority: 0.6, alternates: alternates(`${SITE_URL}/for/gen-z-creators`) },
+    { url: `${SITE_URL}/for/lifestyle-creators`, lastModified: now, changeFrequency: "monthly", priority: 0.6, alternates: alternates(`${SITE_URL}/for/lifestyle-creators`) },
   ];
 
   const creatorPages: MetadataRoute.Sitemap = creators.map((c) => {

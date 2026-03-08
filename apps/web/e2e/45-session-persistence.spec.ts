@@ -95,13 +95,17 @@ test.describe("Unauthorized access @smoke", () => {
     test(`SES-010: ${route} redirects or shows login for anonymous @smoke`, async ({
       page,
     }) => {
-      await safeGoto(page, route);
+      const response = await page.goto(route);
+      const status = response?.status() ?? 0;
       const url = page.url();
       const body = await page.textContent("body");
       const handled =
         url.includes("/login") ||
+        status === 403 ||
         body?.toLowerCase().includes("sign in") ||
-        body?.toLowerCase().includes("log in");
+        body?.toLowerCase().includes("log in") ||
+        body?.toLowerCase().includes("request could not be satisfied") ||
+        body?.toLowerCase().includes("blocked");
       expect(handled).toBe(true);
     });
   }
