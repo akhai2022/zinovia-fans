@@ -8,6 +8,7 @@ import { getDictionary } from "@/lib/i18n/dictionaries";
 import { DEFAULT_LOCALE, LOCALE_COOKIE, SUPPORTED_LOCALES, type Locale } from "@/lib/i18n/config";
 import { DEMO_VIDEOS, DEMO_STEPS } from "@/lib/demoAssets";
 import { DemoVideoPlayer } from "../DemoVideoPlayer";
+import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 
 const SITE_URL = "https://zinovia.ai";
 
@@ -95,6 +96,7 @@ export default async function CreatorDemoPage() {
 
   return (
     <main className="hero-bg">
+      <Breadcrumbs items={[{ label: "Demo", href: "/demo" }, { label: "Creator Walkthrough" }]} />
       {/* Hero */}
       <ScrollReveal>
         <section className="mx-auto w-full max-w-5xl px-4 pb-8 pt-16 sm:px-6 sm:pt-24">

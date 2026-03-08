@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n";
+import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 import { getApiBaseUrl } from "@/lib/apiBase";
 
 const CONTACT_CHANNELS = [
@@ -74,6 +75,7 @@ export default function ContactPage() {
 
   return (
     <Page className="max-w-3xl space-y-8 py-12">
+      <Breadcrumbs items={[{ label: "Contact" }]} />
       <header className="space-y-2">
         <h1 className="font-display text-premium-h2 font-semibold text-foreground">
           {t.contact.title}

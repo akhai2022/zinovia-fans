@@ -54,7 +54,7 @@ const COUNTRY_CODES = [
 ];
 
 export default function SettingsProfilePage() {
-  const { authorized } = useRequireRole(["creator", "admin", "super_admin"]);
+  const { authorized, needsKyc } = useRequireRole(["creator", "admin", "super_admin"]);
   const { t, locale } = useTranslation();
   const router = useRouter();
   const { addToast } = useToast();
@@ -190,6 +190,22 @@ export default function SettingsProfilePage() {
   return (
     <Page className="space-y-4">
       <h1 className="font-display text-premium-h2 font-semibold text-foreground">{t.profile.title}</h1>
+      {needsKyc && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+          <Icon name="verified_user" className="mt-0.5 text-xl text-amber-400 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-400">Complete your identity verification</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Upload your ID document to unlock posting and earn from your content. You can still set up your profile, avatar, and banner in the meantime.
+            </p>
+            <Button variant="outline" size="sm" className="mt-2" asChild>
+              <Link href="/onboarding">
+                <Icon name="verified_user" className="mr-1.5 icon-sm" />Start verification
+              </Link>
+            </Button>
+          </div>
+        </div>
+      )}
       {prefillStatus === "error" && (
         <p className="mt-2 text-sm text-muted-foreground">
           {t.profile.errorCreatorOnly}

@@ -8,9 +8,9 @@ import { useTranslation } from "@/lib/i18n";
 import { BLUR } from "@/lib/blur-placeholders";
 
 const HERO_IMAGES = [
-  "/assets/hero_creator_1.jpg",
-  "/assets/hero_creator_2.jpg",
-  "/assets/hero_creator_3.jpg",
+  { src: "/assets/hero_creator_1.jpg", alt: "Creator sharing exclusive content on Zinovia" },
+  { src: "/assets/hero_creator_2.jpg", alt: "Creator earning from fan subscriptions" },
+  { src: "/assets/hero_creator_3.jpg", alt: "Creator building an audience on Zinovia" },
 ];
 
 export function LandingHero() {
@@ -72,15 +72,15 @@ export function LandingHero() {
               <div className="hero-animate--scale col-span-3 overflow-hidden rounded-2xl border border-white/[0.06] shadow-lg" style={{ animationDelay: "0.4s" }}>
                 <div className="relative aspect-[3/4]">
                   <Image
-                    src={HERO_IMAGES[0]}
-                    alt="Creator"
+                    src={HERO_IMAGES[0].src}
+                    alt={HERO_IMAGES[0].alt}
                     fill
                     priority
                     quality={90}
                     className="object-cover"
                     sizes="420px"
                     placeholder="blur"
-                    blurDataURL={BLUR[HERO_IMAGES[0]]}
+                    blurDataURL={BLUR[HERO_IMAGES[0].src]}
                   />
                 </div>
               </div>
@@ -89,30 +89,30 @@ export function LandingHero() {
                 <div className="hero-animate--scale overflow-hidden rounded-2xl border border-white/[0.06] shadow-lg" style={{ animationDelay: "0.55s" }}>
                   <div className="relative aspect-square">
                     <Image
-                      src={HERO_IMAGES[1]}
-                      alt="Creator"
+                      src={HERO_IMAGES[1].src}
+                      alt={HERO_IMAGES[1].alt}
                       fill
                       priority
                       quality={90}
                       className="object-cover"
                       sizes="260px"
                       placeholder="blur"
-                      blurDataURL={BLUR[HERO_IMAGES[1]]}
+                      blurDataURL={BLUR[HERO_IMAGES[1].src]}
                     />
                   </div>
                 </div>
                 <div className="hero-animate--scale overflow-hidden rounded-2xl border border-white/[0.06] shadow-lg" style={{ animationDelay: "0.65s" }}>
                   <div className="relative aspect-square">
                     <Image
-                      src={HERO_IMAGES[2]}
-                      alt="Creator"
+                      src={HERO_IMAGES[2].src}
+                      alt={HERO_IMAGES[2].alt}
                       fill
                       priority
                       quality={90}
                       className="object-cover"
                       sizes="260px"
                       placeholder="blur"
-                      blurDataURL={BLUR[HERO_IMAGES[2]]}
+                      blurDataURL={BLUR[HERO_IMAGES[2].src]}
                     />
                   </div>
                 </div>

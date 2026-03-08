@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import AppError
 from app.core.settings import get_settings
 from app.db.session import get_async_session
-from app.modules.auth.deps import require_admin
+from app.modules.auth.deps import require_admin, require_admin_writer
 from app.modules.auth.models import User
 from app.modules.inbound.schemas import (
     InboundCategoryCount,
@@ -105,7 +105,7 @@ async def toggle_read(
     email_id: UUID,
     read: bool = Query(True),
     session: AsyncSession = Depends(get_async_session),
-    _admin: User = Depends(require_admin),
+    _admin: User = Depends(require_admin_writer),
 ) -> dict:
     email = await mark_email_read(session, email_id, read=read)
     if not email:
@@ -117,7 +117,7 @@ async def toggle_read(
 @router.post("/sync", operation_id="admin_sync_inbound")
 async def trigger_sync(
     session: AsyncSession = Depends(get_async_session),
-    _admin: User = Depends(require_admin),
+    _admin: User = Depends(require_admin_writer),
 ) -> dict:
     """Manually trigger a sync from Resend Receiving API."""
     count = await sync_from_resend(session)

@@ -1,10 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
+import path from "path";
 
 const baseURL =
   process.env.PLAYWRIGHT_BASE_URL ?? process.env.WEB_BASE_URL ?? "http://localhost:3000";
 
 const apiBaseURL =
   process.env.API_BASE_URL ?? "http://127.0.0.1:8000";
+
+const demoArtifactsDir = path.join(__dirname, "demo-artifacts");
 
 export default defineConfig({
   testDir: "./e2e",
@@ -38,6 +41,27 @@ export default defineConfig({
       name: "nightly",
       grep: /@nightly/,
       use: { ...devices["Desktop Chrome"] },
+    },
+    // Demo — records video for stakeholder-facing walkthroughs.
+    {
+      name: "demo",
+      grep: /@demo/,
+      use: {
+        ...devices["Desktop Chrome"],
+        video: {
+          mode: "on",
+          size: { width: 1280, height: 720 },
+        },
+        screenshot: "on",
+        trace: "on",
+        viewport: { width: 1280, height: 720 },
+      },
+    },
+    // Mobile — smoke coverage on mobile viewport.
+    {
+      name: "mobile",
+      grep: /@mobile/,
+      use: { ...devices["Pixel 5"] },
     },
     // Unfiltered — runs everything including @nightly. Use for local dev only.
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },

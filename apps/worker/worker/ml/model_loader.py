@@ -93,6 +93,26 @@ def get_blip_model() -> tuple[Any, Any]:
     return _blip_processor, _blip_model
 
 
+# --- GIT-base image captioning (fast, MIT license) ---
+_git_processor: Any = None
+_git_model: Any = None
+
+GIT_MODEL = "microsoft/git-base"
+
+
+def get_git_model() -> tuple[Any, Any]:
+    """Return (processor, model) for GIT-base image captioning. Cached."""
+    global _git_processor, _git_model
+    if _git_processor is None or _git_model is None:
+        logger.info("Loading GIT model: %s", GIT_MODEL)
+        from transformers import AutoModelForCausalLM, AutoProcessor
+
+        _git_processor = AutoProcessor.from_pretrained(GIT_MODEL)
+        _git_model = AutoModelForCausalLM.from_pretrained(GIT_MODEL)
+        logger.info("GIT model loaded")
+    return _git_processor, _git_model
+
+
 # --- Sentence Transformer (text embeddings) ---
 _sentence_model: Any = None
 

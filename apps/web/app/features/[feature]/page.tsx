@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { Page } from "@/components/brand/Page";
 import { Button } from "@/components/ui/button";
-import { getFeature, getAllFeatureSlugs } from "./features";
+import { getFeature, getAllFeatureSlugs, FEATURES } from "./features";
+import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 
 const SITE_URL = "https://zinovia.ai";
 
@@ -47,6 +48,7 @@ export default function FeaturePage({ params }: { params: { feature: string } })
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
+      <Breadcrumbs items={[{ label: "Features", href: "/features/subscriptions" }, { label: data.name }]} />
 
       {/* Hero */}
       <header className="text-center space-y-4">
@@ -107,6 +109,41 @@ export default function FeaturePage({ params }: { params: { feature: string } })
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{a}</p>
             </details>
           ))}
+        </div>
+      </section>
+
+      {/* Related Features */}
+      <section className="space-y-4">
+        <h2 className="font-display text-xl font-semibold text-foreground">Explore More Features</h2>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {Object.values(FEATURES)
+            .filter((f) => f.slug !== data.slug)
+            .map((f) => (
+              <Link
+                key={f.slug}
+                href={`/features/${f.slug}`}
+                className="rounded-2xl border border-white/[0.06] bg-card p-5 transition-colors hover:border-primary/30"
+              >
+                <h3 className="text-sm font-semibold text-foreground">{f.name}</h3>
+                <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{f.heroDescription}</p>
+              </Link>
+            ))}
+        </div>
+      </section>
+
+      {/* Compare Zinovia */}
+      <section className="space-y-4">
+        <h2 className="font-display text-xl font-semibold text-foreground">Compare Zinovia</h2>
+        <p className="text-sm text-muted-foreground">See how Zinovia&apos;s features and pricing compare to other creator platforms.</p>
+        <div className="flex flex-wrap gap-3">
+          {["patreon", "onlyfans", "fanvue", "fansly"].map((c) => (
+            <Button key={c} variant="secondary" size="sm" asChild>
+              <Link href={`/compare/${c}`}>vs {c.charAt(0).toUpperCase() + c.slice(1)}</Link>
+            </Button>
+          ))}
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/pricing">View pricing</Link>
+          </Button>
         </div>
       </section>
 

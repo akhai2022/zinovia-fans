@@ -16,9 +16,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import async_session_factory
-from app.modules.auth.constants import ADMIN_ROLE
+from app.modules.auth.constants import READER_ROLE, SUPER_SUPER_ADMIN_ROLE
 from app.modules.auth.models import Profile, User
 from app.modules.auth.security import hash_password
+from app.modules.media.models import MediaObject as _MediaObject  # noqa: F401 — register media_assets table
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +29,8 @@ async def seed_admin(session: AsyncSession, email: str, password: str) -> None:
     result = await session.execute(select(User).where(User.email == email))
     existing = result.scalar_one_or_none()
     if existing:
-        if existing.role != ADMIN_ROLE:
-            existing.role = ADMIN_ROLE
+        if existing.role != SUPER_ADMIN_ROLE:
+            existing.role = SUPER_ADMIN_ROLE
             await session.commit()
             logger.info("Upgraded existing user %s to admin role.", email)
         else:
@@ -39,13 +40,38 @@ async def seed_admin(session: AsyncSession, email: str, password: str) -> None:
     user = User(
         email=email,
         password_hash=hash_password(password),
-        role=ADMIN_ROLE,
+        role=SUPER_ADMIN_ROLE,
         is_active=True,
     )
     profile = Profile(user=user, display_name="Admin")
     session.add_all([user, profile])
     await session.commit()
     logger.info("Created admin user: %s", email)
+
+
+async def seed_reader(session: AsyncSession, email: str, password: str) -> None:
+    """Create reader (read-only admin) user if not already present. Idempotent."""
+    result = await session.execute(select(User).where(User.email == email))
+    existing = result.scalar_one_or_none()
+    if existing:
+        if existing.role != READER_ROLE:
+            existing.role = READER_ROLE
+            await session.commit()
+            logger.info("Upgraded existing user %s to reader role.", email)
+        else:
+            logger.info("Reader user %s already exists. Skipping.", email)
+        return
+
+    user = User(
+        email=email,
+        password_hash=hash_password(password),
+        role=READER_ROLE,
+        is_active=True,
+    )
+    profile = Profile(user=user, display_name="Reader")
+    session.add_all([user, profile])
+    await session.commit()
+    logger.info("Created reader user: %s", email)
 
 
 async def seed() -> None:
@@ -55,6 +81,8 @@ async def seed() -> None:
         raise RuntimeError("SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD must be set.")
     async with async_session_factory() as session:
         await seed_admin(session, email, password)
+        # Always seed the readonly reader account
+        await seed_reader(session, "reader@zinovia.ai", "Reader@2026!")
 
 
 def main() -> None:

@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
 from app.db.session import get_async_session
-from app.modules.auth.deps import require_admin
+from app.modules.auth.deps import require_admin, require_admin_writer
 from app.modules.auth.models import User
 from app.modules.creators.deps import require_creator
 from app.modules.payouts.models import Payout, PayoutAuditLog
@@ -133,7 +133,7 @@ async def upsert_settings_endpoint(
 )
 async def admin_reconcile(
     session: AsyncSession = Depends(get_async_session),
-    _admin: User = Depends(require_admin),
+    _admin: User = Depends(require_admin_writer),
 ) -> ReconcileResult:
     result = await reconcile_availability(session)
     return ReconcileResult(**result)
@@ -149,7 +149,7 @@ async def admin_generate_payouts(
     start: str = Query(..., description="Period start YYYY-MM-DD"),
     end: str = Query(..., description="Period end YYYY-MM-DD"),
     session: AsyncSession = Depends(get_async_session),
-    _admin: User = Depends(require_admin),
+    _admin: User = Depends(require_admin_writer),
 ) -> GeneratePayoutsResult:
     try:
         period_start = datetime.strptime(start, "%Y-%m-%d").replace(tzinfo=timezone.utc)
@@ -244,7 +244,7 @@ async def admin_update_status(
     payout_id: str,
     body: PayoutStatusUpdate,
     session: AsyncSession = Depends(get_async_session),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin_writer),
 ) -> PayoutOut:
     import uuid as _uuid
 

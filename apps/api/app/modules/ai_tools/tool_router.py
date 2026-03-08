@@ -1,4 +1,4 @@
-"""AI tool endpoints — remove-bg, cartoonize, image-ref."""
+"""AI tool endpoints — remove-bg, cartoonize, animate-image, auto-caption, image-ref."""
 
 from __future__ import annotations
 
@@ -21,6 +21,12 @@ from app.modules.media.service import generate_signed_download
 from app.modules.media.storage import get_storage_client
 from app.modules.ai_tools.tool_models import AiToolJob
 from app.modules.ai_tools.tool_schemas import (
+    AnimateImageRequest,
+    AnimateImageResponse,
+    AnimateImageStatusOut,
+    AutoCaptionRequest,
+    AutoCaptionResponse,
+    AutoCaptionStatusOut,
     CartoonizeRequest,
     CartoonizeResponse,
     CartoonizeStatusOut,
@@ -39,6 +45,8 @@ from app.modules.ai_tools.tool_service import (
 )
 from app.modules.audit.service import (
     ACTION_AI_IMAGE_REF_CREATE,
+    ACTION_AI_TOOL_ANIMATE_IMAGE,
+    ACTION_AI_TOOL_AUTO_CAPTION,
     ACTION_AI_TOOL_CARTOONIZE,
     ACTION_AI_TOOL_REMOVE_BG,
     log_audit_event,
@@ -229,6 +237,226 @@ async def cartoonize_status(
         job_id=job.id,
         status=job.status,
         result_url=result_url,
+        error=job.error_message,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Animate Image
+# ---------------------------------------------------------------------------
+
+
+def _require_animate_image() -> None:
+    settings = get_settings()
+    if not settings.enable_ai_tools or not settings.enable_animate_image:
+        raise AppError(status_code=404, detail="feature_disabled")
+
+
+VALID_MOTION_PRESETS = {"gentle", "dynamic", "zoom"}
+VALID_OUTPUT_FORMATS = {"mp4", "gif"}
+
+
+@router.post(
+    "/animate-image",
+    response_model=AnimateImageResponse,
+    operation_id="ai_tools_animate_image",
+)
+async def animate_image(
+    body: AnimateImageRequest,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(get_current_user),
+) -> AnimateImageResponse:
+    """Submit an animate-image job. Rate limited per day."""
+    _require_animate_image()
+    settings = get_settings()
+    await check_rate_limit_custom(
+        f"ai:tool:animate:{user.id}",
+        max_count=settings.ai_tool_animate_daily_limit,
+        window_seconds=86400,
+    )
+    media = await _verify_media_ownership(session, body.media_asset_id, user)
+
+    # Validate params
+    if body.motion_preset not in VALID_MOTION_PRESETS:
+        raise AppError(status_code=422, detail="invalid_motion_preset")
+    if body.num_frames < 7 or body.num_frames > 25:
+        raise AppError(status_code=422, detail="num_frames must be 7-25")
+    if body.fps not in (4, 7, 12):
+        raise AppError(status_code=422, detail="fps must be 4, 7, or 12")
+    if body.output_format not in VALID_OUTPUT_FORMATS:
+        raise AppError(status_code=422, detail="invalid_output_format")
+
+    params = {
+        "motion_preset": body.motion_preset,
+        "num_frames": body.num_frames,
+        "fps": body.fps,
+        "output_format": body.output_format,
+    }
+
+    job = await create_tool_job(
+        session,
+        user_id=user.id,
+        tool="animate_image",
+        input_object_key=media.object_key,
+        input_media_asset_id=media.id,
+        params=params,
+    )
+    await session.commit()
+
+    from app.celery_client import enqueue_animate_image
+
+    enqueue_animate_image(str(job.id))
+
+    await log_audit_event(
+        session,
+        action=ACTION_AI_TOOL_ANIMATE_IMAGE,
+        actor_id=user.id,
+        resource_type="ai_tool_job",
+        resource_id=str(job.id),
+        metadata={"tool": "animate_image", "media_asset_id": str(media.id), **params},
+    )
+
+    return AnimateImageResponse(job_id=job.id, status="processing")
+
+
+@router.get(
+    "/animate-image/{job_id}",
+    response_model=AnimateImageStatusOut,
+    operation_id="ai_tools_animate_image_status",
+)
+async def animate_image_status(
+    job_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(get_current_user),
+) -> AnimateImageStatusOut:
+    """Poll animate-image job status. When ready, includes presigned result URL."""
+    _require_animate_image()
+    job = await get_tool_job(session, job_id, user.id)
+    if not job:
+        raise AppError(status_code=404, detail="job_not_found")
+
+    result_url: str | None = None
+    if job.status == "ready" and job.result_object_key:
+        storage = get_storage_client()
+        result_url = generate_signed_download(storage, job.result_object_key)
+
+    return AnimateImageStatusOut(
+        job_id=job.id,
+        status=job.status,
+        result_url=result_url,
+        error=job.error_message,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Auto Caption
+# ---------------------------------------------------------------------------
+
+
+def _require_auto_caption() -> None:
+    settings = get_settings()
+    if not settings.enable_ai_tools or not settings.enable_auto_caption:
+        raise AppError(status_code=404, detail="feature_disabled")
+
+
+VALID_CAPTION_MODES = {"short", "detailed", "alt_text"}
+VALID_CAPTION_TONES = {"neutral", "playful", "flirty", "professional"}
+VALID_CAPTION_QUALITY = {"fast", "better"}
+VALID_CAPTION_LANGUAGES = {"en", "fr"}
+
+
+@router.post(
+    "/auto-caption",
+    response_model=AutoCaptionResponse,
+    operation_id="ai_tools_auto_caption",
+)
+async def auto_caption(
+    body: AutoCaptionRequest,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(get_current_user),
+) -> AutoCaptionResponse:
+    """Submit an auto-caption job. Rate limited per day."""
+    _require_auto_caption()
+    settings = get_settings()
+    await check_rate_limit_custom(
+        f"ai:tool:caption:{user.id}",
+        max_count=settings.ai_tool_caption_daily_limit,
+        window_seconds=86400,
+    )
+    media = await _verify_media_ownership(session, body.media_asset_id, user)
+
+    # Validate params
+    if body.mode not in VALID_CAPTION_MODES:
+        raise AppError(status_code=422, detail="invalid_mode")
+    if body.tone not in VALID_CAPTION_TONES:
+        raise AppError(status_code=422, detail="invalid_tone")
+    if body.quality not in VALID_CAPTION_QUALITY:
+        raise AppError(status_code=422, detail="invalid_quality")
+    if body.language not in VALID_CAPTION_LANGUAGES:
+        raise AppError(status_code=422, detail="invalid_language")
+
+    # Validate image content type
+    if not media.content_type or not media.content_type.startswith("image/"):
+        raise AppError(status_code=422, detail="image_required")
+
+    params = {
+        "mode": body.mode,
+        "tone": body.tone,
+        "quality": body.quality,
+        "include_keywords": body.include_keywords,
+        "language": body.language,
+    }
+
+    job = await create_tool_job(
+        session,
+        user_id=user.id,
+        tool="auto_caption",
+        input_object_key=media.object_key,
+        input_media_asset_id=media.id,
+        params=params,
+    )
+    await session.commit()
+
+    from app.celery_client import enqueue_auto_caption
+
+    enqueue_auto_caption(str(job.id))
+
+    await log_audit_event(
+        session,
+        action=ACTION_AI_TOOL_AUTO_CAPTION,
+        actor_id=user.id,
+        resource_type="ai_tool_job",
+        resource_id=str(job.id),
+        metadata={"tool": "auto_caption", "media_asset_id": str(media.id), **params},
+    )
+
+    return AutoCaptionResponse(job_id=job.id, status="processing")
+
+
+@router.get(
+    "/auto-caption/{job_id}",
+    response_model=AutoCaptionStatusOut,
+    operation_id="ai_tools_auto_caption_status",
+)
+async def auto_caption_status(
+    job_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(get_current_user),
+) -> AutoCaptionStatusOut:
+    """Poll auto-caption job status. When ready, includes caption result."""
+    _require_auto_caption()
+    job = await get_tool_job(session, job_id, user.id)
+    if not job:
+        raise AppError(status_code=404, detail="job_not_found")
+
+    result: dict | None = None
+    if job.status == "ready" and job.params and "result" in job.params:
+        result = job.params["result"]
+
+    return AutoCaptionStatusOut(
+        job_id=job.id,
+        status=job.status,
+        result=result,
         error=job.error_message,
     )
 

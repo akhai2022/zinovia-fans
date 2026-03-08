@@ -72,7 +72,9 @@ async def consume_email_verification_token(
     if not evt:
         return None
     user_result = await session.execute(select(User).where(User.id == evt.user_id))
-    user = user_result.scalar_one()
+    user = user_result.scalar_one_or_none()
+    if not user:
+        return None
     await session.delete(evt)
     await session.commit()
     return user

@@ -40,6 +40,7 @@ from app.modules.onboarding.service import (
 )
 from app.modules.onboarding.mail import (
     VerificationEmailDeliveryError,
+    send_kyc_reminder_email,
     send_verification_email,
 )
 from app.modules.audit.service import (
@@ -223,6 +224,14 @@ async def verify_email(
                 ip_address=client_ip,
                 auto_commit=False,
             )
+            # Send KYC reminder email to prompt creator to complete verification
+            try:
+                await send_kyc_reminder_email(user.email)
+            except Exception:
+                logger.warning("Failed to send KYC reminder email to %s", user.email, exc_info=True)
+
+        # Refresh user to pick up committed state changes (transition_creator_state commits separately)
+        await session.refresh(user)
 
         # Auto-login: set session cookie so user doesn't have to sign in again
         from datetime import UTC, datetime as _dt

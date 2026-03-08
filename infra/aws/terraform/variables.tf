@@ -352,6 +352,18 @@ variable "enable_cartoon_avatar" {
   description = "Enable cartoon avatar AI tool (CPU-only OpenCV style transfer). Requires enable_ai_tools=true."
 }
 
+variable "enable_animate_image" {
+  type        = bool
+  default     = false
+  description = "Enable animate image AI tool (CPU-only Ken Burns effects). Requires enable_ai_tools=true."
+}
+
+variable "enable_auto_caption" {
+  type        = bool
+  default     = false
+  description = "Enable auto caption AI tool (CPU-only HuggingFace image captioning). Requires enable_ai_tools=true."
+}
+
 variable "default_currency" {
   type        = string
   default     = "eur"

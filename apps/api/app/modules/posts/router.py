@@ -69,7 +69,8 @@ async def feed(
     from app.modules.posts.service import _post_to_out_locked
 
     items_tuples, total, next_cursor = await get_feed_page(
-        session, current_user.id, page=page, page_size=page_size, cursor=cursor
+        session, current_user.id, page=page, page_size=page_size, cursor=cursor,
+        current_user_role=current_user.role,
     )
     items = []
     for post, user, profile, is_locked, locked_reason in items_tuples:

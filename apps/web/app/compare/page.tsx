@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Page } from "@/components/brand/Page";
+import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 
 const SITE_URL = "https://zinovia.ai";
 
@@ -25,6 +26,7 @@ const COMPARISONS = [
 export default function ComparePage() {
   return (
     <Page className="max-w-4xl space-y-10 py-12">
+      <Breadcrumbs items={[{ label: "Compare" }]} />
       <header className="text-center space-y-3">
         <h1 className="font-display text-premium-h2 font-bold text-foreground">
           How Zinovia Compares

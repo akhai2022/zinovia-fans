@@ -18,7 +18,7 @@ export class MessagesListPage {
 
   async goto() {
     await safeGoto(this.page, "/messages");
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState("domcontentloaded");
   }
 
   async expectPageLoaded() {
@@ -52,7 +52,7 @@ export class ConversationPage {
 
   async goto(conversationId: string) {
     await safeGoto(this.page, `/messages/${conversationId}`);
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState("domcontentloaded");
   }
 
   async sendMessage(text: string) {

@@ -9,6 +9,11 @@ const BUILD_TIMESTAMP = Date.now().toString(36);
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  typescript: {
+    // Type checking is done in CI/dev — skip during Docker build to avoid
+    // Next.js auto-installing @types/react@19 (which conflicts with React 18).
+    ignoreBuildErrors: true,
+  },
   output: "standalone",
   transpilePackages: ["@zinovia/contracts"],
   env: {

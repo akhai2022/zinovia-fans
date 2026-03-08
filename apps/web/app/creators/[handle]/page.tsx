@@ -21,6 +21,7 @@ import { MessageButton } from "@/features/messaging/MessageButton";
 import { TipButton } from "@/features/payments/TipButton";
 import { getSession } from "@/lib/api/auth";
 import { CreatorPostsSection } from "./CreatorPostsSection";
+import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 
 const SITE_URL = "https://zinovia.ai";
 
@@ -186,6 +187,7 @@ export default async function CreatorProfilePage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(creatorJsonLd) }}
       />
+      <Breadcrumbs items={[{ label: "Creators", href: "/creators" }, { label: creator.display_name }]} />
       <div className="-mx-4 overflow-hidden rounded-2xl border border-border sm:-mx-6 md:mx-0">
         {isOwn ? (
           <Link href="/settings/profile" className="group relative block" title="Change banner">

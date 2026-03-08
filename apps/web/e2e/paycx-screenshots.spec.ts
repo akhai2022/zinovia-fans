@@ -147,7 +147,7 @@ test.describe("Paycx Merchant Application Screenshots", () => {
 
   test("1 — Homepage / Landing Page", async ({ page }) => {
     await page.goto(WEB_BASE);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await page.screenshot({
       path: `${OUTPUT_DIR}/01_homepage.png`,
       fullPage: true,
@@ -156,7 +156,7 @@ test.describe("Paycx Merchant Application Screenshots", () => {
 
   test("2 — Creator Profile with PPV Price", async ({ page }) => {
     await page.goto(`${WEB_BASE}/creators`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await page.screenshot({
       path: `${OUTPUT_DIR}/02_creators_browse.png`,
       fullPage: true,
@@ -165,7 +165,7 @@ test.describe("Paycx Merchant Application Screenshots", () => {
 
   test("3 — Login Page", async ({ page }) => {
     await page.goto(`${WEB_BASE}/login`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await page.screenshot({
       path: `${OUTPUT_DIR}/03_login_page.png`,
       fullPage: true,
@@ -174,7 +174,7 @@ test.describe("Paycx Merchant Application Screenshots", () => {
 
   test("4 — Signup Page", async ({ page }) => {
     await page.goto(`${WEB_BASE}/signup`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await page.screenshot({
       path: `${OUTPUT_DIR}/04_signup_page.png`,
       fullPage: true,
@@ -186,7 +186,7 @@ test.describe("Paycx Merchant Application Screenshots", () => {
     await setupAuthenticatedPage(context, page);
 
     await page.goto(`${WEB_BASE}/billing/purchases`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await page.waitForTimeout(3000);
     await page.screenshot({
       path: `${OUTPUT_DIR}/05_purchase_history.png`,
@@ -202,7 +202,7 @@ test.describe("Paycx Merchant Application Screenshots", () => {
     await setupAuthenticatedPage(context, page);
 
     await page.goto(`${WEB_BASE}/billing/manage`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await page.waitForTimeout(3000);
     await page.screenshot({
       path: `${OUTPUT_DIR}/06_subscription_management.png`,
@@ -218,7 +218,7 @@ test.describe("Paycx Merchant Application Screenshots", () => {
     await setupAuthenticatedPage(context, page);
 
     await page.goto(`${WEB_BASE}/billing/success?creator_handle=demo`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await page.waitForTimeout(3000);
     await page.screenshot({
       path: `${OUTPUT_DIR}/07_checkout_success.png`,
@@ -288,7 +288,7 @@ test.describe("Paycx Merchant Application Screenshots", () => {
     await setupAuthenticatedPage(context, page);
 
     await page.goto(`${WEB_BASE}/creator/earnings`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await page.waitForTimeout(3000);
     await page.screenshot({
       path: `${OUTPUT_DIR}/11_creator_earnings.png`,
@@ -298,7 +298,7 @@ test.describe("Paycx Merchant Application Screenshots", () => {
 
   test("12 — Privacy Policy", async ({ page }) => {
     await page.goto(`${WEB_BASE}/privacy`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await page.screenshot({
       path: `${OUTPUT_DIR}/12_privacy_policy.png`,
       fullPage: true,
@@ -307,7 +307,7 @@ test.describe("Paycx Merchant Application Screenshots", () => {
 
   test("13 — Terms of Service", async ({ page }) => {
     await page.goto(`${WEB_BASE}/terms`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await page.screenshot({
       path: `${OUTPUT_DIR}/13_terms_of_service.png`,
       fullPage: true,
@@ -316,7 +316,7 @@ test.describe("Paycx Merchant Application Screenshots", () => {
 
   test("14 — Contact / Support", async ({ page }) => {
     await page.goto(`${WEB_BASE}/contact`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await page.screenshot({
       path: `${OUTPUT_DIR}/14_contact_support.png`,
       fullPage: true,
@@ -325,7 +325,7 @@ test.describe("Paycx Merchant Application Screenshots", () => {
 
   test("15 — Help Center", async ({ page }) => {
     await page.goto(`${WEB_BASE}/help`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await page.screenshot({
       path: `${OUTPUT_DIR}/15_help_center.png`,
       fullPage: true,

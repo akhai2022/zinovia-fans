@@ -408,7 +408,12 @@ async def list_user_posts_admin(
     page: int = 1,
     page_size: int = DEFAULT_PAGE_SIZE,
 ) -> tuple[list[dict], int]:
-    """Admin: list posts by a specific user."""
+    """Admin: list posts by a specific user with media."""
+    from sqlalchemy.orm import selectinload
+
+    from app.modules.media.service import generate_signed_download
+    from app.modules.media.storage import get_storage_client
+
     page, page_size, offset, limit = normalize_pagination(
         page, page_size,
         default_size=DEFAULT_PAGE_SIZE,
@@ -421,14 +426,27 @@ async def list_user_posts_admin(
 
     q = (
         select(Post)
+        .options(selectinload(Post.media).selectinload(PostMedia.media_object))
         .where(Post.creator_user_id == user_id)
         .order_by(Post.created_at.desc())
         .offset(offset)
         .limit(limit)
     )
     rows = (await session.execute(q)).scalars().all()
-    items = [
-        {
+
+    storage = get_storage_client()
+    items = []
+    for p in rows:
+        media_items = []
+        for pm in sorted(p.media, key=lambda m: m.position):
+            mo = pm.media_object
+            if mo:
+                media_items.append({
+                    "media_id": str(mo.id),
+                    "content_type": mo.content_type or "",
+                    "download_url": generate_signed_download(storage, mo.object_key),
+                })
+        items.append({
             "id": p.id,
             "type": p.type,
             "caption": p.caption,
@@ -438,9 +456,8 @@ async def list_user_posts_admin(
             "price_cents": p.price_cents,
             "currency": p.currency,
             "created_at": p.created_at,
-        }
-        for p in rows
-    ]
+            "media": media_items,
+        })
     return items, total
 
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Page } from "@/components/brand/Page";
 import { Button } from "@/components/ui/button";
+import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 
 const SITE_URL = "https://zinovia.ai";
 
@@ -53,10 +54,10 @@ const STEPS = [
 ];
 
 const REVENUE_STREAMS = [
-  { title: "Subscriptions", description: "Fans pay a monthly fee for access to your exclusive content. Predictable, recurring revenue.", icon: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
-  { title: "Paid Unlocks", description: "Sell individual posts, photos, or videos as one-time purchases. Perfect for premium content.", icon: "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" },
-  { title: "Tips", description: "Let fans show their appreciation with tips. A simple way for supporters to give back.", icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
-  { title: "Messaging", description: "Offer private messaging access to subscribers. Connect directly with your most dedicated fans.", icon: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" },
+  { title: "Subscriptions", description: "Fans pay a monthly fee for access to your exclusive content. Predictable, recurring revenue.", icon: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z", href: "/features/subscriptions" },
+  { title: "Paid Unlocks", description: "Sell individual posts, photos, or videos as one-time purchases. Perfect for premium content.", icon: "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z", href: "/features/paid-content" },
+  { title: "Tips", description: "Let fans show their appreciation with tips. A simple way for supporters to give back.", icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z", href: "/pricing" },
+  { title: "Messaging", description: "Offer private messaging access to subscribers. Connect directly with your most dedicated fans.", icon: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z", href: "/features/messaging" },
 ];
 
 const HOW_FAQS = [
@@ -78,11 +79,30 @@ export default function HowItWorksPage() {
     })),
   };
 
+  const howToJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    name: "How to Start Earning on Zinovia",
+    description: "Get started on Zinovia in under 5 minutes. Create your profile, publish content, and earn from subscriptions, tips, and paid content.",
+    totalTime: "PT5M",
+    step: STEPS.map((s, i) => ({
+      "@type": "HowToStep",
+      position: i + 1,
+      name: s.title,
+      text: s.description,
+    })),
+  };
+
   return (
     <Page className="max-w-4xl space-y-12 py-12">
+      <Breadcrumbs items={[{ label: "How It Works" }]} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(howToJsonLd) }}
       />
 
       <header className="text-center space-y-4">
@@ -125,7 +145,7 @@ export default function HowItWorksPage() {
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           {REVENUE_STREAMS.map((stream) => (
-            <div key={stream.title} className="flex gap-4 rounded-2xl border border-white/[0.06] bg-card p-6">
+            <Link key={stream.title} href={stream.href} className="flex gap-4 rounded-2xl border border-white/[0.06] bg-card p-6 transition-colors hover:border-primary/30">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" d={stream.icon} />
@@ -135,7 +155,7 @@ export default function HowItWorksPage() {
                 <h3 className="text-sm font-semibold text-foreground">{stream.title}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">{stream.description}</p>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </section>

@@ -33,13 +33,6 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "";
 
 const OUTPUT_DIR = "/tmp/zinovia-promo-videos";
 
-// Enable video recording for all tests in this file
-test.use({
-  video: { mode: "on", size: { width: 1280, height: 720 } },
-  viewport: { width: 1280, height: 720 },
-  launchOptions: { slowMo: 50 },
-});
-
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
@@ -118,7 +111,7 @@ async function pause(page: Page, ms = 2000) {
 /** Navigate with a settling pause. */
 async function navigateTo(page: Page, path: string, settleMs = 2000) {
   await page.goto(`${WEB_BASE}${path}`);
-  await page.waitForLoadState("networkidle").catch(() => {});
+  await page.waitForLoadState("domcontentloaded").catch(() => {});
   await page.waitForTimeout(settleMs);
 }
 
@@ -266,12 +259,11 @@ async function saveVideo(page: Page, testInfo: any, filename: string) {
   }
 }
 
-/* ------------------------------------------------------------------ */
-/*  Setup                                                              */
-/* ------------------------------------------------------------------ */
-
-test.beforeAll(() => {
-  ensureOutputDir();
+// Enable video recording for all tests in this file (must be file-level for video/launchOptions)
+test.use({
+  video: { mode: "on", size: { width: 1280, height: 720 } },
+  viewport: { width: 1280, height: 720 },
+  launchOptions: { slowMo: 50 },
 });
 
 /* ------------------------------------------------------------------ */
@@ -279,6 +271,10 @@ test.beforeAll(() => {
 /* ------------------------------------------------------------------ */
 
 test.describe("Promo Videos", () => {
+  test.beforeAll(() => {
+    ensureOutputDir();
+  });
+
   test("Creator Journey — Signup to AI Studio", async ({ page, context }, testInfo) => {
     test.setTimeout(180_000);
 
@@ -293,7 +289,7 @@ test.describe("Promo Videos", () => {
     const signupLink = page.locator('a[href="/signup"]').first();
     if (await signupLink.isVisible()) {
       await signupLink.click();
-      await page.waitForLoadState("networkidle").catch(() => {});
+      await page.waitForLoadState("domcontentloaded").catch(() => {});
     } else {
       await navigateTo(page, "/signup");
     }
@@ -397,7 +393,7 @@ test.describe("Promo Videos", () => {
     const signupBtn = page.locator('a[href="/signup"]').first();
     if (await signupBtn.isVisible()) {
       await signupBtn.click();
-      await page.waitForLoadState("networkidle").catch(() => {});
+      await page.waitForLoadState("domcontentloaded").catch(() => {});
     } else {
       await navigateTo(page, "/signup");
     }
@@ -447,7 +443,7 @@ test.describe("Promo Videos", () => {
     const creatorLink = page.locator('a[href*="/creators/"]').first();
     if (await creatorLink.isVisible()) {
       await creatorLink.click();
-      await page.waitForLoadState("networkidle").catch(() => {});
+      await page.waitForLoadState("domcontentloaded").catch(() => {});
       await pause(page, 2000);
       await snap(page, "15_fan_creator_profile");
       await smoothScrollDown(page, 400);
@@ -549,7 +545,7 @@ test.describe("Promo Videos", () => {
 
     // --- Step 8: Creator earnings (admin has access) ---
     await page.goto(`${WEB_BASE}/creator/earnings`);
-    await page.waitForLoadState("networkidle").catch(() => {});
+    await page.waitForLoadState("domcontentloaded").catch(() => {});
     await page.waitForTimeout(3000);
     await snap(page, "24_admin_earnings");
     await smoothScrollDown(page, 400);

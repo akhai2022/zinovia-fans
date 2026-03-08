@@ -32,7 +32,7 @@ export class SignupPage {
 
   async goto() {
     await safeGoto(this.page, "/signup");
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState("domcontentloaded");
   }
 
   async selectFanType() {
@@ -89,7 +89,7 @@ export class LoginPage {
 
   async goto() {
     await safeGoto(this.page, "/login");
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState("domcontentloaded");
   }
 
   async login(email: string, password: string) {

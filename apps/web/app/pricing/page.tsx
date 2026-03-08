@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Page } from "@/components/brand/Page";
 import { Button } from "@/components/ui/button";
+import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 
 const SITE_URL = "https://zinovia.ai";
 
@@ -22,6 +23,11 @@ const COMPARISON = [
   { platform: "OnlyFans", fee: "20%", payout: "21 days", monthlyFee: "Free", highlight: false },
   { platform: "Fanvue", fee: "15%", payout: "7–14 days", monthlyFee: "Free", highlight: false },
   { platform: "Fansly", fee: "20%", payout: "7–14 days", monthlyFee: "Free", highlight: false },
+  { platform: "Passes", fee: "10–15%", payout: "7–14 days", monthlyFee: "Free", highlight: false },
+  { platform: "Ko-fi", fee: "0–5%", payout: "Instant–7 days", monthlyFee: "Free / $6/mo", highlight: false },
+  { platform: "Gumroad", fee: "10%", payout: "7–14 days", monthlyFee: "Free", highlight: false },
+  { platform: "LoyalFans", fee: "20%", payout: "5–7 days", monthlyFee: "Free", highlight: false },
+  { platform: "Fourthwall", fee: "0–5%", payout: "14 days", monthlyFee: "Free", highlight: false },
 ];
 
 const PRICING_FAQS = [
@@ -43,11 +49,52 @@ export default function PricingPage() {
     })),
   };
 
+  const productJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: "Zinovia Fans Creator Platform",
+    description: "Creator subscription platform with competitive fees, 48-hour payouts, and AI-powered tools.",
+    brand: { "@type": "Brand", name: "Zinovia" },
+    url: `${SITE_URL}/pricing`,
+    offers: {
+      "@type": "AggregateOffer",
+      lowPrice: "0",
+      highPrice: "0",
+      priceCurrency: "EUR",
+      offerCount: "1",
+      offers: [
+        {
+          "@type": "Offer",
+          name: "Zinovia Creator Account",
+          price: "0",
+          priceCurrency: "EUR",
+          availability: "https://schema.org/InStock",
+          description: "Free to join. Competitive platform fee only when you earn.",
+        },
+      ],
+    },
+    additionalProperty: [
+      { "@type": "PropertyValue", name: "CompetitorFee_OnlyFans", value: "20%" },
+      { "@type": "PropertyValue", name: "CompetitorFee_Patreon", value: "5-12%" },
+      { "@type": "PropertyValue", name: "CompetitorFee_Fansly", value: "20%" },
+      { "@type": "PropertyValue", name: "CompetitorPayoutSpeed_OnlyFans", value: "21 days" },
+      { "@type": "PropertyValue", name: "CompetitorPayoutSpeed_Patreon", value: "30+ days" },
+      { "@type": "PropertyValue", name: "CompetitorPayoutSpeed_Fansly", value: "7-14 days" },
+      { "@type": "PropertyValue", name: "ZinoviaPayoutSpeed", value: "48 hours" },
+      { "@type": "PropertyValue", name: "ZinoviaFee", value: "Competitive" },
+    ],
+  };
+
   return (
     <Page className="max-w-4xl space-y-12 py-12">
+      <Breadcrumbs items={[{ label: "Pricing" }]} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
       />
 
       <header className="text-center space-y-4">

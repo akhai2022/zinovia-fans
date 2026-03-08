@@ -9,6 +9,7 @@ import { SmartMedia } from "@/components/landing/SmartMedia";
 import { AIForCreators } from "@/components/landing/AIForCreators";
 import { AIHowItWorks } from "@/components/landing/AIHowItWorks";
 import { AITrustStrip } from "@/components/landing/AITrustStrip";
+import { AIStudioStrip } from "@/components/landing/AIStudioStrip";
 import { AIDemoCTA } from "@/components/landing/AIDemoCTA";
 import { ScrollReveal } from "@/components/landing/ScrollReveal";
 import { getDictionary } from "@/lib/i18n/dictionaries";
@@ -152,6 +153,11 @@ export default async function HomePage() {
       {/* Smart Media — staggered cards */}
       <ScrollReveal stagger staggerDelay={100}>
         <SmartMedia t={t.smartMedia} />
+      </ScrollReveal>
+
+      {/* AI Studio Strip — 4 tool cards */}
+      <ScrollReveal stagger staggerDelay={100}>
+        <AIStudioStrip t={t.aiStudioStrip} />
       </ScrollReveal>
 
       {/* AI for Creators — 6 feature cards */}

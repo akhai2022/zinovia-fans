@@ -20,7 +20,7 @@ export class BillingManagePage {
 
   async goto() {
     await safeGoto(this.page, "/billing/manage");
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState("domcontentloaded");
   }
 
   async expectPageLoaded() {
@@ -37,7 +37,7 @@ export class BillingSuccessPage {
 
   async goto() {
     await safeGoto(this.page, "/billing/success");
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState("domcontentloaded");
   }
 
   async expectPageLoaded() {

@@ -40,17 +40,13 @@ export default function VerifyEmailPage() {
       verifyEmail(fromQuery, idempotencyKey)
         .then((res) => {
           // API sets session cookie — redirect directly, no login needed
-          const state = res.state || "";
-          let next = "/onboarding";
+          let next = "/settings/profile";
           if (res.role === "fan") next = "/feed";
-          else if (state === "KYC_APPROVED") next = "/settings/profile";
-          else if (state.startsWith("KYC_")) next = "/onboarding";
           window.location.href = next;
         })
         .catch(() => {
-          // On any error (already verified, expired, etc.) redirect to onboarding
-          // The user will log in from there if needed — never show a form
-          window.location.href = "/onboarding";
+          // On any error (already verified, expired, etc.) redirect to settings
+          window.location.href = "/settings/profile";
         });
     }
   }, [searchParams, router]);
@@ -92,7 +88,7 @@ export default function VerifyEmailPage() {
       const idempotencyKey = uuidClient();
       const res = await verifyEmail(token, idempotencyKey);
       // API sets session cookie — redirect directly, no login needed
-      const next = res.role === "creator" ? "/onboarding" : "/feed";
+      const next = res.role === "fan" ? "/feed" : "/settings/profile";
       window.location.href = next;
     } catch (err) {
       setError(getApiErrorMessage(err).message);

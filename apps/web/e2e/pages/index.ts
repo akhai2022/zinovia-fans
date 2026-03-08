@@ -10,3 +10,6 @@ export { FeedPage, PostCreatePage } from "./feed.page";
 export { MessagesListPage, ConversationPage } from "./dm.page";
 export { AdminPage } from "./admin.page";
 export { AiToolsPage, AiStudioLandingPage } from "./ai-tools.page";
+export { SettingsProfilePage, SettingsSecurityPage } from "./settings.page";
+export { OnboardingPage } from "./onboarding.page";
+export { NotificationsPage } from "./notifications.page";

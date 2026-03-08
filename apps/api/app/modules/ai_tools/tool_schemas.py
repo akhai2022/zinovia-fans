@@ -49,6 +49,55 @@ class CartoonizeStatusOut(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Animate Image
+# ---------------------------------------------------------------------------
+
+class AnimateImageRequest(BaseModel):
+    media_asset_id: UUID
+    motion_preset: str = "gentle"  # gentle | dynamic | zoom
+    num_frames: int = 15  # 7-25
+    fps: int = 7  # 4 | 7 | 12
+    output_format: str = "mp4"  # mp4 | gif
+
+
+class AnimateImageResponse(BaseModel):
+    job_id: UUID
+    status: str
+
+
+class AnimateImageStatusOut(BaseModel):
+    job_id: UUID
+    status: str
+    result_url: str | None = None
+    error: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Auto Caption
+# ---------------------------------------------------------------------------
+
+class AutoCaptionRequest(BaseModel):
+    media_asset_id: UUID
+    mode: str = "short"  # short | detailed | alt_text
+    tone: str = "neutral"  # neutral | playful | flirty | professional
+    quality: str = "fast"  # fast | better
+    include_keywords: bool = True
+    language: str = "en"  # en | fr
+
+
+class AutoCaptionResponse(BaseModel):
+    job_id: UUID
+    status: str
+
+
+class AutoCaptionStatusOut(BaseModel):
+    job_id: UUID
+    status: str
+    result: dict | None = None
+    error: str | None = None
+
+
+# ---------------------------------------------------------------------------
 # Image Ref (deep-link tokens)
 # ---------------------------------------------------------------------------
 

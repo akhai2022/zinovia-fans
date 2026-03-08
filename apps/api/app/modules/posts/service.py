@@ -242,6 +242,7 @@ async def _can_see_post(
     is_follower: bool = False,
     is_subscriber: bool = False,
     ppv_unlocked_post_ids: set[UUID] | None = None,
+    viewer_role: str | None = None,
 ) -> bool:
     """Visibility: PUBLIC all; FOLLOWERS follower or creator; SUBSCRIBERS active subscribers + creator; PPV purchased or creator."""
     if post.visibility == VISIBILITY_PUBLIC:
@@ -249,6 +250,9 @@ async def _can_see_post(
     if not viewer_user_id:
         return False
     if post.creator_user_id == viewer_user_id:
+        return True
+    # Admin / reader / super_admin bypass all visibility restrictions
+    if viewer_role in ("admin", "super_admin", "reader"):
         return True
     if post.visibility == VISIBILITY_FOLLOWERS and is_follower:
         return True
@@ -266,6 +270,7 @@ async def get_creator_posts_page(
     page_size: int = DEFAULT_PAGE_SIZE,
     *,
     current_user_id: UUID | None = None,
+    current_user_role: str | None = None,
     include_locked: bool = True,
 ) -> tuple[list[tuple[Post, bool, str | None]], int]:
     """
@@ -337,6 +342,7 @@ async def get_creator_posts_page(
             is_follower=is_following,
             is_subscriber=is_sub,
             ppv_unlocked_post_ids=ppv_unlocked,
+            viewer_role=current_user_role,
         )
         if can_see:
             items.append((post, False, None))
@@ -391,6 +397,7 @@ async def get_feed_page(
     page_size: int = DEFAULT_PAGE_SIZE,
     *,
     cursor: str | None = None,
+    current_user_role: str | None = None,
 ) -> tuple[list[tuple[Post, User, Profile, bool, str | None]], int, str | None]:
     """
     Feed: latest posts from creators the user follows, plus the user's own posts.
@@ -491,7 +498,8 @@ async def get_feed_page(
         is_subscriber = post.creator_user_id in subscribed_ids
         is_follower = post.creator_user_id in followed_ids
 
-        if post.visibility == VISIBILITY_PUBLIC or is_own:
+        is_admin_viewer = current_user_role in ("admin", "super_admin", "reader")
+        if post.visibility == VISIBILITY_PUBLIC or is_own or is_admin_viewer:
             items.append((post, user, profile, False, None))
         elif post.visibility == VISIBILITY_FOLLOWERS and is_follower:
             items.append((post, user, profile, False, None))

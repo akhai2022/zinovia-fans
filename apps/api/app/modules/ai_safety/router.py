@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import AppError
 from app.core.settings import get_settings
 from app.db.session import get_async_session
-from app.modules.auth.deps import get_current_user, require_admin
+from app.modules.auth.deps import get_current_user, require_admin, require_admin_writer
 from app.modules.auth.models import User
 from app.modules.media.models import MediaObject
 from app.modules.ai_safety.schemas import (
@@ -220,7 +220,7 @@ async def review_scan(
     scan_id: UUID,
     payload: AdminReviewPayload,
     session: AsyncSession = Depends(get_async_session),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin_writer),
 ) -> AdminReviewOut:
     """Admin approves or rejects a flagged media scan."""
     _require_ai_safety()

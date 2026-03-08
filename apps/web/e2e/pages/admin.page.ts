@@ -26,7 +26,7 @@ export class AdminPage {
 
   async goto() {
     await safeGoto(this.page, "/admin");
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState("domcontentloaded");
   }
 
   async expectAdminDashboardVisible() {

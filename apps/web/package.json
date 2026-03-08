@@ -18,7 +18,10 @@
     "e2e:debug": "playwright test --debug",
     "e2e:report": "playwright show-report /tmp/zinovia-pw-report",
     "e2e:pom": "playwright test 20- 21- 22- 23- 24- 25- 26-",
-    "e2e:regression": "playwright test 26-pom-regression"
+    "e2e:regression": "playwright test 26-pom-regression",
+    "e2e:demo": "playwright test --project=demo",
+    "e2e:mobile": "playwright test --project=mobile",
+    "e2e:smoke": "playwright test --project=smoke"
   },
   "dependencies": {
     "@material-symbols/font-400": "^0.40.2",
@@ -36,15 +39,15 @@
   },
   "devDependencies": {
     "@playwright/test": "1.49.0",
-    "@types/node": "^20.14.11",
-    "@types/react": "^18.3.3",
+    "@types/node": "25.3.5",
+    "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.5",
     "postcss": "^8.4.41",
     "tailwindcss": "^3.4.10",
-    "typescript": "^5.5.4",
+    "typescript": "5.9.3",
     "vitest": "^2.1.9"
   }
 }

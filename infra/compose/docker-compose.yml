@@ -126,6 +126,7 @@ services:
     # Browser runs on host; API must be reachable at host (use 127.0.0.1 for consistent loopback).
     environment:
       NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000
+      NODE_ENV: development
     depends_on:
       api:
         condition: service_healthy
@@ -138,7 +139,7 @@ services:
       - /app/packages/contracts/node_modules
       # Isolate .next so container (non-root) can write when running next dev
       - web_next:/app/apps/web/.next
-    command: ["npm", "--prefix", "apps/web", "run", "dev", "--", "--hostname", "0.0.0.0"]
+    command: ["sh", "-c", "npm install && npm --prefix apps/web run dev -- --hostname 0.0.0.0"]
 
 volumes:
   pgdata:

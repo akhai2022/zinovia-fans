@@ -29,7 +29,7 @@ export class AiToolsPage {
 
   async goto(tool: "remove-bg" | "cartoon-avatar"): Promise<void> {
     await this.page.goto(`/ai/tools/${tool}`);
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState("domcontentloaded");
   }
 
   async expectPageLoaded(): Promise<void> {
@@ -52,7 +52,7 @@ export class AiStudioLandingPage {
 
   async goto(): Promise<void> {
     await this.page.goto("/ai");
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState("domcontentloaded");
   }
 
   async expectHeroVisible(): Promise<void> {

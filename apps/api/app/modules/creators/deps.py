@@ -8,7 +8,7 @@ from app.core.errors import AppError
 from app.db.session import get_async_session
 from app.modules.auth.deps import get_current_user
 from app.modules.auth.models import Profile, User
-from app.modules.auth.constants import ADMIN_ROLE, SUPER_ADMIN_ROLE
+from app.modules.auth.constants import ADMIN_ROLE, READER_ROLE, SUPER_ADMIN_ROLE
 from app.modules.creators.constants import CREATOR_ROLE
 
 
@@ -25,7 +25,7 @@ async def require_creator_with_profile(
 ) -> User:
     """Require user has creator profile with handle set."""
     # Admins and super_admins bypass all profile checks
-    if user.role in (ADMIN_ROLE, SUPER_ADMIN_ROLE):
+    if user.role in (ADMIN_ROLE, SUPER_ADMIN_ROLE, READER_ROLE):
         return user
     result = await session.execute(select(Profile).where(Profile.user_id == user.id))
     profile = result.scalar_one_or_none()

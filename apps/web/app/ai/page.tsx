@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { ScrollReveal } from "@/components/landing/ScrollReveal";
+import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 import { AIForCreators } from "@/components/landing/AIForCreators";
 import { AIHowItWorks } from "@/components/landing/AIHowItWorks";
 import { AITrustStrip } from "@/components/landing/AITrustStrip";
@@ -23,16 +24,20 @@ const TOOL_ICONS = [
   "M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z",
   "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z",
   "M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129",
+  "M14.752 11.168l-3.197-.274L12 7.5l.445 3.394-3.197.274 3.197.274L12 14.836l-.445-3.394 3.197-.274M5.105 8.71l6.895-3.83 6.895 3.83v6.58L12 19.12l-6.895-3.83V8.71z",
+  "M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z",
 ];
 
 function getToolFeatures(t: Dictionary["aiToolsLanding"]) {
   return [
-    { title: t.removeBgTitle, description: t.removeBgDesc, comingSoon: false },
-    { title: t.cartoonTitle, description: t.cartoonDesc, comingSoon: false },
-    { title: t.captionsTitle, description: t.captionsDesc, comingSoon: false },
-    { title: t.safetyTitle, description: t.safetyDesc, comingSoon: false },
-    { title: t.promoTitle, description: t.promoDesc, comingSoon: false },
-    { title: t.translateTitle, description: t.translateDesc, comingSoon: false },
+    { title: t.removeBgTitle, description: t.removeBgDesc, href: "/ai/tools/remove-bg", comingSoon: false },
+    { title: t.cartoonTitle, description: t.cartoonDesc, href: "/ai/tools/cartoon-avatar", comingSoon: false },
+    { title: t.captionsTitle, description: t.captionsDesc, href: "/ai/tools/auto-caption", comingSoon: false },
+    { title: t.safetyTitle, description: t.safetyDesc, href: null, comingSoon: false },
+    { title: t.promoTitle, description: t.promoDesc, href: null, comingSoon: false },
+    { title: t.translateTitle, description: t.translateDesc, href: null, comingSoon: false },
+    { title: t.animateTitle, description: t.animateDesc, href: "/ai/tools/animate-image", comingSoon: false },
+    { title: t.autoCaptionTitle, description: t.autoCaptionDesc, href: "/ai/tools/auto-caption", comingSoon: false },
   ];
 }
 
@@ -49,6 +54,7 @@ export default async function AiStudioLandingPage() {
 
   return (
     <main className="hero-bg">
+      <Breadcrumbs items={[{ label: "AI Studio" }]} />
       {/* Hero */}
       <ScrollReveal>
         <section className="mx-auto w-full max-w-6xl px-4 pb-12 pt-16 sm:px-6 sm:pt-24">
@@ -116,42 +122,56 @@ export default async function AiStudioLandingPage() {
             </p>
           </div>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {tools.map(({ title, description, comingSoon }, i) => (
-              <div
-                key={title}
-                className={`sr-child card-hover-lift flex flex-col gap-4 rounded-2xl border border-white/[0.06] bg-card p-6${comingSoon ? " opacity-75" : ""}`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <svg
-                      className="h-5 w-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={1.5}
-                      aria-hidden
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d={TOOL_ICONS[i]}
-                      />
-                    </svg>
+            {tools.map(({ title, description, href, comingSoon }, i) => {
+              const content = (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={1.5}
+                        aria-hidden
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d={TOOL_ICONS[i]}
+                        />
+                      </svg>
+                    </div>
+                    {comingSoon && (
+                      <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                        {t.aiFeatures.comingSoonLabel}
+                      </span>
+                    )}
+                    {href && !comingSoon && (
+                      <span className="rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary">
+                        Try it
+                      </span>
+                    )}
                   </div>
-                  {comingSoon && (
-                    <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                      {t.aiFeatures.comingSoonLabel}
-                    </span>
-                  )}
+                  <h3 className="text-sm font-semibold text-foreground">
+                    {title}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    {description}
+                  </p>
+                </>
+              );
+              const cls = `sr-child card-hover-lift flex flex-col gap-4 rounded-2xl border border-white/[0.06] bg-card p-6 transition-colors hover:border-primary/20${comingSoon ? " opacity-75" : ""}`;
+              return href ? (
+                <Link key={title} href={href} className={cls}>
+                  {content}
+                </Link>
+              ) : (
+                <div key={title} className={cls}>
+                  {content}
                 </div>
-                <h3 className="text-sm font-semibold text-foreground">
-                  {title}
-                </h3>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {description}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       </ScrollReveal>

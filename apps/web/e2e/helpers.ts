@@ -269,6 +269,36 @@ export async function createAdminUser(
   };
 }
 
+/* --------------- browser context helpers --------------- */
+
+/**
+ * Set API cookies on a Playwright browser context.
+ * Handles both API domain and localhost for local dev.
+ */
+export async function setCookiesOnContext(
+  context: import("@playwright/test").BrowserContext,
+  cookies: string,
+): Promise<void> {
+  const url = new URL(API_BASE);
+  const parsed = cookies
+    .split(";")
+    .map((c) => c.trim())
+    .filter(Boolean)
+    .map((pair) => {
+      const [name, ...rest] = pair.split("=");
+      return {
+        name: name.trim(),
+        value: rest.join("=").trim(),
+        domain: url.hostname,
+        path: "/",
+      };
+    });
+  await context.addCookies(parsed);
+  await context.addCookies(
+    parsed.map((c) => ({ ...c, domain: "localhost" })),
+  );
+}
+
 /* --------------- page helpers --------------- */
 
 /** Login via the web UI form. */

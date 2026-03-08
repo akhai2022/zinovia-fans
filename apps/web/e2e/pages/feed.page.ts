@@ -24,7 +24,7 @@ export class FeedPage {
 
   async goto() {
     await safeGoto(this.page, "/feed");
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState("domcontentloaded");
   }
 
   async expectFeedLoaded() {
@@ -67,7 +67,7 @@ export class PostCreatePage {
 
   async goto() {
     await safeGoto(this.page, "/creator/post/new");
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState("domcontentloaded");
   }
 
   async createTextPost(caption: string, visibility: "PUBLIC" | "SUBSCRIBERS" | "PPV" = "PUBLIC", ppvPrice?: number) {

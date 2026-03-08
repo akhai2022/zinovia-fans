@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Page } from "@/components/brand/Page";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 
 export const metadata = {
   title: "Help Center — Zinovia Fans",
@@ -64,6 +65,7 @@ const faqJsonLd = {
 export default function HelpPage() {
   return (
     <Page className="max-w-3xl space-y-8 py-12">
+      <Breadcrumbs items={[{ label: "Help Center" }]} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}

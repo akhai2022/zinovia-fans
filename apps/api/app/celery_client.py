@@ -88,6 +88,18 @@ def enqueue_cartoonize(job_id: str) -> None:
     app.send_task("ai_tools.cartoonize", args=[job_id])  # type: ignore[attr-defined]
 
 
+def enqueue_animate_image(job_id: str) -> None:
+    """Enqueue AI tool animate-image task. Idempotent on worker side."""
+    app = _get_celery_app()
+    app.send_task("ai_tools.animate_image", args=[job_id])  # type: ignore[attr-defined]
+
+
+def enqueue_auto_caption(job_id: str) -> None:
+    """Enqueue AI tool auto-caption task. Idempotent on worker side."""
+    app = _get_celery_app()
+    app.send_task("ai_tools.auto_caption", args=[job_id])  # type: ignore[attr-defined]
+
+
 def enqueue_translate_caption(
     translation_id: str,
     source_text: str,

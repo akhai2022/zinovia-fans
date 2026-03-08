@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Page } from "@/components/brand/Page";
 import { Button } from "@/components/ui/button";
+import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 
 const SITE_URL = "https://zinovia.ai";
 
@@ -33,6 +34,7 @@ const MILESTONES = [
 export default function AboutPage() {
   return (
     <Page className="max-w-4xl space-y-12 py-12">
+      <Breadcrumbs items={[{ label: "About" }]} />
       <header className="text-center space-y-4">
         <h1 className="font-display text-premium-h2 font-bold text-foreground">
           Built for creators.{" "}

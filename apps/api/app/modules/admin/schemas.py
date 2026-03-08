@@ -148,6 +148,7 @@ class AdminUserPostOut(BaseModel):
     price_cents: int | None = None
     currency: str | None = None
     created_at: datetime
+    media: list[AdminPostMediaOut] = []
 
 
 class AdminUserPostPage(BaseModel):

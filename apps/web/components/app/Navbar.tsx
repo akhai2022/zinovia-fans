@@ -110,6 +110,50 @@ export function Navbar({
             );
           })}
 
+          {/* For Creators dropdown — always visible */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "flex items-center gap-1.5",
+                  pathname.startsWith("/for/") && "bg-white/10 text-foreground"
+                )}
+              >
+                <Icon name="diversity_3" className="icon-base" />
+                <span>{t.nav.forCreators}</span>
+                <Icon name="expand_more" className="icon-xs text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-52">
+              <DropdownMenuItem asChild>
+                <Link href="/for/fitness-creators" className="flex items-center gap-2">
+                  <Icon name="fitness_center" className="icon-base text-muted-foreground" />
+                  {t.nav.forFitness}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/for/musicians" className="flex items-center gap-2">
+                  <Icon name="music_note" className="icon-base text-muted-foreground" />
+                  {t.nav.forMusicians}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/for/podcasters" className="flex items-center gap-2">
+                  <Icon name="podcasts" className="icon-base text-muted-foreground" />
+                  {t.nav.forPodcasters}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/for/artists" className="flex items-center gap-2">
+                  <Icon name="palette" className="icon-base text-muted-foreground" />
+                  {t.nav.forArtists}
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {user && (
             <>
               {NAV_LINKS_AUTH.map(({ href, label, icon }) => {
@@ -170,6 +214,18 @@ export function Navbar({
                       <Link href="/ai/tools/cartoon-avatar" className="flex items-center gap-2">
                         <Icon name="brush" className="icon-base text-muted-foreground" />
                         {t.nav.aiCartoonAvatar}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/ai/tools/animate-image" className="flex items-center gap-2">
+                        <Icon name="animation" className="icon-base text-muted-foreground" />
+                        {t.nav.aiAnimateImage}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/ai/tools/auto-caption" className="flex items-center gap-2">
+                        <Icon name="subtitles" className="icon-base text-muted-foreground" />
+                        {t.nav.aiAutoCaption}
                       </Link>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -268,7 +324,7 @@ export function Navbar({
                     {t.nav.support}
                   </Link>
                 </DropdownMenuItem>
-                {(user?.role === "admin" || user?.role === "super_admin") && (
+                {(user?.role === "admin" || user?.role === "super_admin" || user?.role === "reader") && (
                   <DropdownMenuItem asChild>
                     <Link href="/admin" className="flex items-center gap-2">
                       <Icon name="verified_user" className="icon-base text-muted-foreground" />
@@ -340,6 +396,33 @@ export function Navbar({
             );
           })}
 
+          {/* For Creators section — mobile drawer */}
+          <div className="flex items-center gap-2 px-3 pt-3 pb-1">
+            <Icon name="diversity_3" className="icon-sm text-muted-foreground" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t.nav.forCreators}</span>
+          </div>
+          {([
+            { href: "/for/fitness-creators", label: t.nav.forFitness, icon: "fitness_center" },
+            { href: "/for/musicians", label: t.nav.forMusicians, icon: "music_note" },
+            { href: "/for/podcasters", label: t.nav.forPodcasters, icon: "podcasts" },
+            { href: "/for/artists", label: t.nav.forArtists, icon: "palette" },
+          ] as { href: string; label: string; icon: string }[]).map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setMobileOpen(false)}
+              className={cn(
+                "flex items-center gap-3 rounded-brand border border-border px-3 py-2.5 text-sm font-medium text-foreground transition-colors",
+                pathname === item.href
+                  ? "bg-white/10 border-primary/30"
+                  : "bg-card hover:bg-white/5"
+              )}
+            >
+              <Icon name={item.icon} className="icon-base text-muted-foreground" />
+              {item.label}
+            </Link>
+          ))}
+
           {/* AI Studio section — mobile drawer, creator only */}
           {user && isCreator && (
             <>
@@ -352,6 +435,8 @@ export function Navbar({
                 { href: "/ai/images", label: t.nav.aiImageLibrary, icon: "photo_library" },
                 { href: "/ai/tools/remove-bg", label: t.nav.aiRemoveBg, icon: "content_cut" },
                 { href: "/ai/tools/cartoon-avatar", label: t.nav.aiCartoonAvatar, icon: "brush" },
+                { href: "/ai/tools/animate-image", label: t.nav.aiAnimateImage, icon: "animation" },
+                { href: "/ai/tools/auto-caption", label: t.nav.aiAutoCaption, icon: "subtitles" },
               ] as { href: string; label: string; icon: string; comingSoon?: boolean }[]).map((item) => (
                 <Link
                   key={item.href + item.icon}
@@ -403,7 +488,7 @@ export function Navbar({
                 <Icon name="help" className="icon-base text-muted-foreground" />
                 {t.nav.support}
               </Link>
-              {(user?.role === "admin" || user?.role === "super_admin") && (
+              {(user?.role === "admin" || user?.role === "super_admin" || user?.role === "reader") && (
                 <Link
                   href="/admin"
                   onClick={() => setMobileOpen(false)}

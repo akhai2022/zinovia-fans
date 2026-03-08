@@ -6,13 +6,13 @@ WORKDIR /app
 
 # Install dependencies
 FROM base AS deps
-COPY package.json /app/package.json
+COPY package.json package-lock.json /app/
 COPY apps/web/package.json /app/apps/web/package.json
 COPY packages/contracts/package.json /app/packages/contracts/package.json
-RUN npm install
+RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
 # sharp is required for Next.js image optimization in standalone mode.
 # Install at root so it is resolvable via Node module resolution from apps/web.
-RUN npm install sharp
+RUN npm install --legacy-peer-deps sharp
 
 # Build the app (produces .next with standalone output)
 FROM base AS builder

@@ -12,5 +12,7 @@ export const featureFlags = {
   translations: readBool(process.env.NEXT_PUBLIC_ENABLE_TRANSLATIONS),
   aiTools: readBool(process.env.NEXT_PUBLIC_ENABLE_AI_TOOLS),
   cartoonAvatar: readBool(process.env.NEXT_PUBLIC_ENABLE_CARTOON_AVATAR),
+  animateImage: readBool(process.env.NEXT_PUBLIC_ENABLE_ANIMATE_IMAGE),
+  autoCaption: readBool(process.env.NEXT_PUBLIC_ENABLE_AUTO_CAPTION),
 };
 

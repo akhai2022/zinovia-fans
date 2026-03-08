@@ -1,0 +1,50 @@
+{
+  "project": "Zinovia",
+  "generated": "Run `npm run e2e:demo` to generate",
+  "artifacts": [
+    {
+      "scenario": "Creator Demo Journey",
+      "role": "creator",
+      "tag": "@demo",
+      "testFile": "e2e/50-demo-creator.spec.ts",
+      "description": "Full creator walkthrough: signup → onboarding → profile → post → vault → earnings → AI Studio",
+      "screenshots": [
+        { "path": "creator-01-logged-in.png", "milestone": "Creator logged in" },
+        { "path": "creator-02-onboarding.png", "milestone": "Onboarding page" },
+        { "path": "creator-03-settings-profile.png", "milestone": "Profile settings" },
+        { "path": "creator-03-profile-filled.png", "milestone": "Profile filled" },
+        { "path": "creator-04-new-post-page.png", "milestone": "New post page" },
+        { "path": "creator-04-post-filled.png", "milestone": "Post filled" },
+        { "path": "creator-05-vault.png", "milestone": "Media vault" },
+        { "path": "creator-06-earnings.png", "milestone": "Earnings dashboard" },
+        { "path": "creator-07-ai-studio.png", "milestone": "AI Studio" },
+        { "path": "creator-08-discovery.png", "milestone": "Creator discovery" }
+      ],
+      "video": "Video saved by Playwright in /tmp/zinovia-pw-results/ when run with --project=demo"
+    },
+    {
+      "scenario": "Fan Demo Journey",
+      "role": "fan",
+      "tag": "@demo",
+      "testFile": "e2e/51-demo-fan.spec.ts",
+      "description": "Full fan walkthrough: homepage → signup → discover → profile → feed → interactions → billing → search",
+      "screenshots": [
+        { "path": "fan-01-homepage.png", "milestone": "Landing page" },
+        { "path": "fan-02-signup-page.png", "milestone": "Signup page" },
+        { "path": "fan-02-signup-filled.png", "milestone": "Signup form filled" },
+        { "path": "fan-03-discover-creators.png", "milestone": "Creator discovery" },
+        { "path": "fan-04-creator-profile.png", "milestone": "Creator profile" },
+        { "path": "fan-05-feed.png", "milestone": "User feed" },
+        { "path": "fan-07-notifications.png", "milestone": "Notifications" },
+        { "path": "fan-08-billing.png", "milestone": "Billing page" },
+        { "path": "fan-09-search.png", "milestone": "Search page" }
+      ],
+      "video": "Video saved by Playwright in /tmp/zinovia-pw-results/ when run with --project=demo"
+    }
+  ],
+  "runCommands": {
+    "allDemos": "cd apps/web && npx playwright test --project=demo",
+    "creatorDemo": "cd apps/web && npx playwright test 50-demo-creator --project=demo",
+    "fanDemo": "cd apps/web && npx playwright test 51-demo-fan --project=demo"
+  }
+}

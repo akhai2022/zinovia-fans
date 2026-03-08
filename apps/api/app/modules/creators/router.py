@@ -219,6 +219,7 @@ async def list_creator_posts(
         page=page,
         page_size=page_size,
         current_user_id=current_user.id if current_user else None,
+        current_user_role=current_user.role if current_user else None,
         include_locked=include_locked,
     )
     items = [
@@ -242,7 +243,11 @@ async def get_creator(
     plan_price, plan_currency = await _get_plan_price(session, user.id)
     subscriber = False
     if current_user_id:
-        subscriber = await is_active_subscriber(session, current_user_id, user.id)
+        # Admin / reader / super_admin see all content unlocked
+        if current_user and current_user.role in ("admin", "super_admin", "reader"):
+            subscriber = True
+        else:
+            subscriber = await is_active_subscriber(session, current_user_id, user.id)
     return CreatorProfilePublic(
         user_id=user.id,
         handle=profile.handle or "",

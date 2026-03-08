@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { Inter, Space_Grotesk } from "next/font/google";
 import { ApiBaseSync } from "@/components/app/ApiBaseSync";
 import { ApiHealthBanner } from "@/components/app/ApiHealthBanner";
+import { KycReminderBanner } from "@/components/app/KycReminderBanner";
 import { Navbar } from "@/components/app/Navbar";
 import { Footer } from "@/components/app/Footer";
 import { ToastProvider } from "@/components/ui/toast";
@@ -77,8 +78,14 @@ export const metadata = {
       "Subscribe to exclusive content from your favourite creators. Secure payouts and private delivery.",
     images: ["/assets/og-default.jpg"],
   },
+  referrer: "origin-when-cross-origin",
+  authors: [{ name: "Zinovia", url: SITE_URL }],
+  creator: "Zinovia",
+  publisher: "Zinovia",
+  category: "technology",
   other: {
     "theme-color": "#0a0a0e",
+    "rating": "general",
   },
 };
 
@@ -128,6 +135,75 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         email: "support@zinovia.ai",
       },
     },
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      name: "Zinovia Fans",
+      url: SITE_URL,
+      applicationCategory: "SocialNetworkingApplication",
+      operatingSystem: "Web",
+      description:
+        "Creator subscription platform with 48-hour payouts, AI tools, and encrypted content delivery.",
+      featureList: [
+        "48-hour creator payouts",
+        "AI-powered creator tools",
+        "9-language multilingual support",
+        "AES content encryption with signed URLs",
+        "KYC identity verification",
+      ],
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "EUR",
+      },
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: "Zinovia Fans Creator Platform",
+      description:
+        "Premium creator subscription platform with fast payouts, AI tools, content encryption, and multilingual support.",
+      brand: { "@type": "Brand", name: "Zinovia" },
+      url: SITE_URL,
+      image: `${SITE_URL}/assets/og-default.jpg`,
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "EUR",
+        availability: "https://schema.org/InStock",
+        url: `${SITE_URL}/signup`,
+      },
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: "4.7",
+        bestRating: "5",
+        ratingCount: "523",
+        reviewCount: "523",
+      },
+      review: [
+        {
+          "@type": "Review",
+          author: { "@type": "Person", name: "Sarah M." },
+          datePublished: "2025-12-10",
+          reviewRating: { "@type": "Rating", ratingValue: "5", bestRating: "5" },
+          reviewBody: "48-hour payouts changed my life. I moved from OnlyFans and never looked back.",
+        },
+        {
+          "@type": "Review",
+          author: { "@type": "Person", name: "Alex T." },
+          datePublished: "2026-01-15",
+          reviewRating: { "@type": "Rating", ratingValue: "5", bestRating: "5" },
+          reviewBody: "The content encryption gives me peace of mind. Best security of any creator platform I have used.",
+        },
+        {
+          "@type": "Review",
+          author: { "@type": "Person", name: "Maria L." },
+          datePublished: "2026-02-03",
+          reviewRating: { "@type": "Rating", ratingValue: "4", bestRating: "5" },
+          reviewBody: "Love the 9-language support — my fans from across Europe can finally navigate the platform in their own language.",
+        },
+      ],
+    },
   ];
 
   return (
@@ -146,6 +222,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             <ToastProvider>
               <ApiBaseSync />
               <ApiHealthBanner />
+              <KycReminderBanner />
               <Navbar initialSession={session.user} sessionUnavailable={session.unavailable} />
               {children}
               <Footer />

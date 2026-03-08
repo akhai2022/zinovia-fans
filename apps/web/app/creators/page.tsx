@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { ApiClientError, apiFetchServer } from "@/lib/api/client";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { CreatorGrid } from "./CreatorGrid";
+import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 
 export const metadata: Metadata = {
   title: "Browse Creators | Zinovia",
@@ -77,6 +78,7 @@ export default async function CreatorsPage({
   if (fetchError) {
     return (
       <Page className="max-w-6xl space-y-6">
+        <Breadcrumbs items={[{ label: "Creators" }]} />
         <h1 className="font-display text-premium-h2 font-semibold text-foreground">
           {t.creatorsPage.title}
         </h1>
@@ -105,6 +107,7 @@ export default async function CreatorsPage({
 
   return (
     <Page className="max-w-6xl space-y-6">
+      <Breadcrumbs items={[{ label: "Creators" }]} />
       <h1 className="font-display text-premium-h2 font-semibold text-foreground">
         {t.creatorsPage.title}
       </h1>

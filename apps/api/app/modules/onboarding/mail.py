@@ -538,6 +538,59 @@ async def send_contact_form_email(
     )
 
 
+async def send_kyc_reminder_email(recipient: str) -> None:
+    """Send a reminder email asking the creator to complete KYC verification."""
+    settings = get_settings()
+    base = (settings.public_web_base_url or settings.app_base_url).rstrip("/")
+    onboarding_url = f"{base}/onboarding"
+
+    subject = "Complete your identity verification to start earning"
+    text_body = (
+        "Hi there,\n\n"
+        "Your Zinovia Fans account is almost ready! To start posting content "
+        "and earning from your fans, you need to complete your identity "
+        "verification (KYC).\n\n"
+        "What you'll need:\n"
+        "- A valid government-issued ID (passport, driver's license, or national ID)\n"
+        "- A selfie for identity confirmation\n\n"
+        "The process takes under 2 minutes.\n\n"
+        f"Complete verification: {onboarding_url}\n\n"
+        "In the meantime, you can already set up your profile, upload your "
+        "avatar, and customize your banner.\n\n"
+        "Best regards,\n"
+        "The Zinovia Fans Team\n"
+        "https://zinovia.ai"
+    )
+    html_body = _wrap_html(
+        '<p style="margin:0 0 16px;font-size:18px;font-weight:600;">'
+        "Complete your identity verification</p>"
+        '<p style="margin:0 0 16px;">Your Zinovia Fans account is almost ready! '
+        "To start posting content and earning from your fans, you need to "
+        "complete your identity verification.</p>"
+        '<div style="background:#f3f4f6;border-radius:6px;padding:16px;margin:0 0 16px;">'
+        '<p style="margin:0 0 8px;font-weight:600;font-size:14px;">What you\'ll need:</p>'
+        '<ul style="margin:0;padding-left:20px;font-size:14px;">'
+        "<li>A valid government-issued ID (passport, driver's license, or national ID)</li>"
+        "<li>A selfie for identity confirmation</li>"
+        "</ul></div>"
+        '<p style="margin:0 0 24px;text-align:center;">'
+        '<a href="' + onboarding_url + '" style="display:inline-block;'
+        "background-color:#6366f1;color:#ffffff;font-weight:600;"
+        "text-decoration:none;padding:12px 32px;border-radius:6px;"
+        'font-size:16px;">Verify my identity</a></p>'
+        '<p style="margin:0 0 8px;font-size:13px;color:#6b7280;">'
+        "In the meantime, you can already set up your profile, upload your "
+        "avatar, and customize your banner.</p>"
+    )
+    provider = get_mail_provider()
+    await provider.send_generic_email(
+        recipient=recipient,
+        subject=subject,
+        text_body=text_body,
+        html_body=html_body,
+    )
+
+
 async def send_admin_notification_email(
     recipient: str, title: str, message: str
 ) -> None:

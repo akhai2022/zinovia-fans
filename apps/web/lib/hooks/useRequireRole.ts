@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/hooks/useSession";
 
-type Role = "creator" | "admin" | "super_admin" | "fan";
+type Role = "creator" | "admin" | "super_admin" | "reader" | "fan";
 
 const KYC_DONE_STATES = new Set(["KYC_APPROVED", "COMPLETED"]);
 
@@ -13,14 +13,16 @@ const KYC_DONE_STATES = new Set(["KYC_APPROVED", "COMPLETED"]);
  * (via SessionProvider context) and redirects to `redirectTo` (default `/`)
  * if the user's role does not match `requiredRole`.
  *
- * For creators, also checks that KYC is complete. If not, redirects
- * to `/onboarding` so they can finish identity verification.
+ * For creators, KYC completion is NOT required for profile editing
+ * (avatar, banner uploads) or media management. KYC is only enforced
+ * when `requireKyc` option is explicitly set (e.g. for posting).
  *
- * Returns `{ user, authorized }` so pages can render conditionally.
+ * Returns `{ user, authorized, needsKyc }` so pages can render conditionally.
  */
 export function useRequireRole(
   requiredRole: Role | Role[],
   redirectTo = "/",
+  options?: { requireKyc?: boolean },
 ) {
   const router = useRouter();
   const { user } = useSession();
@@ -28,11 +30,14 @@ export function useRequireRole(
   const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
   const hasRole = !!user && roles.includes(user.role as Role);
 
-  // Creators must complete KYC; admins bypass
+  // Check if creator needs KYC (informational, no longer blocks by default)
   const needsKyc =
     hasRole &&
     user?.role === "creator" &&
     !KYC_DONE_STATES.has(user.onboarding_state ?? "");
+
+  // Only enforce KYC redirect when explicitly required (e.g. posting)
+  const enforceKyc = !!options?.requireKyc && needsKyc;
 
   useEffect(() => {
     // Not authenticated — middleware should already redirect, but handle edge case
@@ -44,14 +49,15 @@ export function useRequireRole(
       router.replace(redirectTo);
       return;
     }
-    if (needsKyc) {
+    if (enforceKyc) {
       router.replace("/onboarding");
     }
-  }, [user, hasRole, needsKyc, router, redirectTo]);
+  }, [user, hasRole, enforceKyc, router, redirectTo]);
 
   return {
-    user: hasRole && !needsKyc ? user : null,
+    user: hasRole && !enforceKyc ? user : null,
     isLoading: false,
-    authorized: hasRole && !needsKyc,
+    authorized: hasRole && !enforceKyc,
+    needsKyc,
   };
 }

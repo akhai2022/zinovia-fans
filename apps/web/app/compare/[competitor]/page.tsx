@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { Page } from "@/components/brand/Page";
 import { Button } from "@/components/ui/button";
-import { getComparison, getAllComparisonSlugs } from "./comparisons";
+import { getComparison, getAllComparisonSlugs, COMPARISONS } from "./comparisons";
+import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 
 const SITE_URL = "https://zinovia.ai";
 
@@ -41,19 +42,61 @@ export default function ComparisonPage({ params }: { params: { competitor: strin
     })),
   };
 
+  const comparisonJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: `Zinovia vs ${data.name} Comparison`,
+    description: data.description,
+    numberOfItems: 2,
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        item: {
+          "@type": "Product",
+          name: "Zinovia Fans Creator Platform",
+          url: SITE_URL,
+          brand: { "@type": "Brand", name: "Zinovia" },
+          description: "Creator subscription platform with 48-hour payouts, AI tools, content encryption, and 9-language support.",
+          offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
+          additionalProperty: [
+            ...data.features.map((f) => ({ "@type": "PropertyValue" as const, name: f.feature, value: f.zinovia })),
+            ...data.fees.map((f) => ({ "@type": "PropertyValue" as const, name: f.label, value: f.zinovia })),
+            { "@type": "PropertyValue" as const, name: "Payout Speed", value: data.payoutSpeed.zinovia },
+          ],
+        },
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        item: {
+          "@type": "Product",
+          name: data.name,
+          brand: { "@type": "Brand", name: data.name },
+          description: `${data.name} creator platform.`,
+          additionalProperty: [
+            ...data.features.map((f) => ({ "@type": "PropertyValue" as const, name: f.feature, value: f.competitor })),
+            ...data.fees.map((f) => ({ "@type": "PropertyValue" as const, name: f.label, value: f.competitor })),
+            { "@type": "PropertyValue" as const, name: "Payout Speed", value: data.payoutSpeed.competitor },
+          ],
+        },
+      },
+    ],
+  };
+
   return (
     <Page className="max-w-4xl space-y-10 py-12">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(comparisonJsonLd) }}
+      />
+      <Breadcrumbs items={[{ label: "Compare", href: "/compare" }, { label: `vs ${data.name}` }]} />
 
       <header className="space-y-3">
-        <p className="text-sm font-medium text-primary">
-          <Link href="/compare" className="hover:underline underline-offset-4">Compare</Link>
-          {" / "}
-          <span className="text-muted-foreground">vs {data.name}</span>
-        </p>
         <h1 className="font-display text-premium-h2 font-bold text-foreground">{data.title}</h1>
         <p className="max-w-2xl text-muted-foreground">{data.summary}</p>
       </header>
@@ -150,6 +193,42 @@ export default function ComparisonPage({ params }: { params: { competitor: strin
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{a}</p>
             </details>
           ))}
+        </div>
+      </section>
+
+      {/* Zinovia Features */}
+      <section className="space-y-4">
+        <h2 className="font-display text-xl font-semibold text-foreground">Explore Zinovia Features</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[
+            { slug: "subscriptions", name: "Monthly Subscriptions", desc: "Build predictable recurring revenue from fans." },
+            { slug: "payouts", name: "Fast Payouts", desc: "Get paid within 48 hours via secure bank transfer." },
+            { slug: "messaging", name: "Private Messaging", desc: "Connect with fans through built-in DMs." },
+            { slug: "paid-content", name: "Paid Unlocks", desc: "Sell individual posts as one-time purchases." },
+          ].map((f) => (
+            <Link
+              key={f.slug}
+              href={`/features/${f.slug}`}
+              className="rounded-2xl border border-white/[0.06] bg-card p-5 transition-colors hover:border-primary/30"
+            >
+              <h3 className="text-sm font-semibold text-foreground">{f.name}</h3>
+              <p className="mt-1 text-xs text-muted-foreground">{f.desc}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Other Comparisons */}
+      <section className="space-y-4">
+        <h2 className="font-display text-xl font-semibold text-foreground">Other Comparisons</h2>
+        <div className="flex flex-wrap gap-3">
+          {Object.values(COMPARISONS)
+            .filter((c) => c.slug !== data.slug)
+            .map((c) => (
+              <Button key={c.slug} variant="secondary" size="sm" asChild>
+                <Link href={`/compare/${c.slug}`}>vs {c.name}</Link>
+              </Button>
+            ))}
         </div>
       </section>
 

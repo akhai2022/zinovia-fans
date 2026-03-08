@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
 from app.core.settings import get_settings
-from app.modules.auth.models import Profile
+from app.modules.auth.models import Profile, User
 from app.modules.billing.service import is_active_subscriber
 from app.modules.creators.models import Follow
 from app.modules.media.models import MediaDerivedAsset, MediaObject
@@ -128,6 +128,12 @@ async def can_user_access_media(
         return False
     if media.owner_user_id == user_id:
         return True
+    # Admin / reader roles can view all media
+    from app.modules.auth.constants import ADMIN_ROLE, READER_ROLE, SUPER_ADMIN_ROLE
+    user_result = await session.execute(select(User.role).where(User.id == user_id))
+    user_role = user_result.scalar_one_or_none()
+    if user_role in (ADMIN_ROLE, SUPER_ADMIN_ROLE, READER_ROLE):
+        return True
     # Check if any post that uses this asset is visible to the viewer
     posts_result = await session.execute(
         select(Post)
@@ -191,6 +197,12 @@ async def is_fully_entitled(
     if not media:
         return False
     if media.owner_user_id == user_id:
+        return True
+    # Admin / reader roles are fully entitled
+    from app.modules.auth.constants import ADMIN_ROLE, READER_ROLE, SUPER_ADMIN_ROLE
+    user_result = await session.execute(select(User.role).where(User.id == user_id))
+    user_role = user_result.scalar_one_or_none()
+    if user_role in (ADMIN_ROLE, SUPER_ADMIN_ROLE, READER_ROLE):
         return True
 
     posts_result = await session.execute(

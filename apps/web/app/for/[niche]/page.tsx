@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { Page } from "@/components/brand/Page";
 import { Button } from "@/components/ui/button";
 import { getNiche, getAllNicheSlugs } from "./niches";
+import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 
 const SITE_URL = "https://zinovia.ai";
 
@@ -47,6 +48,7 @@ export default function NichePage({ params }: { params: { niche: string } }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
+      <Breadcrumbs items={[{ label: "For Creators" }, { label: data.name }]} />
 
       {/* Hero */}
       <header className="text-center space-y-4">

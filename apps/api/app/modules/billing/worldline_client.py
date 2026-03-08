@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 
 import httpx
 
+from app.core.errors import AppError
 from app.core.settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -140,7 +141,10 @@ async def create_hosted_checkout(
                 "worldline hosted checkout failed status=%s body=%s",
                 resp.status_code, resp.text[:500],
             )
-        resp.raise_for_status()
+        try:
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise AppError(status_code=502, detail="Payment provider error. Please try again.") from exc
         data = resp.json()
 
     partial_url = data.get("partialRedirectUrl", "")
@@ -177,7 +181,10 @@ async def get_payment_status(payment_id: str) -> dict:
         resp = await client.get(full_url, headers=headers)
         if resp.status_code >= 400:
             logger.error("worldline get_payment_status failed status=%s body=%s", resp.status_code, resp.text[:500])
-        resp.raise_for_status()
+        try:
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise AppError(status_code=502, detail="Payment provider error. Please try again.") from exc
         return resp.json()
 
 
@@ -195,7 +202,10 @@ async def get_hosted_checkout_status(hosted_checkout_id: str) -> dict:
         resp = await client.get(full_url, headers=headers)
         if resp.status_code >= 400:
             logger.error("worldline get_hosted_checkout_status failed status=%s body=%s", resp.status_code, resp.text[:500])
-        resp.raise_for_status()
+        try:
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise AppError(status_code=502, detail="Payment provider error. Please try again.") from exc
         return resp.json()
 
 
@@ -268,6 +278,9 @@ async def create_refund(payment_id: str, amount_cents: int, currency: str = "EUR
         resp = await client.post(full_url, json=body, headers=headers)
         if resp.status_code >= 400:
             logger.error("worldline create_refund failed status=%s body=%s", resp.status_code, resp.text[:500])
-        resp.raise_for_status()
+        try:
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise AppError(status_code=502, detail="Payment provider error. Please try again.") from exc
         logger.info("worldline refund created payment_id=%s amount_cents=%s", payment_id, amount_cents)
         return resp.json()

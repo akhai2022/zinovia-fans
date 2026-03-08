@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { Button } from "@/components/ui/button";
 import { ScrollReveal } from "@/components/landing/ScrollReveal";
+import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { DEFAULT_LOCALE, LOCALE_COOKIE, SUPPORTED_LOCALES, type Locale } from "@/lib/i18n/config";
 
@@ -48,6 +49,7 @@ export default async function DemoIndexPage() {
 
   return (
     <main className="hero-bg">
+      <Breadcrumbs items={[{ label: "Demo" }]} />
       {/* Hero */}
       <ScrollReveal>
         <section className="mx-auto w-full max-w-5xl px-4 pb-12 pt-16 sm:px-6 sm:pt-24">

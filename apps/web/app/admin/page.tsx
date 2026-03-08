@@ -61,6 +61,12 @@ type AdminUserDetail = AdminUser & {
   total_earned_cents: number;
 };
 
+type AdminPostMedia = {
+  media_id: string;
+  content_type: string;
+  download_url: string | null;
+};
+
 type AdminUserPost = {
   id: string;
   type: string;
@@ -71,6 +77,7 @@ type AdminUserPost = {
   price_cents: number | null;
   currency: string | null;
   created_at: string;
+  media: AdminPostMedia[];
 };
 
 type AdminUserSubscriber = {
@@ -246,8 +253,9 @@ export default function AdminPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useTranslation();
-  const { authorized, user: adminUser } = useRequireRole(["admin", "super_admin"]);
+  const { authorized, user: adminUser } = useRequireRole(["admin", "super_admin", "reader"]);
   const isSuperAdmin = adminUser?.role === "super_admin";
+  const isReader = adminUser?.role === "reader";
   const ROLE_FILTERS = getRoleFilters(t.admin);
   const CATEGORY_LABELS = getCategoryLabels(t.admin);
   type AdminTab = "users" | "posts" | "transactions" | "inbox" | "moderation" | "kyc";
@@ -263,7 +271,7 @@ export default function AdminPage() {
   const [usersPage, setUsersPage] = useState(1);
   const [usersSearch, setUsersSearch] = useState("");
   const [usersRole, setUsersRole] = useState<string | null>(null);
-  const searchTimer = useRef<ReturnType<typeof setTimeout>>();
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
   // User detail
@@ -514,6 +522,7 @@ export default function AdminPage() {
   }, [modPage]);
 
   const handleModReview = async (scanId: string, decision: "APPROVED" | "REJECTED") => {
+    if (isReader) return;
     setActionLoading(scanId);
     try {
       await apiFetch(`/ai-safety/admin/review/${scanId}`, {
@@ -544,6 +553,7 @@ export default function AdminPage() {
   };
 
   const resolveSupportMessage = async (msgId: string) => {
+    if (isReader) return;
     setActionLoading(msgId);
     try {
       await apiFetch(`/admin/support-messages/${msgId}/resolve`, { method: "POST" });
@@ -571,6 +581,7 @@ export default function AdminPage() {
   };
 
   const deleteMedia = async (mediaId: string) => {
+    if (isReader) return;
     setActionLoading(mediaId);
     try {
       await apiFetch(`/admin/media/${mediaId}`, { method: "DELETE" });
@@ -585,6 +596,7 @@ export default function AdminPage() {
   };
 
   const deletePostMedia = async (mediaId: string) => {
+    if (isReader) return;
     setActionLoading(mediaId);
     try {
       await apiFetch(`/admin/media/${mediaId}`, { method: "DELETE" });
@@ -673,6 +685,7 @@ export default function AdminPage() {
 
   /* ---- User actions ---- */
   const userAction = async (userId: string, action: string, reason?: string) => {
+    if (isReader) return;
     setActionLoading(`${userId}-${action}`);
     try {
       await apiFetch(`/admin/users/${userId}/action`, {
@@ -698,6 +711,7 @@ export default function AdminPage() {
   };
 
   const postAction = async (postId: string, action: string) => {
+    if (isReader) return;
     setActionLoading(`${postId}-${action}`);
     try {
       await apiFetch(`/admin/posts/${postId}/action`, {
@@ -712,8 +726,25 @@ export default function AdminPage() {
     }
   };
 
+  const userPostAction = async (postId: string, action: string) => {
+    if (isReader) return;
+    setActionLoading(`${postId}-${action}`);
+    try {
+      await apiFetch(`/admin/posts/${postId}/action`, {
+        method: "POST",
+        body: { action },
+      });
+      if (selectedUser) fetchUserPosts(selectedUser.user_id, userPostsPage);
+    } catch (err) {
+      handleApiError(err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   /* ---- Send notification handler ---- */
   const handleSendNotification = async (targetUserId?: string) => {
+    if (isReader) return;
     if (!notifyTitle || !notifyMessage) return;
     setNotifyLoading(true);
     setError(null);
@@ -1586,55 +1617,97 @@ export default function AdminPage() {
                       ))}
                     </div>
 
-                    {/* Posts sub-tab */}
+                    {/* Posts sub-tab — card grid with media previews */}
                     {userDetailTab === "posts" && (
                       <div className="space-y-3">
+                        <p className="text-xs text-muted-foreground">{userPostsTotal} post{userPostsTotal !== 1 ? "s" : ""}</p>
                         {userPosts.length === 0 ? (
-                          <p className="py-4 text-center text-sm text-muted-foreground">No posts.</p>
+                          <div className="flex flex-col items-center gap-2 py-10">
+                            <Icon name="article" className="text-4xl text-muted-foreground/40" />
+                            <p className="text-sm text-muted-foreground">No posts.</p>
+                          </div>
                         ) : (
-                          <div className="overflow-x-auto rounded-lg border border-border">
-                            <table className="w-full text-sm">
-                              <thead>
-                                <tr className="border-b border-border bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
-                                  <th className="px-4 py-3 font-semibold">Type</th>
-                                  <th className="px-4 py-3 font-semibold">Caption</th>
-                                  <th className="px-4 py-3 font-semibold">Visibility</th>
-                                  <th className="px-4 py-3 font-semibold">Status</th>
-                                  <th className="px-4 py-3 font-semibold">Price</th>
-                                  <th className="px-4 py-3 font-semibold">Date</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-border">
-                                {userPosts.map((p) => (
-                                  <tr key={p.id} className="text-foreground transition-colors hover:bg-white/[0.03]">
-                                    <td className="px-4 py-3 whitespace-nowrap">
-                                      <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                                        {p.type}
-                                      </span>
-                                    </td>
-                                    <td className="px-4 py-3 max-w-[200px] truncate text-muted-foreground">
-                                      {p.caption || "\u2014"}
-                                    </td>
-                                    <td className="px-4 py-3 whitespace-nowrap text-xs">{p.visibility}</td>
-                                    <td className="px-4 py-3 whitespace-nowrap text-xs">
-                                      <span className={p.status === "REMOVED" ? "text-red-400" : ""}>
-                                        {p.status}
-                                      </span>
-                                    </td>
-                                    <td className="px-4 py-3 whitespace-nowrap text-xs font-mono">
-                                      {p.price_cents ? formatCents(p.price_cents, p.currency || "USD") : "\u2014"}
-                                    </td>
-                                    <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
-                                      {new Date(p.created_at).toLocaleDateString("en-US", {
-                                        month: "short",
-                                        day: "numeric",
-                                        year: "numeric",
-                                      })}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                          <div className="space-y-4">
+                            {userPosts.map((p) => (
+                              <div key={p.id} className={`rounded-lg border border-border bg-card overflow-hidden ${p.status === "REMOVED" ? "opacity-60" : ""}`}>
+                                {/* Media grid */}
+                                {p.media.length > 0 && (
+                                  <div className={`grid gap-0.5 ${p.media.length === 1 ? "grid-cols-1" : p.media.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+                                    {p.media.map((m) => {
+                                      const isImage = m.content_type.startsWith("image");
+                                      const isVideo = m.content_type.startsWith("video");
+                                      return (
+                                        <div key={m.media_id} className="group relative aspect-square bg-muted/30">
+                                          {isImage && m.download_url ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img src={m.download_url} alt="media" className="h-full w-full object-cover" loading="lazy" />
+                                          ) : isVideo && m.download_url ? (
+                                            <video src={m.download_url} className="h-full w-full object-cover" muted preload="metadata" />
+                                          ) : (
+                                            <div className="flex h-full w-full items-center justify-center">
+                                              <Icon name={isVideo ? "play_circle" : "insert_drive_file"} className="text-3xl text-muted-foreground/50" />
+                                            </div>
+                                          )}
+                                          {/* Type badge */}
+                                          <span className={`absolute left-1 top-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${isVideo ? "bg-purple-500/80 text-white" : "bg-blue-500/80 text-white"}`}>
+                                            {isVideo ? "Video" : "Image"}
+                                          </span>
+                                          {/* Hover overlay */}
+                                          {m.download_url && (
+                                            <a href={m.download_url} target="_blank" rel="noopener noreferrer" className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                                              <Icon name="open_in_new" className="text-2xl text-white" />
+                                            </a>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                                {/* Post info */}
+                                <div className="p-3 space-y-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{p.type}</span>
+                                    <span className="text-xs text-muted-foreground">{p.visibility}</span>
+                                    {p.nsfw && <span className="rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-red-400">NSFW</span>}
+                                    {p.price_cents ? <span className="text-xs font-mono text-emerald-400">{formatCents(p.price_cents, p.currency || "USD")}</span> : null}
+                                    <span className={`text-xs font-medium ${p.status === "REMOVED" ? "text-red-400" : p.status === "PUBLISHED" ? "text-emerald-400" : "text-muted-foreground"}`}>{p.status}</span>
+                                    <span className="ml-auto text-[10px] text-muted-foreground">
+                                      {new Date(p.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                                    </span>
+                                  </div>
+                                  {p.caption && <p className="text-sm text-muted-foreground line-clamp-2">{p.caption}</p>}
+                                  {/* Actions */}
+                                  {!isReader && (
+                                    <div className="flex items-center gap-2 pt-1">
+                                      {p.status === "PUBLISHED" && (
+                                        <Button
+                                          size="sm"
+                                          variant="destructive"
+                                          className="h-7 px-3 text-xs"
+                                          disabled={actionLoading === `${p.id}-remove`}
+                                          onClick={() => userPostAction(p.id, "remove")}
+                                        >
+                                          <Icon name="delete" className="mr-1 icon-xs" />
+                                          {actionLoading === `${p.id}-remove` ? <Spinner className="h-3 w-3" /> : "Remove"}
+                                        </Button>
+                                      )}
+                                      {p.status === "REMOVED" && (
+                                        <Button
+                                          size="sm"
+                                          variant="secondary"
+                                          className="h-7 px-3 text-xs"
+                                          disabled={actionLoading === `${p.id}-restore`}
+                                          onClick={() => userPostAction(p.id, "restore")}
+                                        >
+                                          <Icon name="restore" className="mr-1 icon-xs" />
+                                          {actionLoading === `${p.id}-restore` ? <Spinner className="h-3 w-3" /> : "Restore"}
+                                        </Button>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         )}
                         <Pagination
@@ -1726,10 +1799,13 @@ export default function AdminPage() {
                                         className="h-full w-full object-cover"
                                         loading="lazy"
                                       />
-                                    ) : isVideo ? (
-                                      <div className="flex h-full w-full items-center justify-center">
-                                        <Icon name="play_circle" className="text-4xl text-purple-400" />
-                                      </div>
+                                    ) : isVideo && m.download_url ? (
+                                      <video
+                                        src={m.download_url}
+                                        className="h-full w-full object-cover"
+                                        muted
+                                        preload="metadata"
+                                      />
                                     ) : (
                                       <div className="flex h-full w-full items-center justify-center">
                                         <Icon name="insert_drive_file" className="text-4xl text-muted-foreground/50" />

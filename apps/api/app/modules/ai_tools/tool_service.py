@@ -21,6 +21,7 @@ async def create_tool_job(
     tool: str,
     input_object_key: str,
     input_media_asset_id: UUID | None = None,
+    params: dict | None = None,
 ) -> AiToolJob:
     job = AiToolJob(
         id=uuid.uuid4(),
@@ -29,6 +30,7 @@ async def create_tool_job(
         status="pending",
         input_media_asset_id=input_media_asset_id,
         input_object_key=input_object_key,
+        params=params,
     )
     session.add(job)
     await session.flush()

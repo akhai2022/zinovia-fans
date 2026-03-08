@@ -30,7 +30,7 @@ export class LandingPage {
 
   async goto() {
     await safeGoto(this.page, "/");
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState("domcontentloaded");
   }
 
   async expectHeroVisible() {

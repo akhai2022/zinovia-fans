@@ -23,7 +23,7 @@ export function SubscribeInviteVideo() {
         <div className="relative aspect-[16/10] w-full overflow-hidden rounded-3xl bg-background">
           <Image
             src="/assets/hero_abstract.jpg"
-            alt="Abstract gradient"
+            alt="Zinovia creator platform showcase background"
             fill
             loading="lazy"
             quality={90}
@@ -37,9 +37,13 @@ export function SubscribeInviteVideo() {
 
           {/* Floating creator thumbnails */}
           <div className="absolute inset-0 flex items-center justify-center gap-4 px-8" aria-hidden>
-            {["/assets/creator_fitness.jpg", "/assets/creator_fashion.jpg", "/assets/creator_art.jpg"].map((src, i) => (
+            {[
+              { src: "/assets/creator_fitness.jpg", alt: "Fitness creator on Zinovia" },
+              { src: "/assets/creator_fashion.jpg", alt: "Fashion creator on Zinovia" },
+              { src: "/assets/creator_art.jpg", alt: "Art creator on Zinovia" },
+            ].map((img, i) => (
               <div
-                key={src}
+                key={img.src}
                 className="float-gentle relative h-32 w-24 overflow-hidden rounded-xl border border-white/10 shadow-lg sm:h-44 sm:w-32 md:h-56 md:w-40"
                 style={{
                   "--float-rotate": `${(i - 1) * 5}deg`,
@@ -48,15 +52,15 @@ export function SubscribeInviteVideo() {
                 } as React.CSSProperties}
               >
                 <Image
-                  src={src}
-                  alt=""
+                  src={img.src}
+                  alt={img.alt}
                   fill
                   loading="lazy"
                   quality={80}
                   className="object-cover"
                   sizes="160px"
                   placeholder="blur"
-                  blurDataURL={BLUR[src]}
+                  blurDataURL={BLUR[img.src]}
                 />
               </div>
             ))}

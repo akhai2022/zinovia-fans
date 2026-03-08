@@ -3,4 +3,5 @@ CREATOR_ROLE = "creator"
 DEFAULT_USER_ROLE = "creator"  # Default for the User model (creators via /auth/register)
 ADMIN_ROLE = "admin"
 SUPER_ADMIN_ROLE = "super_admin"
+READER_ROLE = "reader"
 TOKEN_TYPE_BEARER = "bearer"

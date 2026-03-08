@@ -1436,6 +1436,8 @@ resource "aws_ecs_task_definition" "api" {
         { name = "ENABLE_AI_SAFETY", value = tostring(var.enable_ai_safety) },
         { name = "ENABLE_AI_TOOLS", value = tostring(var.enable_ai_tools) },
         { name = "ENABLE_CARTOON_AVATAR", value = tostring(var.enable_cartoon_avatar) },
+        { name = "ENABLE_ANIMATE_IMAGE", value = tostring(var.enable_animate_image) },
+        { name = "ENABLE_AUTO_CAPTION", value = tostring(var.enable_auto_caption) },
         { name = "DEFAULT_CURRENCY", value = var.default_currency },
         { name = "CCBILL_ACCOUNT_NUMBER", value = var.ccbill_account_number },
         { name = "CCBILL_SUB_ACCOUNT", value = var.ccbill_sub_account },
@@ -1529,7 +1531,9 @@ resource "aws_ecs_task_definition" "web" {
         { name = "NEXT_PUBLIC_ENABLE_TRANSLATIONS", value = tostring(var.enable_translations) },
         { name = "NEXT_PUBLIC_ENABLE_AI_SAFETY", value = tostring(var.enable_ai_safety) },
         { name = "NEXT_PUBLIC_ENABLE_AI_TOOLS", value = tostring(var.enable_ai_tools) },
-        { name = "NEXT_PUBLIC_ENABLE_CARTOON_AVATAR", value = tostring(var.enable_cartoon_avatar) }
+        { name = "NEXT_PUBLIC_ENABLE_CARTOON_AVATAR", value = tostring(var.enable_cartoon_avatar) },
+        { name = "NEXT_PUBLIC_ENABLE_ANIMATE_IMAGE", value = tostring(var.enable_animate_image) },
+        { name = "NEXT_PUBLIC_ENABLE_AUTO_CAPTION", value = tostring(var.enable_auto_caption) }
       ],
       local.web_base_url != "" ? [{ name = "NEXT_PUBLIC_APP_URL", value = local.web_base_url }] : []
     )
@@ -1571,6 +1575,8 @@ resource "aws_ecs_task_definition" "worker" {
       { name = "ENABLE_AI_SAFETY", value = tostring(var.enable_ai_safety) },
       { name = "ENABLE_AI_TOOLS", value = tostring(var.enable_ai_tools) },
       { name = "ENABLE_CARTOON_AVATAR", value = tostring(var.enable_cartoon_avatar) },
+      { name = "ENABLE_ANIMATE_IMAGE", value = tostring(var.enable_animate_image) },
+      { name = "ENABLE_AUTO_CAPTION", value = tostring(var.enable_auto_caption) },
       { name = "ENABLE_SMART_PREVIEWS", value = tostring(var.enable_smart_previews) },
       { name = "ENABLE_TRANSLATIONS", value = tostring(var.enable_translations) },
       # Worker doesn't send email or use cookies but shares Settings with API

@@ -36,7 +36,7 @@ export class CreatorProfilePage {
 
   async goto(handle: string) {
     await safeGoto(this.page, `/creators/${handle}`);
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState("domcontentloaded");
   }
 
   async expectProfileLoaded() {
@@ -80,7 +80,7 @@ export class CreatorDiscoveryPage {
 
   async goto() {
     await safeGoto(this.page, "/creators");
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState("domcontentloaded");
   }
 
   async expectPageLoaded() {

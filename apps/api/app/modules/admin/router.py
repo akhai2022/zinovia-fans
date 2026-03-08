@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import AppError
 from app.core.settings import get_settings
 from app.db.session import get_async_session
-from app.modules.auth.deps import require_admin
+from app.modules.auth.deps import require_admin, require_admin_writer
 from app.modules.auth.models import Profile, User
 from app.modules.auth.service import _generate_unique_handle, _sanitize_handle
 from app.modules.admin.schemas import (
@@ -81,7 +81,7 @@ async def action_creator(
     user_id: UUID,
     payload: AdminCreatorAction,
     session: AsyncSession = Depends(get_async_session),
-    _admin: User = Depends(require_admin),
+    _admin: User = Depends(require_admin_writer),
 ) -> dict:
     return await admin_action_creator(session, user_id, payload.action, payload.reason)
 
@@ -110,7 +110,7 @@ async def action_post(
     post_id: UUID,
     payload: AdminPostAction,
     session: AsyncSession = Depends(get_async_session),
-    _admin: User = Depends(require_admin),
+    _admin: User = Depends(require_admin_writer),
 ) -> dict:
     return await admin_action_post(session, post_id, payload.action, payload.reason)
 
@@ -188,7 +188,7 @@ async def action_user(
     user_id: UUID,
     payload: AdminUserAction,
     session: AsyncSession = Depends(get_async_session),
-    _admin: User = Depends(require_admin),
+    _admin: User = Depends(require_admin_writer),
 ) -> dict:
     return await admin_action_user(session, user_id, payload.action, payload.reason)
 
@@ -330,7 +330,7 @@ async def get_tokens(
 async def force_verify_email(
     email: str = Query(..., description="Creator email to verify"),
     session: AsyncSession = Depends(get_async_session),
-    _admin: User = Depends(require_admin),
+    _admin: User = Depends(require_admin_writer),
 ) -> dict:
     from app.modules.onboarding.models import EmailVerificationToken
     from app.modules.onboarding.service import transition_creator_state
@@ -380,7 +380,7 @@ async def force_verify_email(
 )
 async def backfill_handles(
     session: AsyncSession = Depends(get_async_session),
-    _admin: User = Depends(require_admin),
+    _admin: User = Depends(require_admin_writer),
 ) -> dict:
     """Find all creators without a handle and generate one from their display name or email."""
     result = await session.execute(
@@ -464,7 +464,7 @@ async def list_support_messages(
 async def mark_support_message_read(
     message_id: UUID,
     session: AsyncSession = Depends(get_async_session),
-    _admin: User = Depends(require_admin),
+    _admin: User = Depends(require_admin_writer),
 ) -> dict:
     from app.modules.contact.models import ContactSubmission
 
@@ -481,7 +481,7 @@ async def mark_support_message_read(
 async def resolve_support_message(
     message_id: UUID,
     session: AsyncSession = Depends(get_async_session),
-    _admin: User = Depends(require_admin),
+    _admin: User = Depends(require_admin_writer),
     notes: str | None = Body(None),
 ) -> dict:
     from app.modules.contact.models import ContactSubmission
@@ -674,7 +674,7 @@ async def review_kyc(
     session_id: UUID,
     payload: _KycReviewRequest,
     session: AsyncSession = Depends(get_async_session),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin_writer),
 ) -> dict:
     """Approve or reject a KYC session. Super_admin only."""
     if admin.role != "super_admin":
@@ -717,8 +717,7 @@ async def review_kyc(
             "admin_kyc_rejected",
             {"session_id": str(kyc.id), "admin_id": str(admin.id), "notes": payload.notes},
         )
-
-    await session.commit()
+    # transition_creator_state already commits; no extra commit needed
     return {"status": "ok", "action": payload.action, "session_id": str(session_id)}
 
 
@@ -774,11 +773,16 @@ async def list_user_media(
 async def delete_media(
     media_id: UUID,
     session: AsyncSession = Depends(get_async_session),
-    _admin: User = Depends(require_admin),
+    _admin: User = Depends(require_admin_writer),
 ) -> dict:
-    """Delete a media asset and its derived variants. Removes from DB (S3 cleanup is separate)."""
+    """Delete a media asset and its derived variants. Removes from DB and S3."""
+    import logging
+
     from app.modules.media.models import MediaDerivedAsset, MediaObject
+    from app.modules.media.storage import get_storage_client
     from app.modules.posts.models import PostMedia
+
+    log = logging.getLogger(__name__)
 
     media = (await session.execute(
         select(MediaObject).where(MediaObject.id == media_id)
@@ -786,9 +790,29 @@ async def delete_media(
     if not media:
         raise AppError(status_code=404, detail="media_not_found")
 
-    # Remove references
+    object_key = media.object_key
+
+    # Collect derived asset keys for S3 cleanup
+    derived_rows = (await session.execute(
+        select(MediaDerivedAsset.object_key).where(MediaDerivedAsset.parent_asset_id == media_id)
+    )).scalars().all()
+
+    # Remove references from DB
     await session.execute(delete(PostMedia).where(PostMedia.media_asset_id == media_id))
     await session.execute(delete(MediaDerivedAsset).where(MediaDerivedAsset.parent_asset_id == media_id))
     await session.execute(delete(MediaObject).where(MediaObject.id == media_id))
     await session.commit()
+
+    # Best-effort S3 cleanup
+    try:
+        storage = get_storage_client()
+        storage.delete_object(object_key)
+        for dk in derived_rows:
+            try:
+                storage.delete_object(dk)
+            except Exception:
+                pass
+    except Exception as exc:
+        log.warning("S3 cleanup failed for media %s: %s", media_id, exc)
+
     return {"status": "ok", "media_id": str(media_id)}

@@ -98,7 +98,8 @@ async def checkout_subscription(
         except AppError:
             raise
     else:
-        assert payload.creator_id is not None
+        if payload.creator_id is None:
+            raise AppError(status_code=400, detail="creator_id or creator_handle required")
         creator_user_id = payload.creator_id
         creator_handle = None
     checkout_url = await create_checkout_session(

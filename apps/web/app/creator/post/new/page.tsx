@@ -40,7 +40,7 @@ const VISIBILITY_ICONS = {
 } as const;
 
 export default function NewPostPage() {
-  const { authorized } = useRequireRole(["creator", "admin", "super_admin"]);
+  const { authorized } = useRequireRole(["creator", "admin", "super_admin"], "/", { requireKyc: true });
   const router = useRouter();
   const { addToast } = useToast();
   const { t } = useTranslation();
