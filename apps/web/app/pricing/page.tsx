@@ -198,6 +198,26 @@ export default function PricingPage() {
         </div>
       </section>
 
+      {/* Learn More */}
+      <section className="space-y-4">
+        <h2 className="font-display text-xl font-semibold text-foreground">Learn More</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[
+            { href: "/fast-payouts", label: "48-Hour Fast Payouts", desc: "Learn how Zinovia gets your earnings to your bank in 48 hours." },
+            { href: "/content-protection", label: "Content Protection", desc: "5-layer security: signed URLs, encryption, watermarking, and more." },
+            { href: "/features/subscriptions", label: "Subscription Features", desc: "Flexible subscription tiers, paid unlocks, tips, and messaging." },
+            { href: "/alternatives/creator-platforms", label: "Best Creator Platforms 2026", desc: "Compare the top creator platforms side by side." },
+            { href: "/guides/creator-platform-fees-compared", label: "Guide: Fee Comparison", desc: "Detailed fee breakdown across all major creator platforms." },
+            { href: "/compare", label: "All Comparisons", desc: "Head-to-head comparisons of Zinovia vs every major platform." },
+          ].map((link) => (
+            <Link key={link.href} href={link.href} className="rounded-2xl border border-white/[0.06] bg-card p-5 transition-colors hover:border-primary/30">
+              <h3 className="text-sm font-semibold text-foreground">{link.label}</h3>
+              <p className="mt-1 text-xs text-muted-foreground">{link.desc}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="rounded-2xl border border-white/[0.06] bg-card p-8 text-center">
         <h2 className="font-display text-xl font-bold text-foreground">Start earning today</h2>

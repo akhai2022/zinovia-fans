@@ -269,6 +269,23 @@ export default function AlternativePage({
         </div>
       </section>
 
+      {/* Helpful Guides */}
+      <section className="space-y-4">
+        <h2 className="font-display text-xl font-semibold text-foreground">Helpful Guides</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[
+            { href: "/guides/creator-platform-fees-compared", label: "Creator Platform Fees Compared", desc: "Side-by-side fee breakdown across all major creator platforms." },
+            { href: "/guides/how-to-start-earning-as-creator", label: "How to Start Earning as a Creator", desc: "Step-by-step guide to launching and growing your creator income." },
+            { href: "/guides/ai-tools-for-creators", label: "AI Tools for Creators", desc: "How AI-powered tools can help you create, promote, and earn more." },
+          ].map((link) => (
+            <Link key={link.href} href={link.href} className="rounded-2xl border border-white/[0.06] bg-card p-5 transition-colors hover:border-primary/30">
+              <h3 className="text-sm font-semibold text-foreground">{link.label}</h3>
+              <p className="mt-1 text-xs text-muted-foreground">{link.desc}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="rounded-2xl border border-white/[0.06] bg-card p-8 text-center">
         <h2 className="font-display text-xl font-bold text-foreground">

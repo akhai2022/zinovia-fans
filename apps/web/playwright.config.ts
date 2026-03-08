@@ -25,6 +25,12 @@ export default defineConfig({
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
+    // Realistic browser headers to avoid CloudFront WAF bot detection
+    userAgent:
+      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    extraHTTPHeaders: {
+      "Accept-Language": "en-US,en;q=0.9",
+    },
   },
   projects: [
     {

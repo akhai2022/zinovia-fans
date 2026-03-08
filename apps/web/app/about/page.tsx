@@ -31,9 +31,74 @@ const MILESTONES = [
   { year: "2026", event: "Creator verification and KYC system launched" },
 ];
 
+const FAQS = [
+  {
+    q: "What is Zinovia?",
+    a: "Zinovia is a creator subscription platform with 48-hour payouts, AI tools, content encryption, and 9-language support. Creators monetize through subscriptions, paid unlocks, tips, and private messaging.",
+  },
+  {
+    q: "How is Zinovia different from OnlyFans or Patreon?",
+    a: "Zinovia offers lower fees, faster payouts (48 hours vs 30+ days), built-in AI tools for captions and tagging, content protection with signed URLs and AES encryption, and an EU-first approach with GDPR compliance and EUR-first payments.",
+  },
+  {
+    q: "What languages does Zinovia support?",
+    a: "Zinovia supports 9 languages: English, Spanish, French, German, Portuguese, Turkish, Romanian, Polish, and Italian.",
+  },
+  {
+    q: "Is Zinovia free to join?",
+    a: "Yes. There is no monthly platform fee. Zinovia uses a revenue-based fee model — you only pay when you earn.",
+  },
+  {
+    q: "Where is Zinovia based?",
+    a: "Zinovia is a European company. We are fully GDPR compliant and operate with EUR-first payments, supporting creators and fans across Europe and globally.",
+  },
+];
+
 export default function AboutPage() {
+  const organizationJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Zinovia",
+    url: "https://zinovia.ai",
+    logo: "https://zinovia.ai/icon.svg",
+    description:
+      "Creator subscription platform with 48-hour payouts, AI tools, content encryption, and 9-language support.",
+    foundingDate: "2024",
+    sameAs: [],
+    contactPoint: {
+      "@type": "ContactPoint",
+      contactType: "customer support",
+      url: "https://zinovia.ai/help",
+    },
+    knowsAbout: [
+      "creator economy",
+      "content monetization",
+      "subscription platforms",
+      "creator tools",
+      "content protection",
+    ],
+  };
+
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQS.map(({ q, a }) => ({
+      "@type": "Question",
+      name: q,
+      acceptedAnswer: { "@type": "Answer", text: a },
+    })),
+  };
+
   return (
     <Page className="max-w-4xl space-y-12 py-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <Breadcrumbs items={[{ label: "About" }]} />
       <header className="text-center space-y-4">
         <h1 className="font-display text-premium-h2 font-bold text-foreground">
@@ -96,6 +161,24 @@ export default function AboutPage() {
               <span className="shrink-0 font-display text-sm font-bold text-primary">{milestone.year}</span>
               <p className="text-sm text-foreground/90">{milestone.event}</p>
             </div>
+          ))}
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="space-y-4">
+        <h2 className="font-display text-xl font-semibold text-foreground">Frequently Asked Questions</h2>
+        <div className="divide-y divide-white/[0.06]">
+          {FAQS.map(({ q, a }) => (
+            <details key={q} className="group py-5">
+              <summary className="flex cursor-pointer items-center justify-between text-sm font-medium text-foreground">
+                {q}
+                <svg className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-45" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+              </summary>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{a}</p>
+            </details>
           ))}
         </div>
       </section>

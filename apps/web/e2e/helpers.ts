@@ -376,18 +376,30 @@ export async function activatePostPurchase(
  * (ERR_NETWORK_CHANGED, ERR_CONNECTION_RESET) that occur against remote hosts.
  */
 export async function safeGoto(page: Page, path: string): Promise<void> {
-  try {
-    await page.goto(path);
-  } catch (err: any) {
-    const msg = err?.message ?? "";
-    if (
-      msg.includes("ERR_NETWORK_CHANGED") ||
-      msg.includes("ERR_CONNECTION_RESET") ||
-      msg.includes("ERR_NETWORK_IO_SUSPENDED")
-    ) {
-      await page.waitForTimeout(500);
-      await page.goto(path);
-    } else {
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await page.goto(path);
+      // Retry on CloudFront WAF 403 blocks (rate limiting / bot detection)
+      if (response?.status() === 403 && attempt < maxAttempts) {
+        const body = await page.textContent("body").catch(() => "");
+        if (body?.includes("CloudFront") || body?.includes("Request blocked")) {
+          await page.waitForTimeout(1000 * attempt);
+          continue;
+        }
+      }
+      return;
+    } catch (err: any) {
+      const msg = err?.message ?? "";
+      if (
+        attempt < maxAttempts &&
+        (msg.includes("ERR_NETWORK_CHANGED") ||
+         msg.includes("ERR_CONNECTION_RESET") ||
+         msg.includes("ERR_NETWORK_IO_SUSPENDED"))
+      ) {
+        await page.waitForTimeout(500 * attempt);
+        continue;
+      }
       throw err;
     }
   }

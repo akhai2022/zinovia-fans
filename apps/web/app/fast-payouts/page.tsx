@@ -229,6 +229,25 @@ export default function FastPayoutsPage() {
         </div>
       </section>
 
+      {/* Related Resources */}
+      <section className="space-y-4">
+        <h2 className="font-display text-xl font-semibold text-foreground">Related Resources</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[
+            { href: "/features/payouts", label: "Payout Features", desc: "Full breakdown of Zinovia's payout system and supported currencies." },
+            { href: "/guides/creator-platform-fees-compared", label: "Guide: Creator Platform Fees Compared", desc: "Side-by-side fee comparison across all major creator platforms." },
+            { href: "/pricing", label: "Zinovia Pricing", desc: "Transparent pricing with no monthly fees and no hidden costs." },
+            { href: "/alternatives/patreon-alternatives", label: "Patreon Alternatives", desc: "Explore the best alternatives to Patreon for creators." },
+            { href: "/compare/patreon", label: "Zinovia vs Patreon", desc: "Head-to-head comparison of fees, payouts, and creator tools." },
+          ].map((link) => (
+            <Link key={link.href} href={link.href} className="rounded-2xl border border-white/[0.06] bg-card p-5 transition-colors hover:border-primary/30">
+              <h3 className="text-sm font-semibold text-foreground">{link.label}</h3>
+              <p className="mt-1 text-xs text-muted-foreground">{link.desc}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="rounded-2xl border border-white/[0.06] bg-card p-8 text-center">
         <h2 className="font-display text-xl font-bold text-foreground">Start earning with 48-hour payouts</h2>

@@ -208,6 +208,24 @@ export default function ContentProtectionPage() {
         </div>
       </section>
 
+      {/* Related Resources */}
+      <section className="space-y-4">
+        <h2 className="font-display text-xl font-semibold text-foreground">Related Resources</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[
+            { href: "/features/content-security", label: "Content Security Features", desc: "Deep dive into signed URLs, encryption, and watermarking." },
+            { href: "/guides/content-protection-for-creators", label: "Guide: How to Protect Your Content", desc: "Step-by-step guide to protecting your creator content online." },
+            { href: "/compare/onlyfans", label: "Zinovia vs OnlyFans", desc: "Head-to-head comparison of features, fees, and content protection." },
+            { href: "/alternatives/onlyfans-alternatives", label: "OnlyFans Alternatives", desc: "Explore the best alternatives to OnlyFans for creators." },
+          ].map((link) => (
+            <Link key={link.href} href={link.href} className="rounded-2xl border border-white/[0.06] bg-card p-5 transition-colors hover:border-primary/30">
+              <h3 className="text-sm font-semibold text-foreground">{link.label}</h3>
+              <p className="mt-1 text-xs text-muted-foreground">{link.desc}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="rounded-2xl border border-white/[0.06] bg-card p-8 text-center">
         <h2 className="font-display text-xl font-bold text-foreground">Protect your content today</h2>
