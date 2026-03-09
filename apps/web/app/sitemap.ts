@@ -74,6 +74,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Standalone feature pages
     { url: `${SITE_URL}/fast-payouts`, lastModified: now, changeFrequency: "monthly", priority: 0.7, alternates: alternates(`${SITE_URL}/fast-payouts`) },
     { url: `${SITE_URL}/content-protection`, lastModified: now, changeFrequency: "monthly", priority: 0.7, alternates: alternates(`${SITE_URL}/content-protection`) },
+    { url: `${SITE_URL}/earnings-calculator`, lastModified: now, changeFrequency: "monthly", priority: 0.7, alternates: alternates(`${SITE_URL}/earnings-calculator`) },
+    { url: `${SITE_URL}/white-label`, lastModified: now, changeFrequency: "monthly", priority: 0.7, alternates: alternates(`${SITE_URL}/white-label`) },
+    { url: `${SITE_URL}/for`, lastModified: now, changeFrequency: "monthly", priority: 0.7, alternates: alternates(`${SITE_URL}/for`) },
     // AI Studio & AI tools
     { url: `${SITE_URL}/ai`, lastModified: now, changeFrequency: "monthly", priority: 0.7, alternates: alternates(`${SITE_URL}/ai`) },
     { url: `${SITE_URL}/ai/tools/remove-bg`, lastModified: now, changeFrequency: "monthly", priority: 0.5, alternates: alternates(`${SITE_URL}/ai/tools/remove-bg`) },
