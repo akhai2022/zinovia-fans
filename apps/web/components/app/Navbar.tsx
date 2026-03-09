@@ -234,6 +234,12 @@ export function Navbar({
                         {t.nav.aiAutoCaption}
                       </Link>
                     </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/ai/tools/virtual-tryon" className="flex items-center gap-2">
+                        <Icon name="checkroom" className="icon-base text-muted-foreground" />
+                        {t.nav.aiVirtualTryOn}
+                      </Link>
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
@@ -443,6 +449,7 @@ export function Navbar({
                 { href: "/ai/tools/cartoon-avatar", label: t.nav.aiCartoonAvatar, icon: "brush" },
                 { href: "/ai/tools/animate-image", label: t.nav.aiAnimateImage, icon: "animation" },
                 { href: "/ai/tools/auto-caption", label: t.nav.aiAutoCaption, icon: "subtitles" },
+                { href: "/ai/tools/virtual-tryon", label: t.nav.aiVirtualTryOn, icon: "checkroom" },
               ] as { href: string; label: string; icon: string; comingSoon?: boolean }[]).map((item) => (
                 <Link
                   key={item.href + item.icon}

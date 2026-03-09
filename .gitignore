@@ -30,6 +30,12 @@ infra/aws/terraform/*.tfstate
 infra/aws/terraform/*.tfstate.*
 infra/aws/terraform/tfplan
 
+# Video generation build artifacts
+scripts/video/venv/
+scripts/video/frames/
+scripts/video/audio/
+scripts/video/output/
+
 # Downloaded binaries (AWS CLI, Terraform, etc.)
 awscliv2.zip
 .tools/

@@ -26,6 +26,7 @@ const TOOL_ICONS = [
   "M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129",
   "M14.752 11.168l-3.197-.274L12 7.5l.445 3.394-3.197.274 3.197.274L12 14.836l-.445-3.394 3.197-.274M5.105 8.71l6.895-3.83 6.895 3.83v6.58L12 19.12l-6.895-3.83V8.71z",
   "M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z",
+  "M12 2l2 4h3a1 1 0 01.8 1.6L15 12l2.8 4.4a1 1 0 01-.8 1.6h-3l-2 4-2-4H7a1 1 0 01-.8-1.6L9 12 6.2 7.6A1 1 0 017 6h3l2-4z",
 ];
 
 function getToolFeatures(t: Dictionary["aiToolsLanding"]) {
@@ -38,6 +39,7 @@ function getToolFeatures(t: Dictionary["aiToolsLanding"]) {
     { title: t.translateTitle, description: t.translateDesc, href: null, comingSoon: false },
     { title: t.animateTitle, description: t.animateDesc, href: "/ai/tools/animate-image", comingSoon: false },
     { title: t.autoCaptionTitle, description: t.autoCaptionDesc, href: "/ai/tools/auto-caption", comingSoon: false },
+    { title: t.virtualTryOnTitle, description: t.virtualTryOnDesc, href: "/ai/tools/virtual-tryon", comingSoon: false },
   ];
 }
 

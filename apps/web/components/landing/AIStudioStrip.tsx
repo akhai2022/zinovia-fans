@@ -8,6 +8,7 @@ const CARDS = [
   { key: "animate", icon: "animation", href: "/ai/tools/animate-image" },
   { key: "autoCaption", icon: "subtitles", href: "/ai/tools/auto-caption" },
   { key: "safety", icon: "shield", href: "/ai" },
+  { key: "virtualTryOn", icon: "checkroom", href: "/ai/tools/virtual-tryon" },
 ] as const;
 
 type CardKey = (typeof CARDS)[number]["key"];
@@ -19,6 +20,7 @@ function getCardTitle(key: CardKey, t: Dictionary["aiStudioStrip"]): string {
     case "animate": return t.animateTitle;
     case "autoCaption": return t.autoCaptionTitle;
     case "safety": return t.safetyTitle;
+    case "virtualTryOn": return t.virtualTryOnTitle;
   }
 }
 
@@ -29,6 +31,7 @@ function getCardDesc(key: CardKey, t: Dictionary["aiStudioStrip"]): string {
     case "animate": return t.animateDesc;
     case "autoCaption": return t.autoCaptionDesc;
     case "safety": return t.safetyDesc;
+    case "virtualTryOn": return t.virtualTryOnDesc;
   }
 }
 
@@ -66,7 +69,7 @@ export function AIStudioStrip({ t }: { t: Dictionary["aiStudioStrip"] }) {
         </p>
       </div>
 
-      <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {CARDS.map(({ key, icon, href }) => (
           <Link
             key={key}

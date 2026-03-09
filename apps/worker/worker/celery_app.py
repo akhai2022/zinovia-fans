@@ -20,6 +20,7 @@ celery_app = Celery(
         "worker.tasks.ai",
         "worker.tasks.ai_safety",
         "worker.tasks.ai_tools",
+        "worker.tasks.billing",
         "worker.tasks.media",
         "worker.tasks.notifications",
         "worker.tasks.posts",
@@ -30,5 +31,9 @@ celery_app.conf.beat_schedule = {
     "posts-publish-due-every-minute": {
         "task": "posts.publish_due_scheduled",
         "schedule": crontab(minute="*"),
-    }
+    },
+    "billing-renew-worldline-every-hour": {
+        "task": "billing.renew_worldline_subscriptions",
+        "schedule": crontab(minute=0),
+    },
 }

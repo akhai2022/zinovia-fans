@@ -1,4 +1,4 @@
-"""AI tool worker tasks — remove background, cartoonize, animate image.
+"""AI tool worker tasks — remove background, cartoonize, animate image, virtual try-on.
 
 Pattern follows worker/tasks/media.py:
 - _make_session_factory() for per-task DB sessions
@@ -539,5 +539,94 @@ def auto_caption(self, job_id: str) -> dict | None:
 
     except Exception as e:
         logger.exception("auto_caption FAILED", extra={"job_id": job_id})
+        asyncio.run(_update_job(job_id, "failed", error_message=str(e)[:500]))
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Virtual Try-On (SegFormer + SD Inpainting + IP-Adapter — CPU, ~5-10 min)
+# ---------------------------------------------------------------------------
+
+MAX_TRYON_FILE_SIZE = 20 * 1024 * 1024  # 20MB per image
+
+
+@shared_task(name="ai_tools.virtual_tryon", bind=True, time_limit=900, soft_time_limit=720)
+def virtual_tryon(self, job_id: str) -> str | None:
+    """Run virtual try-on: SegFormer segmentation + SD inpainting + IP-Adapter (CPU).
+
+    1. Load job from DB, check idempotency
+    2. Download person image + garment image from S3
+    3. Validate file sizes and image formats
+    4. Segment person clothing via SegFormer (mattmdjaga/segformer_b2_clothes)
+    5. Build inpainting mask for the target category (upper/lower/full)
+    6. Run SD inpainting conditioned on garment via IP-Adapter (~5-10 min CPU)
+    7. Upload JPEG result to S3
+    8. Update job status
+    """
+    logger.info("virtual_tryon START", extra={"job_id": job_id})
+
+    job = asyncio.run(_load_job(job_id))
+    if not job:
+        logger.warning("Job not found", extra={"job_id": job_id})
+        return None
+
+    if job["status"] in ("ready", "processing"):
+        logger.info("Job already %s, skipping", job["status"], extra={"job_id": job_id})
+        return None
+
+    asyncio.run(_update_job(job_id, "processing"))
+
+    try:
+        params = job.get("params") or {}
+        garment_object_key = params.get("garment_object_key")
+        category = params.get("category", "upper_body")
+
+        if not garment_object_key:
+            raise ValueError("Missing garment_object_key in job params")
+
+        bucket = get_media_bucket()
+
+        # Download both images
+        person_bytes = get_object_bytes(bucket, job["input_object_key"])
+        garment_bytes = get_object_bytes(bucket, garment_object_key)
+
+        # Validate file sizes
+        if len(person_bytes) > MAX_TRYON_FILE_SIZE:
+            raise ValueError(f"Person image too large: {len(person_bytes)} bytes (max {MAX_TRYON_FILE_SIZE})")
+        if len(garment_bytes) > MAX_TRYON_FILE_SIZE:
+            raise ValueError(f"Garment image too large: {len(garment_bytes)} bytes (max {MAX_TRYON_FILE_SIZE})")
+
+        # Validate image formats
+        person_img = Image.open(BytesIO(person_bytes))
+        garment_img = Image.open(BytesIO(garment_bytes))
+        for label, img in [("Person", person_img), ("Garment", garment_img)]:
+            if img.format and img.format.upper() not in ("JPEG", "JPG", "PNG", "WEBP"):
+                raise ValueError(f"{label} image unsupported format: {img.format}")
+
+        from worker.ml.tryon_cpu_runner import run_tryon
+
+        result = run_tryon(
+            person_bytes=person_bytes,
+            garment_bytes=garment_bytes,
+            category=category,
+        )
+
+        result_key = _result_object_key(job_id, ext="jpg")
+        put_object_bytes(bucket, result_key, result["result_bytes"], result["content_type"])
+
+        asyncio.run(_update_job(job_id, "ready", result_object_key=result_key))
+        logger.info(
+            "virtual_tryon DONE",
+            extra={
+                "job_id": job_id,
+                "result_key": result_key,
+                "model": result.get("model"),
+                "inference_ms": result.get("timings", {}).get("inference_ms"),
+            },
+        )
+        return result_key
+
+    except Exception as e:
+        logger.exception("virtual_tryon FAILED", extra={"job_id": job_id})
         asyncio.run(_update_job(job_id, "failed", error_message=str(e)[:500]))
         return None

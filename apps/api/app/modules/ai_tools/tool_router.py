@@ -1,4 +1,4 @@
-"""AI tool endpoints — remove-bg, cartoonize, animate-image, auto-caption, image-ref."""
+"""AI tool endpoints — remove-bg, cartoonize, animate-image, auto-caption, virtual-tryon, image-ref."""
 
 from __future__ import annotations
 
@@ -36,6 +36,9 @@ from app.modules.ai_tools.tool_schemas import (
     RemoveBgRequest,
     RemoveBgResponse,
     RemoveBgStatusOut,
+    VirtualTryOnRequest,
+    VirtualTryOnResponse,
+    VirtualTryOnStatusOut,
 )
 from app.modules.ai_tools.tool_service import (
     create_image_ref,
@@ -49,6 +52,7 @@ from app.modules.audit.service import (
     ACTION_AI_TOOL_AUTO_CAPTION,
     ACTION_AI_TOOL_CARTOONIZE,
     ACTION_AI_TOOL_REMOVE_BG,
+    ACTION_AI_TOOL_VIRTUAL_TRYON,
     log_audit_event,
 )
 
@@ -457,6 +461,111 @@ async def auto_caption_status(
         job_id=job.id,
         status=job.status,
         result=result,
+        error=job.error_message,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Virtual Try-On
+# ---------------------------------------------------------------------------
+
+
+def _require_virtual_tryon() -> None:
+    settings = get_settings()
+    if not settings.enable_ai_tools or not settings.enable_virtual_tryon:
+        raise AppError(status_code=404, detail="feature_disabled")
+
+
+VALID_TRYON_CATEGORIES = {"upper_body", "lower_body", "full_body"}
+
+
+@router.post(
+    "/virtual-tryon",
+    response_model=VirtualTryOnResponse,
+    operation_id="ai_tools_virtual_tryon",
+)
+async def virtual_tryon(
+    body: VirtualTryOnRequest,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(get_current_user),
+) -> VirtualTryOnResponse:
+    """Submit a virtual try-on job. Requires person photo + garment image. Rate limited per day."""
+    _require_virtual_tryon()
+    settings = get_settings()
+    await check_rate_limit_custom(
+        f"ai:tool:tryon:{user.id}",
+        max_count=settings.ai_tool_tryon_daily_limit,
+        window_seconds=86400,
+    )
+
+    if body.category not in VALID_TRYON_CATEGORIES:
+        raise AppError(status_code=422, detail="invalid_category")
+
+    person_media = await _verify_media_ownership(session, body.person_media_asset_id, user)
+    garment_media = await _verify_media_ownership(session, body.garment_media_asset_id, user)
+
+    params = {
+        "garment_object_key": garment_media.object_key,
+        "garment_media_asset_id": str(garment_media.id),
+        "category": body.category,
+    }
+
+    job = await create_tool_job(
+        session,
+        user_id=user.id,
+        tool="virtual_tryon",
+        input_object_key=person_media.object_key,
+        input_media_asset_id=person_media.id,
+        params=params,
+    )
+    await session.commit()
+
+    from app.celery_client import enqueue_virtual_tryon
+
+    enqueue_virtual_tryon(str(job.id))
+
+    await log_audit_event(
+        session,
+        action=ACTION_AI_TOOL_VIRTUAL_TRYON,
+        actor_id=user.id,
+        resource_type="ai_tool_job",
+        resource_id=str(job.id),
+        metadata={
+            "tool": "virtual_tryon",
+            "person_media_asset_id": str(person_media.id),
+            "garment_media_asset_id": str(garment_media.id),
+            "category": body.category,
+        },
+    )
+
+    return VirtualTryOnResponse(job_id=job.id, status="processing")
+
+
+@router.get(
+    "/virtual-tryon/{job_id}",
+    response_model=VirtualTryOnStatusOut,
+    operation_id="ai_tools_virtual_tryon_status",
+)
+async def virtual_tryon_status(
+    job_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(get_current_user),
+) -> VirtualTryOnStatusOut:
+    """Poll virtual try-on job status. When ready, includes presigned result URL."""
+    _require_virtual_tryon()
+    job = await get_tool_job(session, job_id, user.id)
+    if not job:
+        raise AppError(status_code=404, detail="job_not_found")
+
+    result_url: str | None = None
+    if job.status == "ready" and job.result_object_key:
+        storage = get_storage_client()
+        result_url = generate_signed_download(storage, job.result_object_key)
+
+    return VirtualTryOnStatusOut(
+        job_id=job.id,
+        status=job.status,
+        result_url=result_url,
         error=job.error_message,
     )
 

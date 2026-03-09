@@ -1,4 +1,4 @@
-"""Lazy-singleton model loaders for AI safety inference.
+"""Lazy-singleton model loaders for AI safety inference and AI tools.
 
 Each model is loaded on first use and cached in a module-level global.
 All models run on CPU (device=-1 / device="cpu").
@@ -130,3 +130,75 @@ def get_sentence_model() -> Any:
         _sentence_model = SentenceTransformer(SENTENCE_MODEL, device="cpu")
         logger.info("Sentence model loaded")
     return _sentence_model
+
+
+# --- Virtual Try-On: Clothing segmentation (SegFormer) ---
+_clothing_seg_processor: Any = None
+_clothing_seg_model: Any = None
+
+CLOTHING_SEG_MODEL = "mattmdjaga/segformer_b2_clothes"
+
+
+def get_clothing_segmenter() -> tuple[Any, Any]:
+    """Return (processor, model) for clothing segmentation. Cached.
+
+    Uses SegFormer fine-tuned on clothing labels:
+      0=Background, 4=Upper-clothes, 5=Skirt, 6=Pants, 7=Dress, ...
+    """
+    global _clothing_seg_processor, _clothing_seg_model
+    if _clothing_seg_processor is None or _clothing_seg_model is None:
+        logger.info("Loading clothing segmenter: %s", CLOTHING_SEG_MODEL)
+        from transformers import AutoModelForSemanticSegmentation, SegformerImageProcessor
+
+        _clothing_seg_processor = SegformerImageProcessor.from_pretrained(CLOTHING_SEG_MODEL)
+        _clothing_seg_model = AutoModelForSemanticSegmentation.from_pretrained(CLOTHING_SEG_MODEL)
+        logger.info("Clothing segmenter loaded")
+    return _clothing_seg_processor, _clothing_seg_model
+
+
+# --- Virtual Try-On: CatVTON pipeline (ICLR 2025) ---
+_catvton_pipe: Any = None
+
+CATVTON_BASE_MODEL = "runwayml/stable-diffusion-inpainting"
+CATVTON_ATTN_CKPT = "zhengchong/CatVTON"
+CATVTON_ATTN_VERSION = "mix"
+
+
+def get_tryon_pipeline() -> Any:
+    """Return a cached CatVTON virtual try-on pipeline.
+
+    CatVTON (ICLR 2025) — dedicated virtual try-on diffusion model.
+    Uses latent concatenation + skip cross-attention for garment transfer.
+
+    Stack:
+      - runwayml/stable-diffusion-inpainting (SD 1.5 UNet + scheduler, ~2GB)
+      - stabilityai/sd-vae-ft-mse (~330MB VAE)
+      - zhengchong/CatVTON (attention checkpoint, ~50MB)
+
+    CPU float32. First load downloads ~2.5GB total.
+    Expected inference: 5-10 min at 30 steps on CPU.
+    """
+    global _catvton_pipe
+    if _catvton_pipe is None:
+        import torch
+
+        logger.info(
+            "Loading CatVTON pipeline: base=%s, attn=%s/%s (CPU, float32)",
+            CATVTON_BASE_MODEL,
+            CATVTON_ATTN_CKPT,
+            CATVTON_ATTN_VERSION,
+        )
+        from worker.ml.catvton import CatVTONPipeline
+
+        _catvton_pipe = CatVTONPipeline(
+            base_ckpt=CATVTON_BASE_MODEL,
+            attn_ckpt=CATVTON_ATTN_CKPT,
+            attn_ckpt_version=CATVTON_ATTN_VERSION,
+            weight_dtype=torch.float32,
+            device="cpu",
+            skip_safety_check=True,
+            use_tf32=False,
+        )
+
+        logger.info("CatVTON pipeline ready")
+    return _catvton_pipe

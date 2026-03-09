@@ -7,6 +7,10 @@ import { Page } from "@/components/brand/Page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { apiFetch } from "@/lib/api/client";
+import { fanSubscriptionPurchase } from "@/lib/gtag";
+import { fbqSubscribe } from "@/lib/fbq";
+import { gadsPurchase } from "@/lib/gads";
+import { sendServerConversion } from "@/lib/serverConversion";
 import "@/lib/api";
 
 const MAX_POLLS = 10;
@@ -17,13 +21,26 @@ function SuccessContent() {
   const returnTo = searchParams.get("return") ?? "/feed";
   const creatorId = searchParams.get("creator_id");
   const creatorHandle = searchParams.get("creator_handle");
+  const priceParam = searchParams.get("price");
   const returnLabel = returnTo.startsWith("/creators/")
     ? `Back to @${creatorHandle || "creator"}`
     : "Go to feed";
 
   const [entitlementConfirmed, setEntitlementConfirmed] = useState(false);
+  const [analyticsFired, setAnalyticsFired] = useState(false);
   const [pollCount, setPollCount] = useState(0);
   const [polling, setPolling] = useState(!!creatorId);
+
+  // Fire purchase analytics once entitlement is confirmed
+  useEffect(() => {
+    if (!entitlementConfirmed || analyticsFired) return;
+    setAnalyticsFired(true);
+    const priceVal = parseFloat(priceParam || "0");
+    fanSubscriptionPurchase(creatorHandle || "unknown", priceVal);
+    fbqSubscribe(priceVal);
+    gadsPurchase(priceVal);
+    sendServerConversion("purchase", { value: priceVal });
+  }, [entitlementConfirmed, analyticsFired, creatorHandle, priceParam]);
 
   // Poll for entitlement if we have a creator_id (webhook may be delayed)
   useEffect(() => {

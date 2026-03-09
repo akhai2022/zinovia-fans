@@ -250,6 +250,84 @@ def verify_webhook_signature(body: bytes, key_id: str, signature: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Token-based recurring payment
+# ---------------------------------------------------------------------------
+
+async def create_token_payment(
+    *,
+    token: str,
+    amount_cents: int,
+    currency: str = "EUR",
+    merchant_reference: str = "",
+    customer_id: str = "",
+) -> dict:
+    """Create a payment using a stored Worldline token (for recurring subscription charges).
+
+    Returns dict with payment id, status, and status output.
+    """
+    settings = get_settings()
+    merchant_id = settings.worldline_merchant_id
+    api_endpoint = settings.worldline_api_endpoint
+    url_path = f"/v1/{merchant_id}/payments"
+    full_url = f"{api_endpoint}{url_path}"
+
+    short_cust_id = (customer_id.replace("-", "")[:15]) if customer_id else "anon"
+
+    body: dict = {
+        "order": {
+            "amountOfMoney": {
+                "amount": amount_cents,
+                "currencyCode": currency.upper(),
+            },
+            "references": {
+                "merchantReference": merchant_reference[:30] if merchant_reference else "",
+            },
+            "customer": {
+                "merchantCustomerId": short_cust_id,
+            },
+        },
+        "cardPaymentMethodSpecificInput": {
+            "token": token,
+            "isRecurring": True,
+            "recurringPaymentSequenceIndicator": "recurring",
+            "authorizationMode": "SALE",
+            "unscheduledCardOnFileRequestor": "merchantInitiated",
+        },
+    }
+
+    content_type = "application/json"
+    headers = {
+        **_auth_header("POST", url_path, content_type),
+        "Content-Type": content_type,
+    }
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post(full_url, json=body, headers=headers)
+        if resp.status_code >= 400:
+            logger.error(
+                "worldline token payment failed status=%s body=%s",
+                resp.status_code, resp.text[:500],
+            )
+        try:
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise AppError(status_code=502, detail="Payment provider error during renewal.") from exc
+        data = resp.json()
+
+    payment_id = data.get("payment", {}).get("id", "")
+    status_val = data.get("payment", {}).get("status", "")
+    logger.info(
+        "worldline token payment created payment_id=%s status=%s merchant_ref=%s",
+        payment_id, status_val, merchant_reference,
+    )
+    return {
+        "payment_id": payment_id,
+        "status": status_val,
+        "data": data,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Refund
 # ---------------------------------------------------------------------------
 

@@ -6,7 +6,7 @@ export type BillingReturnUrls = {
 export function buildBillingReturnUrls(
   origin: string,
   returnPath: string,
-  opts?: { creatorId?: string; creatorHandle?: string },
+  opts?: { creatorId?: string; creatorHandle?: string; price?: string },
 ): BillingReturnUrls {
   const normalizedOrigin = origin.replace(/\/$/, "");
   const safeReturn = returnPath.startsWith("/") ? returnPath : `/${returnPath}`;
@@ -14,6 +14,7 @@ export function buildBillingReturnUrls(
   const params = new URLSearchParams({ return: encodedReturn });
   if (opts?.creatorId) params.set("creator_id", opts.creatorId);
   if (opts?.creatorHandle) params.set("creator_handle", opts.creatorHandle);
+  if (opts?.price) params.set("price", opts.price);
   return {
     successUrl: `${normalizedOrigin}/billing/success?${params.toString()}`,
     cancelUrl: `${normalizedOrigin}/billing/cancel?${params.toString()}`,

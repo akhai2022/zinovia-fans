@@ -88,12 +88,6 @@ type AdminUserSubscriber = {
   created_at: string;
 };
 
-type AdminPostMedia = {
-  media_id: string;
-  content_type: string;
-  download_url: string | null;
-};
-
 type AdminPost = {
   id: string;
   creator_user_id: string;

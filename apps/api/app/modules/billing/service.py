@@ -168,6 +168,13 @@ async def create_checkout_session(
     creator_handle: str | None = None,
 ) -> str:
     """Build checkout URL for subscription. Supports CCBill and Worldline."""
+    if fan_user_id == creator_user_id:
+        raise AppError(status_code=400, detail="cannot_subscribe_to_self")
+
+    # Check for existing active subscription
+    if await is_active_subscriber(session, fan_user_id, creator_user_id):
+        raise AppError(status_code=409, detail="already_subscribed")
+
     settings = get_settings()
     plan = await get_or_create_creator_plan(session, creator_user_id)
     if not plan.active:
@@ -836,6 +843,11 @@ async def _handle_worldline_payment_success(
 
     # Subscription payment
     period_end = _period_end_from_days(30)
+
+    # Extract tokenized card for future recurring charges
+    card_output = payment_output.get("cardPaymentMethodSpecificOutput") or {}
+    wl_token = card_output.get("token") or None
+
     result = await session.execute(
         select(Subscription).where(
             Subscription.fan_user_id == fan_user_id,
@@ -850,6 +862,8 @@ async def _handle_worldline_payment_success(
         existing.current_period_end = period_end
         existing.cancel_at_period_end = False
         existing.cancel_at = None
+        if wl_token:
+            existing.payment_token = wl_token
     else:
         sub = Subscription(
             fan_user_id=fan_user_id,
@@ -859,6 +873,7 @@ async def _handle_worldline_payment_success(
             current_period_end=period_end,
             cancel_at_period_end=False,
             ccbill_subscription_id=f"wl:{payment_id}",
+            payment_token=wl_token,
         )
         session.add(sub)
     await session.flush()
@@ -869,8 +884,8 @@ async def _handle_worldline_payment_success(
     )
 
     logger.info(
-        "worldline subscription created fan_user_id=%s creator_user_id=%s payment_id=%s",
-        fan_user_id, creator_user_id, payment_id,
+        "worldline subscription created fan_user_id=%s creator_user_id=%s payment_id=%s token=%s",
+        fan_user_id, creator_user_id, payment_id, "present" if wl_token else "none",
     )
 
 
@@ -1105,11 +1120,15 @@ async def cancel_subscription(
     if not sub.ccbill_subscription_id:
         raise AppError(status_code=400, detail="subscription_not_cancelable")
 
-    success = await cancel_ccbill_subscription(sub.ccbill_subscription_id)
-    if not success:
-        logger.warning("ccbill cancel API failed, marking locally only subscription_id=%s", subscription_id)
+    # Cancel at the payment provider level (only for CCBill; Worldline subs
+    # are merchant-initiated so cancellation is local — we simply stop charging).
+    if not sub.ccbill_subscription_id.startswith("wl:"):
+        success = await cancel_ccbill_subscription(sub.ccbill_subscription_id)
+        if not success:
+            logger.warning("ccbill cancel API failed, marking locally only subscription_id=%s", subscription_id)
 
     sub.cancel_at_period_end = True
+    sub.cancel_at = datetime.now(timezone.utc)
     await log_audit_event(
         session,
         action=ACTION_SUBSCRIPTION_CANCELED,
@@ -1122,6 +1141,68 @@ async def cancel_subscription(
     await session.commit()
     await session.refresh(sub)
     return sub
+
+
+# ---------------------------------------------------------------------------
+# Worldline recurring renewal
+# ---------------------------------------------------------------------------
+
+async def renew_worldline_subscriptions(session: AsyncSession) -> int:
+    """Find Worldline subscriptions due for renewal and charge via stored token.
+
+    Called by the worker on a schedule.  Returns the number of renewals attempted.
+    """
+    from app.modules.billing.worldline_client import create_token_payment
+
+    now = datetime.now(timezone.utc)
+    result = await session.execute(
+        select(Subscription).where(
+            Subscription.ccbill_subscription_id.like("wl:%"),
+            Subscription.status == "active",
+            Subscription.cancel_at_period_end == False,  # noqa: E712
+            Subscription.payment_token.isnot(None),
+            Subscription.current_period_end <= now,
+        )
+    )
+    due_subs = result.scalars().all()
+    renewed = 0
+
+    for sub in due_subs:
+        plan = await get_or_create_creator_plan(session, sub.creator_user_id)
+        amount_cents = int(plan.price * 100)
+        correlation_id = f"zv_renew_{str(sub.id).replace('-', '')[:12]}"
+
+        try:
+            payment_result = await create_token_payment(
+                token=sub.payment_token,
+                amount_cents=amount_cents,
+                currency=plan.currency.upper(),
+                merchant_reference=correlation_id,
+                customer_id=str(sub.fan_user_id),
+            )
+            # Store correlation for webhook lookup
+            custom_fields = {
+                "zv_fan_user_id": str(sub.fan_user_id),
+                "zv_creator_user_id": str(sub.creator_user_id),
+                "zv_payment_type": "SUBSCRIPTION",
+            }
+            await store_checkout_correlation(session, correlation_id, custom_fields)
+
+            period_end = _period_end_from_days(30)
+            sub.renew_at = period_end
+            sub.current_period_end = period_end
+            await session.commit()
+            renewed += 1
+            logger.info(
+                "worldline renewal initiated sub_id=%s payment_id=%s",
+                sub.id, payment_result.get("payment_id"),
+            )
+        except Exception:
+            logger.exception("worldline renewal failed sub_id=%s", sub.id)
+            sub.status = "past_due"
+            await session.commit()
+
+    return renewed
 
 
 # ---------------------------------------------------------------------------

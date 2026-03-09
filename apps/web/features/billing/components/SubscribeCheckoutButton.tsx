@@ -11,10 +11,6 @@ import { buildBillingReturnUrls } from "@/features/billing/checkoutUrls";
 import { uuidClient } from "@/lib/uuid";
 import { useSession } from "@/lib/hooks/useSession";
 import { useTranslation, interpolate } from "@/lib/i18n";
-import { fanSubscriptionPurchase } from "@/lib/gtag";
-import { fbqSubscribe } from "@/lib/fbq";
-import { gadsPurchase } from "@/lib/gads";
-import { sendServerConversion } from "@/lib/serverConversion";
 import "@/lib/api";
 
 type SubscribeCheckoutButtonProps = {
@@ -63,7 +59,7 @@ export function SubscribeCheckoutButton({
       const { successUrl, cancelUrl } = buildBillingReturnUrls(
         window.location.origin,
         `/creators/${creatorHandle}`,
-        { creatorId, creatorHandle },
+        { creatorId, creatorHandle, price },
       );
       const response = await BillingService.billingCheckoutSubscription({
         creator_id: creatorId,
@@ -76,11 +72,7 @@ export function SubscribeCheckoutButton({
         idempotencyRef.current = null;
         return;
       }
-      const priceVal = parseFloat(price || "0");
-      fanSubscriptionPurchase(creatorHandle, priceVal);
-      fbqSubscribe(priceVal);
-      gadsPurchase(priceVal);
-      sendServerConversion("purchase", { value: priceVal });
+      // Analytics fires on /billing/success after payment is confirmed
       window.location.assign(response.checkout_url);
     } catch (err) {
       const parsed = getApiErrorMessage(err);

@@ -225,10 +225,11 @@ async def verify_email(
                 auto_commit=False,
             )
             # Send KYC reminder email to prompt creator to complete verification
-            try:
-                await send_kyc_reminder_email(user.email)
-            except Exception:
-                logger.warning("Failed to send KYC reminder email to %s", user.email, exc_info=True)
+            if user.role == "creator":
+                try:
+                    await send_kyc_reminder_email(user.email)
+                except Exception:
+                    logger.warning("Failed to send KYC reminder email to %s", user.email, exc_info=True)
 
         # Refresh user to pick up committed state changes (transition_creator_state commits separately)
         await session.refresh(user)
@@ -270,36 +271,51 @@ async def verify_email(
     operation_id="auth_signup",
 )
 async def signup(
-    payload: UserCreate, request: Request, session: AsyncSession = Depends(get_async_session)
+    payload: UserCreate,
+    request: Request,
+    idempotency_key: str = Depends(require_idempotency_key),
+    session: AsyncSession = Depends(get_async_session),
 ) -> dict:
     client_ip = _get_client_ip(request)
-    user = await create_user(session, payload.email, payload.password, payload.display_name)
-    if client_ip:
-        user.signup_ip = client_ip
-        await session.commit()
-    # Send verification email (same as creator flow)
-    token = await create_email_verification_token(session, user.id)
-    email_delivery_status = "sent"
-    email_delivery_error_code: str | None = None
-    try:
-        await send_verification_email(payload.email, token)
-    except VerificationEmailDeliveryError as exc:
-        email_delivery_status = "failed"
-        email_delivery_error_code = exc.reason_code
-    await log_audit_event(
-        session,
-        action=ACTION_SIGNUP,
-        actor_id=user.id,
-        resource_type="user",
-        resource_id=str(user.id),
-        metadata={"role": "fan"},
-        ip_address=client_ip,
+
+    async def _do() -> dict:
+        user = await create_user(session, payload.email, payload.password, payload.display_name)
+        if client_ip:
+            user.signup_ip = client_ip
+        # Send verification email (same as creator flow)
+        token = await create_email_verification_token(session, user.id)
+        email_delivery_status = "sent"
+        email_delivery_error_code: str | None = None
+        try:
+            await send_verification_email(payload.email, token)
+        except VerificationEmailDeliveryError as exc:
+            email_delivery_status = "failed"
+            email_delivery_error_code = exc.reason_code
+        return {
+            "user_id": str(user.id),
+            "email_delivery_status": email_delivery_status,
+            "email_delivery_error_code": email_delivery_error_code,
+        }
+
+    result, created = await get_or_create_idempotency_response(
+        session=session,
+        key=idempotency_key,
+        creator_id=None,
+        endpoint="auth/signup",
+        request_body=payload.model_dump_json(),
+        create_response=_do,
     )
-    return {
-        "user_id": str(user.id),
-        "email_delivery_status": email_delivery_status,
-        "email_delivery_error_code": email_delivery_error_code,
-    }
+    if created and result.get("user_id"):
+        await log_audit_event(
+            session,
+            action=ACTION_SIGNUP,
+            actor_id=UUID(result["user_id"]),
+            resource_type="user",
+            resource_id=result["user_id"],
+            metadata={"role": "fan"},
+            ip_address=client_ip,
+        )
+    return dict(result)
 
 
 @router.post(

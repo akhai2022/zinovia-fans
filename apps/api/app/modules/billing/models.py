@@ -50,6 +50,7 @@ class Subscription(TimestampMixin, Base):
     current_period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, default=False)
     ccbill_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True, index=True)
+    payment_token: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     __table_args__ = (
         UniqueConstraint("fan_user_id", "creator_user_id", name="uq_subscription_fan_creator"),

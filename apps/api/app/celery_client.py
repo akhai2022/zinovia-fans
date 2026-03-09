@@ -100,6 +100,12 @@ def enqueue_auto_caption(job_id: str) -> None:
     app.send_task("ai_tools.auto_caption", args=[job_id])  # type: ignore[attr-defined]
 
 
+def enqueue_virtual_tryon(job_id: str) -> None:
+    """Enqueue AI tool virtual try-on task. Idempotent on worker side."""
+    app = _get_celery_app()
+    app.send_task("ai_tools.virtual_tryon", args=[job_id])  # type: ignore[attr-defined]
+
+
 def enqueue_translate_caption(
     translation_id: str,
     source_text: str,

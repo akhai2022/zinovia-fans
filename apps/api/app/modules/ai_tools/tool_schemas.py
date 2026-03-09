@@ -98,6 +98,28 @@ class AutoCaptionStatusOut(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Virtual Try-On
+# ---------------------------------------------------------------------------
+
+class VirtualTryOnRequest(BaseModel):
+    person_media_asset_id: UUID
+    garment_media_asset_id: UUID
+    category: str = "upper_body"  # upper_body | lower_body | full_body
+
+
+class VirtualTryOnResponse(BaseModel):
+    job_id: UUID
+    status: str
+
+
+class VirtualTryOnStatusOut(BaseModel):
+    job_id: UUID
+    status: str
+    result_url: str | None = None
+    error: str | None = None
+
+
+# ---------------------------------------------------------------------------
 # Image Ref (deep-link tokens)
 # ---------------------------------------------------------------------------
 
