@@ -33,6 +33,14 @@ export const DEMO_VIDEOS = {
     src: "/demo/fan-walkthrough.mp4",
     poster: "/demo/fan-walkthrough-poster.svg",
   },
+  promo: {
+    src: "/demo/zinovia-promo.mp4",
+    poster: "/demo/creator-walkthrough-poster.svg",
+  },
+  promoVertical: {
+    src: "/demo/zinovia-promo-vertical.mp4",
+    poster: "/demo/creator-walkthrough-poster.svg",
+  },
 } as const;
 
 /** Step screenshot placeholders per walkthrough. */

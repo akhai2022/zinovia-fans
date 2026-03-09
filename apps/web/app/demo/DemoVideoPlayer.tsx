@@ -6,9 +6,11 @@ type Props = {
   src: string;
   poster: string;
   accentColor?: string;
+  /** Override the default 16:9 aspect ratio container class */
+  aspectClass?: string;
 };
 
-export function DemoVideoPlayer({ src, poster, accentColor = "bg-primary/90" }: Props) {
+export function DemoVideoPlayer({ src, poster, accentColor = "bg-primary/90", aspectClass }: Props) {
   const [started, setStarted] = useState(false);
   const [error, setError] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -24,7 +26,7 @@ export function DemoVideoPlayer({ src, poster, accentColor = "bg-primary/90" }: 
   };
 
   return (
-    <div className="relative aspect-video w-full overflow-hidden">
+    <div className={`relative ${aspectClass ?? "aspect-video"} w-full overflow-hidden`}>
       {/* Video is always mounted but hidden until user clicks play */}
       <video
         ref={videoRef}
@@ -32,7 +34,7 @@ export function DemoVideoPlayer({ src, poster, accentColor = "bg-primary/90" }: 
         controls={started}
         playsInline
         preload="auto"
-        className={`h-full w-full object-cover ${started && !error ? "" : "hidden"}`}
+        className={`h-full w-full object-contain ${started && !error ? "" : "hidden"}`}
         onError={() => {
           if (started) {
             setError(true);

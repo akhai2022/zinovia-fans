@@ -6,6 +6,8 @@ import { ScrollReveal } from "@/components/landing/ScrollReveal";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { DEFAULT_LOCALE, LOCALE_COOKIE, SUPPORTED_LOCALES, type Locale } from "@/lib/i18n/config";
+import { DEMO_VIDEOS } from "@/lib/demoAssets";
+import { DemoVideoPlayer } from "./DemoVideoPlayer";
 
 const SITE_URL = "https://zinovia.ai";
 
@@ -105,6 +107,45 @@ export default async function DemoIndexPage() {
                 </Link>
               );
             })}
+          </div>
+        </section>
+      </ScrollReveal>
+
+      {/* Promo Videos */}
+      <ScrollReveal>
+        <section className="mx-auto w-full max-w-5xl px-4 pb-16 sm:px-6">
+          <div className="mb-8 text-center">
+            <h2 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
+              {d.promoTitle ?? "Platform Overview"}
+            </h2>
+            <p className="mx-auto mt-2 max-w-xl text-muted-foreground">
+              {d.promoSubtitle ?? "Watch a quick overview of everything Zinovia has to offer."}
+            </p>
+          </div>
+          {/* Landscape promo — full width */}
+          <div className="overflow-hidden rounded-2xl border border-primary/20">
+            <DemoVideoPlayer
+              src={DEMO_VIDEOS.promo.src}
+              poster={DEMO_VIDEOS.promo.poster}
+            />
+            <div className="bg-card/50 px-4 py-3">
+              <h3 className="text-sm font-semibold text-foreground">{d.promoLandscapeLabel ?? "Full Promo"}</h3>
+              <p className="text-xs text-muted-foreground">{d.promoLandscapeDesc ?? "Landscape version for YouTube"}</p>
+            </div>
+          </div>
+
+          {/* Vertical promo — centered, constrained height */}
+          <div className="mx-auto mt-6 max-w-xs overflow-hidden rounded-2xl border border-accent/20">
+            <DemoVideoPlayer
+              src={DEMO_VIDEOS.promoVertical.src}
+              poster={DEMO_VIDEOS.promoVertical.poster}
+              accentColor="bg-accent/90"
+              aspectClass="aspect-[9/16]"
+            />
+            <div className="bg-card/50 px-4 py-3">
+              <h3 className="text-sm font-semibold text-foreground">{d.promoVerticalLabel ?? "Short Promo"}</h3>
+              <p className="text-xs text-muted-foreground">{d.promoVerticalDesc ?? "Vertical version for TikTok, Reels & Shorts"}</p>
+            </div>
           </div>
         </section>
       </ScrollReveal>

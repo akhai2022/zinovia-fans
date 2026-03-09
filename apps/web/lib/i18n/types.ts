@@ -34,6 +34,7 @@ export interface Dictionary {
     aiCartoonAvatar: string;
     aiAnimateImage: string;
     aiAutoCaption: string;
+    aiVirtualTryOn: string;
     comingSoon: string;
     demo: string;
     forCreators: string;
@@ -937,6 +938,8 @@ export interface Dictionary {
     animateDesc: string;
     autoCaptionTitle: string;
     autoCaptionDesc: string;
+    virtualTryOnTitle: string;
+    virtualTryOnDesc: string;
   };
   animateImage: {
     title: string;
@@ -981,6 +984,8 @@ export interface Dictionary {
     safetyDesc: string;
     autoCaptionTitle: string;
     autoCaptionDesc: string;
+    virtualTryOnTitle: string;
+    virtualTryOnDesc: string;
     ctaStart: string;
     ctaExplore: string;
   };
@@ -1022,6 +1027,32 @@ export interface Dictionary {
     errorStatusCheck: string;
     toastSuccess: string;
     toastCopied: string;
+    cpuBadge: string;
+  };
+  virtualTryOn: {
+    title: string;
+    description: string;
+    backToStudio: string;
+    personUploadTitle: string;
+    garmentUploadTitle: string;
+    personUploadHint: string;
+    garmentUploadHint: string;
+    resultTitle: string;
+    processing: string;
+    processingHint: string;
+    categoryLabel: string;
+    categoryUpperBody: string;
+    categoryLowerBody: string;
+    categoryFullBody: string;
+    tryOnButton: string;
+    starting: string;
+    downloadButton: string;
+    tryAnother: string;
+    errorStart: string;
+    errorRateLimit: string;
+    errorStatusCheck: string;
+    errorRefExpired: string;
+    toastSuccess: string;
     cpuBadge: string;
   };
   demo: {
@@ -1098,6 +1129,12 @@ export interface Dictionary {
     fanLanguageTitle: string;
     fanLanguageDesc: string;
     fanLanguageFeatures: string[];
+    promoTitle: string;
+    promoSubtitle: string;
+    promoLandscapeLabel: string;
+    promoLandscapeDesc: string;
+    promoVerticalLabel: string;
+    promoVerticalDesc: string;
     ctaSignup: string;
     ctaExplore: string;
     backToDemo: string;
