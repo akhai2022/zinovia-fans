@@ -366,6 +366,7 @@ async def test_billing_health_reports_status(
     async_client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setenv("PAYMENT_PROVIDER", "ccbill")
     monkeypatch.setenv("CCBILL_ACCOUNT_NUMBER", "900000")
     monkeypatch.setenv("CCBILL_SUB_ACCOUNT", "0000")
     monkeypatch.setenv("CCBILL_FLEX_FORM_ID", "test-form")

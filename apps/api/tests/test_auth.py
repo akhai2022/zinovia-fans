@@ -23,7 +23,7 @@ async def test_signup_returns_201(async_client: AsyncClient) -> None:
         "password": "password123",
         "display_name": "Test User",
     }
-    r = await async_client.post("/auth/signup", json=payload)
+    r = await async_client.post("/auth/signup", json=payload, headers={"Idempotency-Key": str(uuid.uuid4())})
     assert r.status_code == 201, r.json()
     data = r.json()
     assert "user_id" in data
@@ -37,6 +37,7 @@ async def test_login_blocked_for_unverified_user(async_client: AsyncClient) -> N
     await async_client.post(
         "/auth/signup",
         json={"email": email, "password": "password123", "display_name": "Unverified"},
+        headers={"Idempotency-Key": str(uuid.uuid4())},
     )
     r = await async_client.post(
         "/auth/login",
@@ -54,6 +55,7 @@ async def test_login_returns_200(async_client: AsyncClient) -> None:
     await async_client.post(
         "/auth/signup",
         json={"email": email, "password": "password123", "display_name": "Login Test"},
+        headers={"Idempotency-Key": str(uuid.uuid4())},
     )
     # Verify email (workflow step: CREATED → EMAIL_VERIFIED)
     dev_r = await async_client.get("/auth/dev/tokens", params={"email": email})

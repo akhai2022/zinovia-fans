@@ -47,6 +47,7 @@ async def signup_verify_login(
     await client.post(
         "/auth/signup",
         json={"email": email, "password": password, "display_name": display_name},
+        headers={"Idempotency-Key": str(uuid.uuid4())},
     )
     # Promote to creator role (before login so JWT has correct role)
     if role == "creator":

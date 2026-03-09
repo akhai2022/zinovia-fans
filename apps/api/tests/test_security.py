@@ -39,6 +39,7 @@ async def test_signup_requires_date_of_birth(async_client: AsyncClient) -> None:
             "password": "password123456",
             "display_name": "NoDoB",
         },
+        headers={"Idempotency-Key": _idempotency_key()},
     )
     assert r.status_code == 422, r.json()
 
@@ -56,6 +57,7 @@ async def test_signup_rejects_underage(async_client: AsyncClient) -> None:
             "display_name": "Young",
             "date_of_birth": underage_dob.isoformat(),
         },
+        headers={"Idempotency-Key": _idempotency_key()},
     )
     assert r.status_code == 422, r.json()
 
@@ -73,6 +75,7 @@ async def test_signup_accepts_valid_dob(async_client: AsyncClient) -> None:
             "display_name": "Adult",
             "date_of_birth": adult_dob.isoformat(),
         },
+        headers={"Idempotency-Key": _idempotency_key()},
     )
     assert r.status_code == 201, r.json()
 
