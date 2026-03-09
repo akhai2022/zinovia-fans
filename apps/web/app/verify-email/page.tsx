@@ -12,6 +12,7 @@ import { Icon } from "@/components/ui/icon";
 import { resendVerificationEmail, verifyEmail } from "@/lib/onboardingApi";
 import { getApiErrorMessage } from "@/lib/errors";
 import { uuidClient } from "@/lib/uuid";
+import { emailVerified } from "@/lib/gtag";
 import "@/lib/api";
 
 const schema = z.object({ token: z.string().min(1, "Token is required") });
@@ -39,6 +40,7 @@ export default function VerifyEmailPage() {
       const idempotencyKey = uuidClient();
       verifyEmail(fromQuery, idempotencyKey)
         .then((res) => {
+          emailVerified(res.role === "fan" ? "fan" : "creator");
           // API sets session cookie — redirect directly, no login needed
           let next = "/settings/profile";
           if (res.role === "fan") next = "/feed";
@@ -87,6 +89,7 @@ export default function VerifyEmailPage() {
     try {
       const idempotencyKey = uuidClient();
       const res = await verifyEmail(token, idempotencyKey);
+      emailVerified(res.role === "fan" ? "fan" : "creator");
       // API sets session cookie — redirect directly, no login needed
       const next = res.role === "fan" ? "/feed" : "/settings/profile";
       window.location.href = next;

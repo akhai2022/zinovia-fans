@@ -18,6 +18,7 @@ import { useToast } from "@/components/ui/toast";
 import { kycComplete } from "@/lib/onboardingApi";
 import { MediaService } from "@/features/media/api";
 import { useTranslation, interpolate } from "@/lib/i18n";
+import { creatorKycCompleted } from "@/lib/gtag";
 import "@/lib/api";
 
 function getAge(dob: string): number {
@@ -264,6 +265,7 @@ export default function KycVerifyPage() {
         selfie_media_id: selfieMediaId,
       });
       setDone(true);
+      creatorKycCompleted();
       addToast(t.kyc.toastSubmitted ?? t.kyc.toastVerified, "success");
     } catch (err) {
       const msg =

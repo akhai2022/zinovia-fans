@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api/client";
 import { getApiErrorMessage } from "@/lib/errors";
 import { useTranslation, interpolate } from "@/lib/i18n";
+import { fanSubscriptionCancelled } from "@/lib/gtag";
 import "@/lib/api";
 
 type SubscriptionItem = {
@@ -72,6 +73,7 @@ export default function BillingManagePage() {
       await apiFetch(`/billing/subscriptions/${subscriptionId}/cancel`, {
         method: "POST",
       });
+      fanSubscriptionCancelled(subscriptionId);
       await fetchStatus();
     } catch (err) {
       setError(getApiErrorMessage(err).message);

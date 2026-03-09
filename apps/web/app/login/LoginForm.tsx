@@ -17,6 +17,7 @@ import { Icon } from "@/components/ui/icon";
 import { apiFetch } from "@/lib/api/client";
 import { getApiErrorMessage } from "@/lib/errors";
 import { useTranslation } from "@/lib/i18n";
+import { userLogin } from "@/lib/gtag";
 import "@/lib/api";
 
 interface LoginFormProps {
@@ -42,6 +43,7 @@ export function LoginForm({ next, sessionUnavailable }: LoginFormProps) {
         method: "POST",
         body: { email, password },
       });
+      userLogin();
       // Full navigation avoids Next.js router state issues after login.
       window.location.href = next;
       return;

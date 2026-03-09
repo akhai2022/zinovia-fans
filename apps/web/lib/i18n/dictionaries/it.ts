@@ -43,6 +43,8 @@ export const it: Dictionary = {
     forMusicians: "Musicisti",
     forPodcasters: "Podcaster",
     forArtists: "Artisti",
+    viewAllNiches: "Vedi tutte le nicchie",
+    guides: "Guide",
   },
   hero: {
     badge: "Piattaforma di monetizzazione per creatori",

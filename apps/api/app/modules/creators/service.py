@@ -264,11 +264,21 @@ async def update_creator_profile(
 async def get_sitemap_creators(
     session: AsyncSession,
 ) -> list[tuple[str, str]]:
-    """Return (handle, updated_at) for all discoverable creators. Used by sitemap generation."""
+    """Return (handle, updated_at) for discoverable creators with at least 1 post.
+
+    The posts filter prevents empty test accounts from polluting the sitemap
+    and wasting crawl budget.
+    """
+    posts_subq = (
+        select(func.count(Post.id))
+        .where(Post.creator_user_id == Profile.user_id)
+        .correlate(Profile)
+        .scalar_subquery()
+    )
     query = (
         select(Profile.handle, Profile.updated_at)
         .join(User, User.id == Profile.user_id)
-        .where(*_discoverable_where())
+        .where(*_discoverable_where(), posts_subq >= 1)
         .order_by(Profile.updated_at.desc())
     )
     rows = (await session.execute(query)).all()

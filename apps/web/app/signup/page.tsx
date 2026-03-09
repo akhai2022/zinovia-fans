@@ -20,6 +20,10 @@ import { apiFetch } from "@/lib/api/client";
 import { registerCreator } from "@/lib/onboardingApi";
 import { getApiErrorMessage } from "@/lib/errors";
 import { uuidClient } from "@/lib/uuid";
+import { creatorSignup, fanSignup } from "@/lib/gtag";
+import { fbqCompleteRegistration } from "@/lib/fbq";
+import { gadsSignup } from "@/lib/gads";
+import { sendServerConversion } from "@/lib/serverConversion";
 import "@/lib/api";
 
 type AccountType = "fan" | "creator";
@@ -114,6 +118,10 @@ export default function SignupPage() {
         const idempotencyKey = uuidClient();
         const res = await registerCreator(email, password, idempotencyKey);
         sessionStorage.setItem("onboarding_creator_id", res.creator_id);
+        creatorSignup();
+        fbqCompleteRegistration("creator");
+        gadsSignup();
+        sendServerConversion("sign_up", { email });
         const deliveryFailed = res.email_delivery_status === "failed";
         window.location.href = deliveryFailed
           ? "/verify-email?delivery=failed"
@@ -131,6 +139,10 @@ export default function SignupPage() {
             device_info: deviceInfo,
           },
         });
+        fanSignup();
+        fbqCompleteRegistration("fan");
+        gadsSignup();
+        sendServerConversion("sign_up", { email });
         const deliveryFailed = res.email_delivery_status === "failed";
         window.location.href = deliveryFailed
           ? "/verify-email?delivery=failed"

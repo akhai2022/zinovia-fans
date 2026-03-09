@@ -10,6 +10,7 @@ import { apiFetch } from "@/lib/api/client";
 import { getApiErrorMessage } from "@/lib/errors";
 import { useTranslation, interpolate } from "@/lib/i18n";
 import { Icon } from "@/components/ui/icon";
+import { searchPerformed } from "@/lib/gtag";
 import "@/lib/api";
 
 type SearchCreator = {
@@ -77,6 +78,7 @@ export default function SearchPostsPage() {
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    searchPerformed(query);
     doSearch(query, 1);
   };
 

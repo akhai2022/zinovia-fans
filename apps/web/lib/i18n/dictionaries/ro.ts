@@ -43,6 +43,8 @@ export const ro: Dictionary = {
     forMusicians: "Muzicieni",
     forPodcasters: "Podcasteri",
     forArtists: "Artiști",
+    viewAllNiches: "Vezi toate nișele",
+    guides: "Ghiduri",
   },
   hero: {
     badge: "Platforma nr. 1 de monetizare pentru creatori",

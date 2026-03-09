@@ -43,6 +43,8 @@ export const tr: Dictionary = {
     forMusicians: "Müzisyenler",
     forPodcasters: "Podcast Yayıncıları",
     forArtists: "Sanatçılar",
+    viewAllNiches: "Tüm nişleri görüntüle",
+    guides: "Rehberler",
   },
   hero: {
     badge: "İçerik üretici monetizasyon platformu",

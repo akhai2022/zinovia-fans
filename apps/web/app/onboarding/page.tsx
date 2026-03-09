@@ -10,6 +10,7 @@ import { getApiErrorMessage } from "@/lib/errors";
 import { uuidClient } from "@/lib/uuid";
 import { useTranslation } from "@/lib/i18n";
 import { Icon } from "@/components/ui/icon";
+import { creatorKycStarted, creatorOnboardingCompleted } from "@/lib/gtag";
 import "@/lib/api";
 
 type Step = {
@@ -64,12 +65,18 @@ export default function OnboardingPage() {
       .finally(() => setLoadingStatus(false));
   }, [router]);
 
+  // Fire onboarding-completed event once when creator reaches the "all done" state
+  useEffect(() => {
+    if (status?.checklist.kyc_approved) creatorOnboardingCompleted();
+  }, [status]);
+
   const onStartVerification = async () => {
     setError(null);
     setLoading(true);
     try {
       const idempotencyKey = uuidClient();
       const res = await createKycSession(idempotencyKey);
+      creatorKycStarted();
       window.location.href = res.redirect_url;
     } catch (err) {
       setError(getApiErrorMessage(err).message);

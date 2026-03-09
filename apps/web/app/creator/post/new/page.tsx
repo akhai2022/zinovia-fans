@@ -25,6 +25,7 @@ import { AiToolSuggestions } from "@/features/ai-tools/AiToolSuggestions";
 import { PromoSuggestions } from "@/features/posts/components/PromoSuggestions";
 import { TranslatePanel } from "@/features/posts/components/TranslatePanel";
 import { useTranslation, interpolate } from "@/lib/i18n";
+import { creatorContentPublished } from "@/lib/gtag";
 import "@/lib/api";
 
 export interface UploadedImage {
@@ -128,6 +129,7 @@ export default function NewPostPage() {
     };
     try {
       await PostsService.postsCreate(body);
+      creatorContentPublished(finalType.toLowerCase());
       setStatus("ok");
       addToast(t.newPost.toastPostCreatedSuccess, "success");
       router.push("/feed");

@@ -9,6 +9,10 @@ import { useSession } from "@/lib/hooks/useSession";
 import { useTranslation, interpolate } from "@/lib/i18n";
 import { createTipIntent } from "@/features/payments/api";
 import { getApiErrorMessage } from "@/lib/errors";
+import { fanTipSent } from "@/lib/gtag";
+import { fbqPurchase } from "@/lib/fbq";
+import { gadsPurchase } from "@/lib/gads";
+import { sendServerConversion } from "@/lib/serverConversion";
 
 const PRESET_AMOUNTS = [200, 500, 1000, 2500]; // cents
 const DEFAULT_CURRENCY = "eur";
@@ -63,6 +67,10 @@ export function TipButton({ creatorId, creatorHandle }: TipButtonProps) {
         currency,
       });
       if (result.checkout_url) {
+        fanTipSent(creatorHandle || "unknown", amount);
+        fbqPurchase(amount);
+        gadsPurchase(amount);
+        sendServerConversion("purchase", { value: amount });
         window.location.assign(result.checkout_url);
       } else {
         setError(t.tip.errorFailed);

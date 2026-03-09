@@ -25,39 +25,59 @@ const SOCIAL_LINKS = [
 export function Footer() {
   const { t } = useTranslation();
 
-  const LINKS = [
-    { href: "/pricing", label: "Pricing" },
-    { href: "/compare", label: "Compare" },
-    { href: "/about", label: "About" },
-    { href: "/demo", label: t.nav.demo },
-    { href: "/help", label: t.footer.help },
-    { href: "/contact", label: t.footer.contact },
-    { href: "/privacy", label: t.footer.privacy },
-    { href: "/terms", label: t.footer.terms },
+  const SECTIONS = [
+    {
+      title: "Product",
+      links: [
+        { href: "/pricing", label: "Pricing" },
+        { href: "/how-it-works", label: "How It Works" },
+        { href: "/fast-payouts", label: "Fast Payouts" },
+        { href: "/content-protection", label: "Content Protection" },
+        { href: "/demo", label: t.nav.demo },
+      ],
+    },
+    {
+      title: "Resources",
+      links: [
+        { href: "/guides", label: "Guides" },
+        { href: "/compare", label: "Compare Platforms" },
+        { href: "/alternatives", label: "Alternatives" },
+        { href: "/for/fitness-creators", label: "For Fitness Creators" },
+        { href: "/for/musicians", label: "For Musicians" },
+        { href: "/for/artists", label: "For Artists" },
+      ],
+    },
+    {
+      title: "Company",
+      links: [
+        { href: "/about", label: "About" },
+        { href: "/contact", label: t.footer.contact },
+        { href: "/help", label: t.footer.help },
+        { href: "/creators", label: "Explore Creators" },
+      ],
+    },
+    {
+      title: "Legal",
+      links: [
+        { href: "/privacy", label: t.footer.privacy },
+        { href: "/terms", label: t.footer.terms },
+      ],
+    },
   ];
 
   return (
     <footer className="mt-16 border-t border-white/[0.06] bg-background">
       <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
-        <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
-          <div className="flex flex-col items-center gap-3 sm:items-start">
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
+          {/* Brand column */}
+          <div className="flex flex-col gap-4 lg:col-span-1">
             <p className="font-display text-sm font-semibold tracking-tight">
               <span className="text-gradient-brand">Zinovia</span>{" "}
               <span className="text-foreground/75">Fans</span>
             </p>
-            <p className="text-sm text-muted-foreground">
-              &copy; {new Date().getFullYear()} Zinovia Fans
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Premium creator subscription platform with fast payouts, AI tools, and content encryption.
             </p>
-          </div>
-          <nav className="flex items-center gap-4 text-sm">
-            {LINKS.map((link) => (
-              <Link key={link.href} href={link.href} className="text-muted-foreground transition-colors hover:text-foreground">
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="flex items-center gap-4">
-            <LanguageSwitcher />
             <div className="flex items-center gap-3">
               {SOCIAL_LINKS.map((social) => (
                 <a
@@ -75,6 +95,25 @@ export function Footer() {
               ))}
             </div>
           </div>
+
+          {/* Link sections */}
+          {SECTIONS.map((section) => (
+            <nav key={section.title} className="flex flex-col gap-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/60">{section.title}</h3>
+              {section.links.map((link) => (
+                <Link key={link.href} href={link.href} className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          ))}
+        </div>
+
+        <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-white/[0.06] pt-6 sm:flex-row">
+          <p className="text-xs text-muted-foreground">
+            &copy; {new Date().getFullYear()} Zinovia Fans. All rights reserved.
+          </p>
+          <LanguageSwitcher />
         </div>
       </div>
     </footer>

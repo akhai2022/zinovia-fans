@@ -37,7 +37,7 @@ export function Navbar({
   const NAV_LINKS_PUBLIC: { href: string; label: string; icon: string; ai?: boolean }[] = [
     { href: "/", label: t.nav.home, icon: "home" },
     { href: "/creators", label: t.nav.creators, icon: "group" },
-    { href: "/search", label: t.common.search, icon: "search" },
+    { href: "/guides", label: t.nav.guides, icon: "menu_book" },
     { href: "/demo", label: t.nav.demo, icon: "play_circle" },
   ];
 
@@ -149,6 +149,12 @@ export function Navbar({
                 <Link href="/for/artists" className="flex items-center gap-2">
                   <Icon name="palette" className="icon-base text-muted-foreground" />
                   {t.nav.forArtists}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/for" className="flex items-center gap-2 border-t border-border pt-1">
+                  <Icon name="apps" className="icon-base text-muted-foreground" />
+                  {t.nav.viewAllNiches}
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>

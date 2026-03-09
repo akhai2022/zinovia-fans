@@ -43,6 +43,8 @@ export const ru: Dictionary = {
     forMusicians: "Музыканты",
     forPodcasters: "Подкастеры",
     forArtists: "Художники",
+    viewAllNiches: "Все ниши",
+    guides: "Руководства",
   },
   hero: {
     badge: "Платформа монетизации для авторов",

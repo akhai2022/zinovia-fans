@@ -41,6 +41,8 @@ export interface Dictionary {
     forMusicians: string;
     forPodcasters: string;
     forArtists: string;
+    viewAllNiches: string;
+    guides: string;
   };
   hero: {
     badge: string;

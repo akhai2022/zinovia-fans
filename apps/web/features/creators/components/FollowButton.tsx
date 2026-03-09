@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { getApiErrorCode, getApiErrorMessage } from "@/lib/errors";
 import { useTranslation } from "@/lib/i18n";
+import { creatorFollowed, creatorUnfollowed } from "@/lib/gtag";
 
 type FollowButtonProps = {
   creatorId: string;
@@ -37,10 +38,12 @@ export function FollowButton({
     try {
       if (following) {
         await CreatorsService.creatorsUnfollow(creatorId);
+        creatorUnfollowed(creatorId);
         onToggle?.(false);
         addToast(t.follow.toastUnfollowed, "success");
       } else {
         await CreatorsService.creatorsFollow(creatorId);
+        creatorFollowed(creatorId);
         onToggle?.(true);
         addToast(t.follow.toastFollowing, "success");
       }

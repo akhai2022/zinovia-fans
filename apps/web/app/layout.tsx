@@ -8,6 +8,8 @@ import { KycReminderBanner } from "@/components/app/KycReminderBanner";
 import { Navbar } from "@/components/app/Navbar";
 import { Footer } from "@/components/app/Footer";
 import { GoogleAnalytics } from "@/components/app/GoogleAnalytics";
+import { MetaPixel } from "@/components/app/MetaPixel";
+import { UtmCapture } from "@/components/app/UtmCapture";
 import { ToastProvider } from "@/components/ui/toast";
 import { getSession } from "@/lib/api/auth";
 import { SessionProvider } from "@/lib/hooks/useSession";
@@ -216,15 +218,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(s){s.dataset.zone='10700280',s.src='https://gizokraijaw.net/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`,
-          }}
-        />
       </head>
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
         <Suspense fallback={null}>
           <GoogleAnalytics />
+          <MetaPixel />
+          <UtmCapture />
         </Suspense>
         <SessionProvider user={session.user} unavailable={session.unavailable}>
           <I18nProvider locale={locale} dictionary={dictionary}>

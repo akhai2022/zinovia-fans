@@ -4,6 +4,10 @@ import { useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import { Spinner } from "@/components/ui/spinner";
 import { createPpvPostIntent } from "@/lib/api/ppv";
+import { fanPpvUnlock } from "@/lib/gtag";
+import { fbqPurchase } from "@/lib/fbq";
+import { gadsPurchase } from "@/lib/gads";
+import { sendServerConversion } from "@/lib/serverConversion";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { useTranslation, interpolate } from "@/lib/i18n";
@@ -48,6 +52,11 @@ export function PostUnlockButton({
         setLoading(false);
         return;
       }
+      const priceEur = priceCents / 100;
+      fanPpvUnlock("unknown", priceEur);
+      fbqPurchase(priceEur);
+      gadsPurchase(priceEur);
+      sendServerConversion("purchase", { value: priceEur });
       window.location.assign(intent.checkout_url);
     } catch (err) {
       setError(err instanceof Error ? err.message : t.ppv.errorFailedToStart);

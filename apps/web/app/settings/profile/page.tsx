@@ -25,6 +25,7 @@ import { useRequireRole } from "@/lib/hooks/useRequireRole";
 import { MediaService } from "@/features/media/api";
 import { Icon } from "@/components/ui/icon";
 import { useTranslation, interpolate, getCountryName } from "@/lib/i18n";
+import { profileUpdated } from "@/lib/gtag";
 import "@/lib/api";
 
 /** Renders a single banner asset by signed URL (used for profile banner preview). */
@@ -150,6 +151,7 @@ export default function SettingsProfilePage() {
     };
     try {
       await CreatorsService.creatorsUpdateMe(payload);
+      profileUpdated();
       addToast(t.profile.toastProfileSaved, "success");
     } catch (err) {
       const code = getApiErrorCode(err);

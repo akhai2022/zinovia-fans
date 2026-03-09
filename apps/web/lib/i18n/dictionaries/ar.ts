@@ -43,6 +43,8 @@ export const ar: Dictionary = {
     forMusicians: "الموسيقيون",
     forPodcasters: "البودكاست",
     forArtists: "الفنانون",
+    viewAllNiches: "عرض جميع التخصصات",
+    guides: "أدلة",
   },
   hero: {
     badge: "منصة تحقيق الدخل لصنّاع المحتوى",

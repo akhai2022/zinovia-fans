@@ -7,6 +7,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { createConversation } from "@/features/messaging/api";
 import { useTranslation } from "@/lib/i18n";
+import { messageInitiated } from "@/lib/gtag";
 
 interface MessageButtonProps {
   creatorId: string;
@@ -23,6 +24,7 @@ export function MessageButton({ creatorId }: MessageButtonProps) {
     setError(null);
     try {
       const { conversation_id } = await createConversation({ creator_id: creatorId });
+      messageInitiated(creatorId);
       router.push(`/messages/${conversation_id}`);
     } catch (err: unknown) {
       const detail = (err as { detail?: string })?.detail;
