@@ -54,6 +54,33 @@ BlipForConditionalGeneration.from_pretrained('Salesforce/blip-image-captioning-b
 from sentence_transformers import SentenceTransformer; \
 SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
 
+# Pre-download CatVTON virtual try-on models (~2.5GB additional).
+# - runwayml/stable-diffusion-inpainting: UNet + scheduler (~2GB)
+# - stabilityai/sd-vae-ft-mse: VAE (~330MB)
+# - zhengchong/CatVTON: attention checkpoint (~50MB)
+# - mattmdjaga/segformer_b2_clothes: clothing segmenter (~90MB)
+RUN python <<'PYEOF'
+from diffusers import AutoencoderKL, DDIMScheduler, UNet2DConditionModel
+from transformers import AutoModelForSemanticSegmentation, SegformerImageProcessor
+from huggingface_hub import snapshot_download
+
+# SD inpainting base (UNet + scheduler)
+UNet2DConditionModel.from_pretrained("runwayml/stable-diffusion-inpainting", subfolder="unet")
+DDIMScheduler.from_pretrained("runwayml/stable-diffusion-inpainting", subfolder="scheduler")
+
+# VAE
+AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse")
+
+# CatVTON attention weights
+snapshot_download(repo_id="zhengchong/CatVTON")
+
+# Clothing segmenter (for automasking)
+SegformerImageProcessor.from_pretrained("mattmdjaga/segformer_b2_clothes")
+AutoModelForSemanticSegmentation.from_pretrained("mattmdjaga/segformer_b2_clothes")
+
+print("CatVTON models pre-downloaded successfully")
+PYEOF
+
 # Pre-install argostranslate language packages (en→fr, en→es, en→ar) at build time.
 # Packages are cached in /app/argos so the worker doesn't download at runtime.
 ENV ARGOS_PACKAGES_DIR=/app/argos
