@@ -28,8 +28,8 @@ class PostPromoSuggestion(Base):
     tone: Mapped[str] = mapped_column(String(16), nullable=False)
     title: Mapped[str] = mapped_column(Text(), nullable=False)
     description: Mapped[str] = mapped_column(Text(), nullable=False)
-    cta_lines: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    hashtags: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    cta_lines: Mapped[list] = mapped_column(JSONB, nullable=False)
+    hashtags: Mapped[list] = mapped_column(JSONB, nullable=False)
     source_caption: Mapped[str | None] = mapped_column(Text(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

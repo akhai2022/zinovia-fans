@@ -313,7 +313,7 @@ async def reset_rate_limit(
             else:
                 deleted = await client.delete(key_pattern)
         finally:
-            await client.aclose()
+            await client.close()
     except Exception as exc:
         logger.warning("e2e: rate-limit reset failed: %s", exc)
         return {"status": "error", "error": str(exc), "deleted": 0}

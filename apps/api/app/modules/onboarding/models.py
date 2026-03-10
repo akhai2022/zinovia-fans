@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from sqlalchemy import Date, DateTime, ForeignKey, String, Text, func
@@ -86,7 +86,7 @@ class KycSession(TimestampMixin, Base):
     )
 
     # KYC document storage (migration 0030)
-    date_of_birth: Mapped[datetime | None] = mapped_column(Date, nullable=True)
+    date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
     id_document_media_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("media_assets.id"), nullable=True
     )

@@ -848,13 +848,13 @@ async def _handle_worldline_payment_success(
     card_output = payment_output.get("cardPaymentMethodSpecificOutput") or {}
     wl_token = card_output.get("token") or None
 
-    result = await session.execute(
+    sub_result = await session.execute(
         select(Subscription).where(
             Subscription.fan_user_id == fan_user_id,
             Subscription.creator_user_id == creator_user_id,
         )
     )
-    existing = result.scalar_one_or_none()
+    existing = sub_result.scalar_one_or_none()
     if existing:
         existing.ccbill_subscription_id = f"wl:{payment_id}"
         existing.status = "active"
@@ -989,10 +989,10 @@ async def _handle_worldline_refund(
         await session.flush()
 
     # Try subscription
-    result = await session.execute(
+    sub_result = await session.execute(
         select(Subscription).where(Subscription.ccbill_subscription_id == wl_tx_id)
     )
-    sub = result.scalar_one_or_none()
+    sub = sub_result.scalar_one_or_none()
     if sub and sub.status != "refunded":
         sub.status = "refunded"
         # Reverse ledger entries for the subscription payment
@@ -1168,6 +1168,8 @@ async def renew_worldline_subscriptions(session: AsyncSession) -> int:
     renewed = 0
 
     for sub in due_subs:
+        if not sub.payment_token:
+            continue
         plan = await get_or_create_creator_plan(session, sub.creator_user_id)
         amount_cents = int(plan.price * 100)
         correlation_id = f"zv_renew_{str(sub.id).replace('-', '')[:12]}"

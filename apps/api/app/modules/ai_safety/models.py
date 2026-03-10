@@ -74,7 +74,7 @@ class ImageTag(Base):
         nullable=False,
         unique=True,
     )
-    tags: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    tags: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     embedding_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     # embedding Vector(384) column is managed via raw SQL in migration (pgvector)
     model_version: Mapped[str | None] = mapped_column(String(128), nullable=True)

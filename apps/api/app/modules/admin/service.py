@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from uuid import UUID
 
-from sqlalchemy import delete, or_, func, select
+from sqlalchemy import delete, or_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
@@ -611,17 +611,17 @@ async def _hard_delete_user(session: AsyncSession, user_id: UUID) -> None:
 
     # SET NULL for shared references (don't delete other users' data)
     await session.execute(
-        BrandAsset.__table__.update()
+        update(BrandAsset)
         .where(BrandAsset.updated_by_user_id == user_id)
         .values(updated_by_user_id=None)
     )
     await session.execute(
-        ImageSafetyScan.__table__.update()
+        update(ImageSafetyScan)
         .where(ImageSafetyScan.reviewed_by == user_id)
         .values(reviewed_by=None)
     )
     await session.execute(
-        AuditEvent.__table__.update()
+        update(AuditEvent)
         .where(AuditEvent.actor_id == user_id)
         .values(actor_id=None)
     )
@@ -629,21 +629,21 @@ async def _hard_delete_user(session: AsyncSession, user_id: UUID) -> None:
     # Media (after posts are deleted)
     # Clear profile avatar/banner FK references before deleting media
     await session.execute(
-        Profile.__table__.update()
+        update(Profile)
         .where(Profile.user_id == user_id)
         .values(avatar_asset_id=None, banner_asset_id=None)
     )
     # Nullify cross-user FK refs to this user's media (no CASCADE on these FKs)
     await session.execute(
-        PostMedia.__table__.delete()
+        delete(PostMedia)
         .where(PostMedia.media_asset_id.in_(owned_media_ids))
     )
     await session.execute(
-        MessageMedia.__table__.delete()
+        delete(MessageMedia)
         .where(MessageMedia.media_asset_id.in_(owned_media_ids))
     )
     await session.execute(
-        Collection.__table__.update()
+        update(Collection)
         .where(Collection.cover_asset_id.in_(owned_media_ids))
         .values(cover_asset_id=None)
     )
