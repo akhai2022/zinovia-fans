@@ -445,7 +445,8 @@ async def test_locked_teaser_image_post_redacts_asset_ids(
     assert sub_post["is_locked"] is True
     assert sub_post["locked_reason"] == "SUBSCRIPTION_REQUIRED"
     assert sub_post["caption"] is None
-    assert sub_post["asset_ids"] == []
+    # Locked teasers now include asset_ids so the frontend can show blurred teaser previews
+    assert sub_post["asset_ids"] == [str(media.id)]
 
 
 @pytest.mark.asyncio
@@ -498,7 +499,8 @@ async def test_locked_teaser_video_post_redacts_asset_ids(
     assert sub_post["is_locked"] is True
     assert sub_post["locked_reason"] == "SUBSCRIPTION_REQUIRED"
     assert sub_post["caption"] is None
-    assert sub_post["asset_ids"] == []
+    # Locked teasers now include asset_ids so the frontend can show blurred teaser previews
+    assert sub_post["asset_ids"] == [str(media.id)]
 
 
 @pytest.mark.asyncio
@@ -549,7 +551,8 @@ async def test_follower_sees_followers_post_unlocked_with_asset_ids(
     fol_post_before = next((p for p in items_before if p.get("visibility") == "FOLLOWERS"), None)
     assert fol_post_before is not None
     assert fol_post_before["is_locked"] is True
-    assert fol_post_before["asset_ids"] == []
+    # Locked teasers now include asset_ids so the frontend can show blurred teaser previews
+    assert fol_post_before["asset_ids"] == [str(media.id)]
     creator_id = me_c.json()["id"]
     await async_client.post(
         f"/creators/{creator_id}/follow",

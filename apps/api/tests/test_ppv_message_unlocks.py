@@ -30,7 +30,8 @@ def _enable_ppvm(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MIN_PPV_CENTS", "100")
     monkeypatch.setenv("MAX_PPV_CENTS", "20000")
     monkeypatch.setenv("PPV_INTENT_RATE_LIMIT_PER_MIN", "10")
-    # Configure CCBill for tests
+    # Configure CCBill for tests and set payment_provider to ccbill
+    monkeypatch.setenv("PAYMENT_PROVIDER", "ccbill")
     monkeypatch.setenv("CCBILL_ACCOUNT_NUMBER", "900000")
     monkeypatch.setenv("CCBILL_SUB_ACCOUNT", "0000")
     monkeypatch.setenv("CCBILL_FLEX_FORM_ID", "test-form")
@@ -162,7 +163,9 @@ async def test_fan_cannot_create_locked_message(
         headers={"Authorization": f"Bearer {fan_token}"},
     )
     assert res.status_code == 403
-    assert res.json()["detail"]["code"] == "ppv_creator_only"
+    # Fan must have a subscription to send messages; the subscription check
+    # happens before the PPV creator-only check.
+    assert res.json()["detail"]["code"] == "subscription_required"
 
 
 @pytest.mark.asyncio
