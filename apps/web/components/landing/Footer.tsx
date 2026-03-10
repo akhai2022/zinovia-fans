@@ -67,7 +67,7 @@ export function Footer() {
           >
             Zinovia Fans
           </Link>
-          <p className="text-premium-small text-muted-foreground">
+          <p className="text-premium-small text-muted-foreground" suppressHydrationWarning>
             © {new Date().getFullYear()} Zinovia Fans. All rights reserved.
           </p>
         </div>

@@ -162,7 +162,7 @@ export function FeedCard({
             {post.caption && (
               <RichCaption text={post.caption} className="line-clamp-3" />
             )}
-            <p className="mt-2 text-premium-small text-muted-foreground">
+            <p className="mt-2 text-premium-small text-muted-foreground" suppressHydrationWarning>
               {post.visibility} · {new Date(post.created_at).toLocaleDateString()}
             </p>
             {/* Card actions — like, comment, share */}

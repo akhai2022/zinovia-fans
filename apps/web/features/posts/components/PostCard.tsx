@@ -63,7 +63,7 @@ export function PostCard({ post, creator }: PostCardProps) {
           />
         </div>
       )}
-      <p className="mt-2 text-xs text-muted-foreground">
+      <p className="mt-2 text-xs text-muted-foreground" suppressHydrationWarning>
         {post.visibility} · {new Date(post.created_at).toLocaleDateString()}
       </p>
     </article>

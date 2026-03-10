@@ -300,7 +300,7 @@ export function Navbar({
                   </div>
                   <p className="mt-0.5 text-xs text-muted-foreground truncate">{user.email}</p>
                   {user.last_login_at && (
-                    <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+                    <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground" suppressHydrationWarning>
                       <Icon name="schedule" className="icon-xs" />
                       Last login: {formatRelativeTime(user.last_login_at, t.common)}
                     </p>
