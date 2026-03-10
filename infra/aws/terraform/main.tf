@@ -1551,7 +1551,7 @@ resource "aws_ecs_task_definition" "worker" {
   task_role_arn            = aws_iam_role.ecs_task.arn
 
   ephemeral_storage {
-    size_in_gib = 30
+    size_in_gib = 50
   }
 
   container_definitions = jsonencode([{
