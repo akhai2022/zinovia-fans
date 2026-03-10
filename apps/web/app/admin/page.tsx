@@ -159,6 +159,71 @@ type AdminKycSession = {
   };
 };
 
+type InboundEmail = {
+  id: string;
+  resend_email_id: string;
+  from_address: string;
+  to_addresses: string[];
+  cc_addresses: string[];
+  subject: string;
+  category: string;
+  snippet: string;
+  attachment_count: number;
+  attachments_meta: { id: string; filename: string; content_type: string; size: number }[];
+  is_read: boolean;
+  forwarded_to: string | null;
+  forwarded_at: string | null;
+  received_at: string;
+  created_at: string;
+};
+
+type InboundEmailDetail = InboundEmail & {
+  html_body: string | null;
+  text_body: string | null;
+  reply_to_addresses: string[];
+  message_id_header: string | null;
+  headers: Record<string, string> | null;
+  spf_result: string | null;
+  dkim_result: string | null;
+  spam_score: string | null;
+};
+
+type InboundCategoryCount = { category: string; total: number; unread: number };
+
+type InboundStats = {
+  categories: InboundCategoryCount[];
+  total: number;
+  total_unread: number;
+};
+
+type PayoutItem = {
+  id: string;
+  creator_id: string;
+  amount_cents: number;
+  currency: string;
+  method: string;
+  status: string;
+  period_start: string;
+  period_end: string;
+  created_at: string;
+  exported_at: string | null;
+  sent_at: string | null;
+  settled_at: string | null;
+  export_batch_id: string | null;
+  bank_reference: string | null;
+  error_reason: string | null;
+};
+
+type PayoutAuditEntry = {
+  id: string;
+  actor_user_id: string;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  details: Record<string, unknown> | null;
+  created_at: string | null;
+};
+
 type PagedResult<T> = { items: T[]; total: number };
 
 /* ------------------------------------------------------------------ */
@@ -252,8 +317,8 @@ export default function AdminPage() {
   const isReader = adminUser?.role === "reader";
   const ROLE_FILTERS = getRoleFilters(t.admin);
   const CATEGORY_LABELS = getCategoryLabels(t.admin);
-  type AdminTab = "users" | "posts" | "transactions" | "inbox" | "moderation" | "kyc";
-  const VALID_TABS: AdminTab[] = ["users", "posts", "transactions", "inbox", "moderation", ...(isSuperAdmin ? ["kyc" as const] : [])];
+  type AdminTab = "users" | "posts" | "transactions" | "inbox" | "moderation" | "emails" | "payouts" | "kyc";
+  const VALID_TABS: AdminTab[] = ["users", "posts", "transactions", "inbox", "moderation", "emails", "payouts", ...(isSuperAdmin ? ["kyc" as const] : [])];
   const initialTab = (VALID_TABS.includes(searchParams.get("tab") as AdminTab) ? searchParams.get("tab") : "users") as AdminTab;
   const [tab, setTab] = useState<AdminTab>(initialTab);
   const [error, setError] = useState<string | null>(null);
@@ -330,6 +395,31 @@ export default function AdminPage() {
   const [globalKycPage, setGlobalKycPage] = useState(1);
   const [globalKycFilter, setGlobalKycFilter] = useState<string>("SUBMITTED");
   const [globalKycLoading, setGlobalKycLoading] = useState(false);
+
+  /* ---- Inbound Emails state ---- */
+  const [inboundEmails, setInboundEmails] = useState<InboundEmail[]>([]);
+  const [inboundTotal, setInboundTotal] = useState(0);
+  const [inboundPage, setInboundPage] = useState(1);
+  const [inboundUnread, setInboundUnread] = useState(0);
+  const [inboundCategory, setInboundCategory] = useState<string | null>(null);
+  const [inboundReadFilter, setInboundReadFilter] = useState<boolean | null>(null);
+  const [inboundStats, setInboundStats] = useState<InboundCategoryCount[]>([]);
+  const [selectedInbound, setSelectedInbound] = useState<InboundEmailDetail | null>(null);
+  const [inboundSyncing, setInboundSyncing] = useState(false);
+
+  /* ---- Payouts state ---- */
+  const [payouts, setPayouts] = useState<PayoutItem[]>([]);
+  const [payoutsTotal, setPayoutsTotal] = useState(0);
+  const [payoutsPage, setPayoutsPage] = useState(1);
+  const [payoutsStatusFilter, setPayoutsStatusFilter] = useState<string | null>(null);
+  const [payoutsAuditView, setPayoutsAuditView] = useState(false);
+  const [payoutAuditLog, setPayoutAuditLog] = useState<PayoutAuditEntry[]>([]);
+  const [payoutAuditTotal, setPayoutAuditTotal] = useState(0);
+  const [payoutAuditPage, setPayoutAuditPage] = useState(1);
+  const [payoutStatusEdit, setPayoutStatusEdit] = useState<string | null>(null);
+  const [payoutNewStatus, setPayoutNewStatus] = useState("");
+  const [payoutBankRef, setPayoutBankRef] = useState("");
+  const [payoutErrorReason, setPayoutErrorReason] = useState("");
 
   /* ---- Moderation state ---- */
   type ModerationItem = {
@@ -658,6 +748,181 @@ export default function AdminPage() {
     }
   };
 
+  /* ---- Fetch: inbound emails ---- */
+  const fetchInboundEmails = useCallback(
+    async (pg = 1) => {
+      try {
+        const query: Record<string, string | number | boolean> = { page: pg, page_size: PAGE_SIZE };
+        if (inboundCategory) query.category = inboundCategory;
+        if (inboundReadFilter !== null) query.is_read = inboundReadFilter;
+        const data = await apiFetch<{ items: InboundEmail[]; total: number; page: number; page_size: number }>("/admin/inbound/emails", { method: "GET", query });
+        setInboundEmails(data.items);
+        setInboundTotal(data.total);
+        setInboundPage(pg);
+        setError(null);
+      } catch (err) {
+        handleApiError(err);
+      }
+    },
+    [inboundCategory, inboundReadFilter, handleApiError],
+  );
+
+  const fetchInboundStats = useCallback(async () => {
+    try {
+      const data = await apiFetch<InboundStats>("/admin/inbound/emails/stats", { method: "GET" });
+      setInboundStats(data.categories);
+      setInboundUnread(data.total_unread);
+    } catch { /* non-critical */ }
+  }, []);
+
+  const openInboundEmail = async (emailId: string) => {
+    try {
+      const data = await apiFetch<InboundEmailDetail>(`/admin/inbound/emails/${emailId}`, { method: "GET" });
+      setSelectedInbound(data);
+      // Mark as read locally
+      setInboundEmails((prev) => prev.map((e) => (e.id === emailId ? { ...e, is_read: true } : e)));
+      setInboundUnread((c) => Math.max(0, c - 1));
+    } catch (err) {
+      handleApiError(err);
+    }
+  };
+
+  const toggleInboundRead = async (emailId: string, read: boolean) => {
+    if (isReader) return;
+    try {
+      await apiFetch(`/admin/inbound/emails/${emailId}/read?read=${read}`, { method: "POST" });
+      setInboundEmails((prev) => prev.map((e) => (e.id === emailId ? { ...e, is_read: read } : e)));
+      setInboundUnread((c) => read ? Math.max(0, c - 1) : c + 1);
+      if (selectedInbound?.id === emailId) setSelectedInbound({ ...selectedInbound, is_read: read });
+    } catch (err) {
+      handleApiError(err);
+    }
+  };
+
+  const syncInbound = async () => {
+    if (isReader) return;
+    setInboundSyncing(true);
+    try {
+      const data = await apiFetch<{ status: string; new_emails: number }>("/admin/inbound/sync", { method: "POST" });
+      if (data.new_emails > 0) {
+        fetchInboundEmails(1);
+        fetchInboundStats();
+      }
+    } catch (err) {
+      handleApiError(err);
+    } finally {
+      setInboundSyncing(false);
+    }
+  };
+
+  /* ---- Fetch: payouts ---- */
+  const fetchPayouts = useCallback(
+    async (pg = 1) => {
+      try {
+        const query: Record<string, string | number> = { page: pg, page_size: PAGE_SIZE };
+        if (payoutsStatusFilter) query.status = payoutsStatusFilter;
+        const data = await apiFetch<PagedResult<PayoutItem>>("/admin/payouts", { method: "GET", query });
+        setPayouts(data.items);
+        setPayoutsTotal(data.total);
+        setPayoutsPage(pg);
+        setError(null);
+      } catch (err) {
+        handleApiError(err);
+      }
+    },
+    [payoutsStatusFilter, handleApiError],
+  );
+
+  const fetchPayoutAudit = useCallback(
+    async (pg = 1) => {
+      try {
+        const data = await apiFetch<PagedResult<PayoutAuditEntry>>("/admin/payouts/audit-log", {
+          method: "GET",
+          query: { page: pg, page_size: PAGE_SIZE },
+        });
+        setPayoutAuditLog(data.items);
+        setPayoutAuditTotal(data.total);
+        setPayoutAuditPage(pg);
+      } catch (err) {
+        handleApiError(err);
+      }
+    },
+    [handleApiError],
+  );
+
+  const exportPayoutsCsv = async (status = "queued") => {
+    try {
+      const csv = await apiFetch<string>("/admin/payouts/export.csv", {
+        method: "GET",
+        query: { status },
+      });
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "payouts-export.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      handleApiError(err);
+    }
+  };
+
+  const updatePayoutStatus = async (payoutId: string) => {
+    if (isReader) return;
+    setActionLoading(payoutId);
+    try {
+      const body: Record<string, string> = { status: payoutNewStatus };
+      if (payoutBankRef) body.bank_reference = payoutBankRef;
+      if (payoutErrorReason) body.error_reason = payoutErrorReason;
+      await apiFetch(`/admin/payouts/${payoutId}/status`, {
+        method: "PATCH",
+        body,
+      });
+      setPayoutStatusEdit(null);
+      setPayoutNewStatus("");
+      setPayoutBankRef("");
+      setPayoutErrorReason("");
+      fetchPayouts(payoutsPage);
+    } catch (err) {
+      handleApiError(err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const reconcilePayouts = async () => {
+    if (isReader) return;
+    setActionLoading("reconcile");
+    try {
+      const data = await apiFetch<{ creators_updated: number; total_cents_moved: number }>("/admin/payouts/reconcile-availability", { method: "POST" });
+      setError(null);
+      alert(`Reconciled: ${data.creators_updated} creators, ${formatCents(data.total_cents_moved, "EUR")} moved to available`);
+    } catch (err) {
+      handleApiError(err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const generateWeeklyPayouts = async () => {
+    if (isReader) return;
+    const start = prompt("Period start (YYYY-MM-DD):");
+    const end = prompt("Period end (YYYY-MM-DD):");
+    if (!start || !end) return;
+    setActionLoading("generate");
+    try {
+      const data = await apiFetch<{ payouts_created: number; total_cents: number; skipped_below_threshold: number }>(`/admin/payouts/generate-weekly?start=${start}&end=${end}`, { method: "POST" });
+      setError(null);
+      alert(`Created ${data.payouts_created} payouts (${formatCents(data.total_cents, "EUR")}). ${data.skipped_below_threshold} below threshold.`);
+      fetchPayouts(1);
+    } catch (err) {
+      handleApiError(err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   /* ---- Tab switch data loading ---- */
   useEffect(() => {
     if (tab === "users") fetchUsers();
@@ -665,17 +930,31 @@ export default function AdminPage() {
     else if (tab === "transactions") fetchTransactions();
     else if (tab === "moderation") fetchModeration();
     else if (tab === "kyc") fetchGlobalKyc();
+    else if (tab === "emails") { fetchInboundEmails(); fetchInboundStats(); }
+    else if (tab === "payouts") fetchPayouts();
     else {
       fetchInbox();
       fetchInboxStats();
     }
-  }, [tab, fetchUsers, fetchPosts, fetchTransactions, fetchInbox, fetchInboxStats, fetchModeration, fetchGlobalKyc]);
+  }, [tab, fetchUsers, fetchPosts, fetchTransactions, fetchInbox, fetchInboxStats, fetchModeration, fetchGlobalKyc, fetchInboundEmails, fetchInboundStats, fetchPayouts]);
 
   // Reload users when search/role changes
   useEffect(() => {
     if (tab === "users") fetchUsers(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch, usersRole]);
+
+  // Reload inbound emails when filters change
+  useEffect(() => {
+    if (tab === "emails") fetchInboundEmails(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inboundCategory, inboundReadFilter]);
+
+  // Reload payouts when status filter changes
+  useEffect(() => {
+    if (tab === "payouts") fetchPayouts(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payoutsStatusFilter]);
 
   /* ---- User actions ---- */
   const userAction = async (userId: string, action: string, reason?: string) => {
@@ -828,8 +1107,8 @@ export default function AdminPage() {
       )}
 
       {/* Tab selector */}
-      <div className="flex gap-2 rounded-xl border border-border bg-muted/50 p-1">
-        {([...["users", "posts", "transactions", "inbox", "moderation"] as const, ...(isSuperAdmin ? ["kyc" as const] : [])]).map((t) => (
+      <div className="flex flex-wrap gap-2 rounded-xl border border-border bg-muted/50 p-1">
+        {([...["users", "posts", "transactions", "inbox", "moderation", "emails", "payouts"] as const, ...(isSuperAdmin ? ["kyc" as const] : [])]).map((t) => (
           <button
             key={t}
             type="button"
@@ -837,6 +1116,7 @@ export default function AdminPage() {
               setTab(t);
               setSelectedUser(null);
               setSelectedMessage(null);
+              setSelectedInbound(null);
             }}
             className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               tab === t
@@ -867,6 +1147,17 @@ export default function AdminPage() {
                 )}
               </>
             )}
+            {t === "emails" && (
+              <>
+                <Icon name="mail" className="icon-base" /> Emails
+                {inboundUnread > 0 && (
+                  <span className="ml-1.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-bold text-white">
+                    {inboundUnread}
+                  </span>
+                )}
+              </>
+            )}
+            {t === "payouts" && <><Icon name="account_balance" className="icon-base" /> Payouts ({payoutsTotal})</>}
             {t === "kyc" && (
               <>
                 <Icon name="verified_user" className="icon-base" /> KYC
@@ -2782,6 +3073,346 @@ export default function AdminPage() {
                   onPageChange={(pg) => fetchGlobalKyc(pg, globalKycFilter)}
                 />
               </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ============================================================ */}
+      {/* INBOUND EMAILS TAB                                            */}
+      {/* ============================================================ */}
+      {tab === "emails" && !selectedInbound && (
+        <Card>
+          <CardContent className="space-y-4 pt-6">
+            {/* Filters + actions */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setInboundCategory(null)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${!inboundCategory ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+                >
+                  All
+                </button>
+                {inboundStats.map((cat) => (
+                  <button
+                    key={cat.category}
+                    type="button"
+                    onClick={() => setInboundCategory(cat.category)}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${inboundCategory === cat.category ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+                  >
+                    {cat.category} ({cat.total})
+                    {cat.unread > 0 && <span className="ml-1 text-blue-400">{cat.unread}</span>}
+                  </button>
+                ))}
+                <span className="mx-2 border-l border-border" />
+                <button
+                  type="button"
+                  onClick={() => setInboundReadFilter(inboundReadFilter === false ? null : false)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${inboundReadFilter === false ? "bg-blue-600 text-white" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+                >
+                  Unread only
+                </button>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={syncInbound} disabled={inboundSyncing || isReader}>
+                  {inboundSyncing ? <Spinner className="mr-1.5 h-3.5 w-3.5" /> : <Icon name="sync" className="mr-1.5 icon-sm" />}
+                  Sync
+                </Button>
+              </div>
+            </div>
+
+            {/* Email list */}
+            {inboundEmails.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">No inbound emails found.</p>
+            ) : (
+              <div className="divide-y divide-border rounded-lg border border-border">
+                {inboundEmails.map((em) => (
+                  <button
+                    key={em.id}
+                    type="button"
+                    onClick={() => openInboundEmail(em.id)}
+                    className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors ${!em.is_read ? "bg-blue-50/50 dark:bg-blue-950/20" : ""}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          {!em.is_read && <span className="inline-block h-2 w-2 rounded-full bg-blue-500 flex-shrink-0" />}
+                          <span className={`text-sm truncate ${!em.is_read ? "font-semibold" : ""}`}>{em.from_address}</span>
+                          {em.category && (
+                            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground flex-shrink-0">{em.category}</span>
+                          )}
+                        </div>
+                        <p className={`text-sm truncate mt-0.5 ${!em.is_read ? "font-medium text-foreground" : "text-muted-foreground"}`}>{em.subject}</p>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">{em.snippet}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {new Date(em.received_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        </span>
+                        {em.attachment_count > 0 && (
+                          <span className="text-xs text-muted-foreground"><Icon name="attach_file" className="text-[12px]" /> {em.attachment_count}</span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <Pagination
+              page={inboundPage}
+              pageSize={PAGE_SIZE}
+              total={inboundTotal}
+              onPageChange={(pg) => fetchInboundEmails(pg)}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Inbound email detail */}
+      {tab === "emails" && selectedInbound && (
+        <Card>
+          <CardContent className="space-y-4 pt-6">
+            <div className="flex items-center gap-3">
+              <Button size="sm" variant="ghost" onClick={() => setSelectedInbound(null)}>
+                <Icon name="arrow_back" className="mr-1 icon-sm" /> Back
+              </Button>
+              <div className="flex-1" />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => toggleInboundRead(selectedInbound.id, !selectedInbound.is_read)}
+                disabled={isReader}
+              >
+                <Icon name={selectedInbound.is_read ? "mark_email_unread" : "mark_email_read"} className="mr-1 icon-sm" />
+                {selectedInbound.is_read ? "Mark unread" : "Mark read"}
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold">{selectedInbound.subject}</h3>
+              <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
+                <span><strong>From:</strong> {selectedInbound.from_address}</span>
+                <span><strong>To:</strong> {selectedInbound.to_addresses.join(", ")}</span>
+                {selectedInbound.cc_addresses.length > 0 && <span><strong>CC:</strong> {selectedInbound.cc_addresses.join(", ")}</span>}
+                <span><strong>Date:</strong> {new Date(selectedInbound.received_at).toLocaleString()}</span>
+                {selectedInbound.category && <span><strong>Category:</strong> {selectedInbound.category}</span>}
+              </div>
+              {/* Security info */}
+              <div className="flex gap-3 text-xs text-muted-foreground">
+                {selectedInbound.spf_result && <span>SPF: {selectedInbound.spf_result}</span>}
+                {selectedInbound.dkim_result && <span>DKIM: {selectedInbound.dkim_result}</span>}
+                {selectedInbound.spam_score && <span>Spam: {selectedInbound.spam_score}</span>}
+              </div>
+            </div>
+
+            {/* Email body */}
+            <div className="rounded-lg border border-border p-4">
+              {selectedInbound.html_body ? (
+                <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: selectedInbound.html_body }} />
+              ) : (
+                <pre className="whitespace-pre-wrap text-sm font-mono">{selectedInbound.text_body || "(no body)"}</pre>
+              )}
+            </div>
+
+            {/* Attachments */}
+            {selectedInbound.attachments_meta.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">Attachments ({selectedInbound.attachment_count})</h4>
+                <div className="flex flex-wrap gap-2">
+                  {selectedInbound.attachments_meta.map((att) => (
+                    <div key={att.id} className="rounded-lg border border-border px-3 py-2 text-xs">
+                      <Icon name="attach_file" className="mr-1 text-[12px]" />
+                      {att.filename} <span className="text-muted-foreground">({(att.size / 1024).toFixed(1)} KB)</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ============================================================ */}
+      {/* PAYOUTS TAB                                                   */}
+      {/* ============================================================ */}
+      {tab === "payouts" && (
+        <Card>
+          <CardContent className="space-y-4 pt-6">
+            {/* Header actions */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap gap-1.5">
+                {[null, "queued", "exported", "sent", "settled", "failed"].map((s) => (
+                  <button
+                    key={s ?? "all"}
+                    type="button"
+                    onClick={() => setPayoutsStatusFilter(s)}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${payoutsStatusFilter === s ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+                  >
+                    {s ?? "All"}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => { setPayoutsAuditView(!payoutsAuditView); if (!payoutsAuditView) fetchPayoutAudit(1); }}>
+                  <Icon name="history" className="mr-1.5 icon-sm" /> {payoutsAuditView ? "Payouts" : "Audit Log"}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => exportPayoutsCsv(payoutsStatusFilter || "queued")} disabled={isReader}>
+                  <Icon name="download" className="mr-1.5 icon-sm" /> Export CSV
+                </Button>
+                <Button size="sm" variant="outline" onClick={reconcilePayouts} disabled={isReader || actionLoading === "reconcile"}>
+                  {actionLoading === "reconcile" ? <Spinner className="mr-1.5 h-3.5 w-3.5" /> : <Icon name="sync" className="mr-1.5 icon-sm" />}
+                  Reconcile
+                </Button>
+                <Button size="sm" onClick={generateWeeklyPayouts} disabled={isReader || actionLoading === "generate"}>
+                  {actionLoading === "generate" ? <Spinner className="mr-1.5 h-3.5 w-3.5" /> : <Icon name="add" className="mr-1.5 icon-sm" />}
+                  Generate Weekly
+                </Button>
+              </div>
+            </div>
+
+            {/* Payouts list */}
+            {!payoutsAuditView && (
+              <>
+                {payouts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-8 text-center">No payouts found.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                          <th className="pb-2 pr-3">Creator</th>
+                          <th className="pb-2 pr-3">Amount</th>
+                          <th className="pb-2 pr-3">Status</th>
+                          <th className="pb-2 pr-3">Method</th>
+                          <th className="pb-2 pr-3">Period</th>
+                          <th className="pb-2 pr-3">Created</th>
+                          <th className="pb-2">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {payouts.map((p) => (
+                          <tr key={p.id} className="hover:bg-muted/30">
+                            <td className="py-2 pr-3 font-mono text-xs">{p.creator_id.slice(0, 8)}...</td>
+                            <td className="py-2 pr-3 font-medium">{formatCents(p.amount_cents, p.currency)}</td>
+                            <td className="py-2 pr-3">
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                p.status === "settled" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+                                p.status === "sent" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" :
+                                p.status === "failed" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
+                                p.status === "exported" ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" :
+                                "bg-muted text-muted-foreground"
+                              }`}>
+                                {p.status}
+                              </span>
+                            </td>
+                            <td className="py-2 pr-3 text-xs">{p.method}</td>
+                            <td className="py-2 pr-3 text-xs">
+                              {new Date(p.period_start).toLocaleDateString("en-US", { month: "short", day: "numeric" })} - {new Date(p.period_end).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                            </td>
+                            <td className="py-2 pr-3 text-xs text-muted-foreground">
+                              {new Date(p.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                            </td>
+                            <td className="py-2">
+                              {payoutStatusEdit === p.id ? (
+                                <div className="flex flex-col gap-1.5">
+                                  <select
+                                    value={payoutNewStatus}
+                                    onChange={(e) => setPayoutNewStatus(e.target.value)}
+                                    className="rounded border border-border bg-background px-2 py-1 text-xs"
+                                  >
+                                    <option value="">Select status...</option>
+                                    <option value="sent">sent</option>
+                                    <option value="settled">settled</option>
+                                    <option value="failed">failed</option>
+                                  </select>
+                                  {payoutNewStatus === "sent" && (
+                                    <Input
+                                      placeholder="Bank reference..."
+                                      value={payoutBankRef}
+                                      onChange={(e) => setPayoutBankRef(e.target.value)}
+                                      className="h-7 text-xs"
+                                    />
+                                  )}
+                                  {payoutNewStatus === "failed" && (
+                                    <Input
+                                      placeholder="Error reason..."
+                                      value={payoutErrorReason}
+                                      onChange={(e) => setPayoutErrorReason(e.target.value)}
+                                      className="h-7 text-xs"
+                                    />
+                                  )}
+                                  <div className="flex gap-1">
+                                    <Button size="sm" className="h-6 text-xs px-2" onClick={() => updatePayoutStatus(p.id)} disabled={!payoutNewStatus || actionLoading === p.id}>
+                                      {actionLoading === p.id ? <Spinner className="h-3 w-3" /> : "Save"}
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={() => { setPayoutStatusEdit(null); setPayoutNewStatus(""); setPayoutBankRef(""); setPayoutErrorReason(""); }}>
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 text-xs"
+                                  onClick={() => { setPayoutStatusEdit(p.id); setPayoutNewStatus(""); }}
+                                  disabled={isReader || p.status === "settled"}
+                                >
+                                  <Icon name="edit" className="icon-sm" />
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                <Pagination
+                  page={payoutsPage}
+                  pageSize={PAGE_SIZE}
+                  total={payoutsTotal}
+                  onPageChange={(pg) => fetchPayouts(pg)}
+                />
+              </>
+            )}
+
+            {/* Audit log view */}
+            {payoutsAuditView && (
+              <>
+                {payoutAuditLog.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-8 text-center">No audit log entries.</p>
+                ) : (
+                  <div className="divide-y divide-border rounded-lg border border-border">
+                    {payoutAuditLog.map((entry) => (
+                      <div key={entry.id} className="px-4 py-3 text-sm">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Icon name="history" className="icon-sm text-muted-foreground" />
+                            <span className="font-medium">{entry.action}</span>
+                            <span className="text-xs text-muted-foreground">{entry.entity_type}:{entry.entity_id?.slice(0, 8)}</span>
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {entry.created_at ? new Date(entry.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}
+                          </span>
+                        </div>
+                        {entry.details && (
+                          <pre className="mt-1 text-xs text-muted-foreground font-mono overflow-x-auto">{JSON.stringify(entry.details, null, 2)}</pre>
+                        )}
+                        <div className="mt-1 text-xs text-muted-foreground">by {entry.actor_user_id.slice(0, 8)}...</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <Pagination
+                  page={payoutAuditPage}
+                  pageSize={PAGE_SIZE}
+                  total={payoutAuditTotal}
+                  onPageChange={(pg) => fetchPayoutAudit(pg)}
+                />
+              </>
             )}
           </CardContent>
         </Card>
