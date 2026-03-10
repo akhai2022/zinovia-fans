@@ -24,6 +24,75 @@ type JobStatus = {
 const CATEGORIES = ["upper_body", "lower_body", "full_body"] as const;
 type Category = (typeof CATEGORIES)[number];
 
+const PROCESSING_STEPS = [
+  { label: "Uploading images", durationSec: 5 },
+  { label: "Segmenting clothing", durationSec: 30 },
+  { label: "Loading try-on model", durationSec: 60 },
+  { label: "Generating try-on (this takes a few minutes)", durationSec: 360 },
+  { label: "Finalizing result", durationSec: 30 },
+];
+
+function ProcessingSteps() {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Determine active step based on elapsed time
+  let cumulative = 0;
+  let activeIdx = PROCESSING_STEPS.length - 1;
+  for (let i = 0; i < PROCESSING_STEPS.length; i++) {
+    cumulative += PROCESSING_STEPS[i].durationSec;
+    if (elapsed < cumulative) {
+      activeIdx = i;
+      break;
+    }
+  }
+
+  return (
+    <div className="w-full max-w-xs space-y-2">
+      {PROCESSING_STEPS.map((step, i) => {
+        const done = i < activeIdx;
+        const active = i === activeIdx;
+        return (
+          <div key={i} className="flex items-center gap-2.5 text-left">
+            {done ? (
+              <Icon
+                name="check_circle"
+                className="icon-sm shrink-0 text-primary"
+              />
+            ) : active ? (
+              <div className="flex h-5 w-5 shrink-0 items-center justify-center">
+                <div className="h-3 w-3 animate-pulse rounded-full bg-primary" />
+              </div>
+            ) : (
+              <div className="flex h-5 w-5 shrink-0 items-center justify-center">
+                <div className="h-2 w-2 rounded-full bg-muted-foreground/30" />
+              </div>
+            )}
+            <span
+              className={`text-xs ${
+                done
+                  ? "text-muted-foreground line-through"
+                  : active
+                    ? "font-medium text-foreground"
+                    : "text-muted-foreground/50"
+              }`}
+            >
+              {step.label}
+            </span>
+          </div>
+        );
+      })}
+      <p className="pt-1 text-[10px] text-muted-foreground/60">
+        Elapsed: {Math.floor(elapsed / 60)}m {elapsed % 60}s
+      </p>
+    </div>
+  );
+}
+
 function VirtualTryOnContent() {
   const { authorized } = useRequireRole(["creator", "admin", "super_admin"]);
   const { t } = useTranslation();
@@ -211,12 +280,12 @@ function VirtualTryOnContent() {
         </Card>
       )}
 
-      {/* Processing state */}
+      {/* Processing state with step progress */}
       {isProcessing && (
         <Card className="mt-4">
           <CardContent className="py-8">
-            <div className="flex flex-col items-center gap-4 text-center">
-              <div className="h-8 w-8 animate-spin rounded-full border-3 border-primary border-t-transparent" />
+            <div className="flex flex-col items-center gap-5 text-center">
+              <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
               <div>
                 <p className="text-sm font-medium text-foreground">
                   {tt.processing}
@@ -225,6 +294,10 @@ function VirtualTryOnContent() {
                   {tt.processingHint}
                 </p>
               </div>
+
+              {/* Step progress indicator */}
+              <ProcessingSteps />
+
               {/* Show thumbnails of inputs */}
               <div className="mt-2 flex gap-4">
                 {personPreview && (
