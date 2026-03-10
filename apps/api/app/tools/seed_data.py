@@ -16,7 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import async_session_factory
-from app.modules.auth.constants import READER_ROLE, SUPER_SUPER_ADMIN_ROLE
+from app.modules.auth.constants import READER_ROLE, SUPER_ADMIN_ROLE
 from app.modules.auth.models import Profile, User
 from app.modules.auth.security import hash_password
 from app.modules.media.models import MediaObject as _MediaObject  # noqa: F401 — register media_assets table

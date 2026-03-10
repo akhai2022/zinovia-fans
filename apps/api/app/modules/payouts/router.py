@@ -230,7 +230,7 @@ async def admin_export_csv(
     return StreamingResponse(
         iter([csv_data]),
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=payouts-export.csv"},
+        headers={"Content-Disposition": "attachment; filename=payouts-export.csv"},
     )
 
 
