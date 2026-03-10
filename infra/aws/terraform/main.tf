@@ -1550,6 +1550,10 @@ resource "aws_ecs_task_definition" "worker" {
   execution_role_arn       = aws_iam_role.ecs_execution.arn
   task_role_arn            = aws_iam_role.ecs_task.arn
 
+  ephemeral_storage {
+    size_in_gib = 30
+  }
+
   container_definitions = jsonencode([{
     name      = "worker"
     image     = "${module.ecr.worker_repository_url}:latest"
@@ -1568,7 +1572,7 @@ resource "aws_ecs_task_definition" "worker" {
       { name = "S3_BUCKET", value = module.s3_media.bucket_id },
       { name = "AWS_REGION", value = var.aws_region },
       { name = "REDIS_URL", value = local.redis_url },
-      { name = "CELERY_CONCURRENCY", value = "2" },
+      { name = "CELERY_CONCURRENCY", value = "1" },
       { name = "ENABLE_NOTIFICATIONS", value = tostring(var.enable_notifications) },
       { name = "ENABLE_SCHEDULED_POSTS", value = tostring(var.enable_scheduled_posts) },
       { name = "AI_PROVIDER", value = var.ai_provider },
@@ -1579,6 +1583,7 @@ resource "aws_ecs_task_definition" "worker" {
       { name = "ENABLE_AUTO_CAPTION", value = tostring(var.enable_auto_caption) },
       { name = "ENABLE_SMART_PREVIEWS", value = tostring(var.enable_smart_previews) },
       { name = "ENABLE_TRANSLATIONS", value = tostring(var.enable_translations) },
+      { name = "ENABLE_VIRTUAL_TRYON", value = "true" },
       # Worker doesn't send email or use cookies but shares Settings with API
       { name = "MAIL_PROVIDER", value = "resend" },
       { name = "COOKIE_SECURE", value = "true" },

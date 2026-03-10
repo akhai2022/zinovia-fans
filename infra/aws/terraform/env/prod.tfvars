@@ -20,8 +20,8 @@ api_cpu          = 512
 api_memory_mb    = 1024
 web_cpu          = 512
 web_memory_mb    = 1024
-worker_cpu       = 1024
-worker_memory_mb = 2048
+worker_cpu       = 2048
+worker_memory_mb = 8192
 
 # Autoscaling
 api_scaling_min    = 1
