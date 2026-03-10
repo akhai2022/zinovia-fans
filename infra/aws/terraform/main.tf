@@ -722,41 +722,35 @@ resource "aws_cloudfront_distribution" "web_alb" {
     response_headers_policy_id = aws_cloudfront_response_headers_policy.security[0].id
   }
 
-  # Custom error responses — serve Next.js error pages with short cache
+  # Custom error responses — serve branded error pages with short cache
   custom_error_response {
     error_code            = 403
     response_code         = 403
-    response_page_path    = "/403"
+    response_page_path    = "/error-pages/forbidden"
     error_caching_min_ttl = 10
-  }
-  custom_error_response {
-    error_code            = 404
-    response_code         = 404
-    response_page_path    = "/404"
-    error_caching_min_ttl = 30
   }
   custom_error_response {
     error_code            = 500
     response_code         = 500
-    response_page_path    = "/500"
+    response_page_path    = "/error-pages/server"
     error_caching_min_ttl = 5
   }
   custom_error_response {
     error_code            = 502
     response_code         = 502
-    response_page_path    = "/500"
+    response_page_path    = "/error-pages/server"
     error_caching_min_ttl = 5
   }
   custom_error_response {
     error_code            = 503
     response_code         = 503
-    response_page_path    = "/500"
+    response_page_path    = "/error-pages/server"
     error_caching_min_ttl = 5
   }
   custom_error_response {
     error_code            = 504
     response_code         = 504
-    response_page_path    = "/500"
+    response_page_path    = "/error-pages/server"
     error_caching_min_ttl = 5
   }
 
