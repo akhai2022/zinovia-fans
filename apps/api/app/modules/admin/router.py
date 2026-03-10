@@ -546,7 +546,7 @@ async def list_kyc_sessions(
                 "email": u.email,
                 "display_name": p.display_name if p else u.email,
                 "handle": p.handle if p else None,
-                "avatar_url": p.avatar_url if p else None,
+                "avatar_url": str(p.avatar_asset_id) if p and p.avatar_asset_id else None,
             }
 
     items = []
