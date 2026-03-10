@@ -1555,9 +1555,10 @@ resource "aws_ecs_task_definition" "worker" {
   }
 
   container_definitions = jsonencode([{
-    name      = "worker"
-    image     = "${module.ecr.worker_repository_url}:latest"
-    essential = true
+    name           = "worker"
+    image          = "${module.ecr.worker_repository_url}:latest"
+    essential      = true
+    stopTimeout    = 30
     logConfiguration = {
       logDriver = "awslogs"
       options = {

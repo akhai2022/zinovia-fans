@@ -550,7 +550,14 @@ def auto_caption(self, job_id: str) -> dict | None:
 MAX_TRYON_FILE_SIZE = 20 * 1024 * 1024  # 20MB per image
 
 
-@shared_task(name="ai_tools.virtual_tryon", bind=True, time_limit=900, soft_time_limit=720)
+@shared_task(
+    name="ai_tools.virtual_tryon",
+    bind=True,
+    time_limit=900,
+    soft_time_limit=720,
+    acks_late=True,
+    reject_on_worker_lost=True,
+)
 def virtual_tryon(self, job_id: str) -> str | None:
     """Run virtual try-on: SegFormer segmentation + SD inpainting + IP-Adapter (CPU).
 
@@ -570,7 +577,7 @@ def virtual_tryon(self, job_id: str) -> str | None:
         logger.warning("Job not found", extra={"job_id": job_id})
         return None
 
-    if job["status"] in ("ready", "processing"):
+    if job["status"] == "ready":
         logger.info("Job already %s, skipping", job["status"], extra={"job_id": job_id})
         return None
 

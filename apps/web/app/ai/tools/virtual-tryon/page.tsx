@@ -28,7 +28,7 @@ const PROCESSING_STEPS = [
   { label: "Uploading images", durationSec: 5 },
   { label: "Segmenting clothing", durationSec: 30 },
   { label: "Loading try-on model", durationSec: 60 },
-  { label: "Generating try-on (this takes a few minutes)", durationSec: 360 },
+  { label: "Generating try-on (this takes a few minutes)", durationSec: 240 },
   { label: "Finalizing result", durationSec: 30 },
 ];
 
@@ -118,13 +118,16 @@ function VirtualTryOnContent() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Poll job status — longer interval since inference takes 5-10 min
+  const pollFailCountRef = useRef(0);
   useEffect(() => {
     if (!jobId) return;
+    pollFailCountRef.current = 0;
     const poll = setInterval(async () => {
       try {
         const data = await apiFetch<JobStatus>(
           `/ai-tools/virtual-tryon/${jobId}`,
         );
+        pollFailCountRef.current = 0;
         setJobStatus(data);
         if (data.status === "ready" || data.status === "failed") {
           clearInterval(poll);
@@ -135,8 +138,12 @@ function VirtualTryOnContent() {
           }
         }
       } catch {
-        clearInterval(poll);
-        setError(tt.errorStatusCheck);
+        // Tolerate up to 3 consecutive poll failures (transient network/auth)
+        pollFailCountRef.current += 1;
+        if (pollFailCountRef.current >= 3) {
+          clearInterval(poll);
+          setError(tt.errorStatusCheck);
+        }
       }
     }, 10_000); // Poll every 10s for long-running jobs
     pollRef.current = poll;
@@ -197,6 +204,31 @@ function VirtualTryOnContent() {
       } else {
         setError(msg);
       }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRetry = async () => {
+    if (!jobId) return;
+    setSubmitting(true);
+    setError(null);
+    setJobStatus(null);
+    try {
+      const data = await apiFetch<{ job_id: string; status: string }>(
+        `/ai-tools/virtual-tryon/${jobId}/retry`,
+        { method: "POST" },
+      );
+      setJobId(data.job_id);
+      setJobStatus({
+        job_id: data.job_id,
+        status: "processing",
+        result_url: null,
+        error: null,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Retry failed";
+      setError(msg);
     } finally {
       setSubmitting(false);
     }
@@ -429,11 +461,24 @@ function VirtualTryOnContent() {
         </Card>
       )}
 
-      {/* Error */}
+      {/* Error with retry */}
       {error && (
-        <p className="mt-3 text-sm text-destructive" role="alert">
-          {error}
-        </p>
+        <div className="mt-3 flex items-center gap-3">
+          <p className="text-sm text-destructive" role="alert">
+            {error}
+          </p>
+          {jobId && jobStatus?.status === "failed" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRetry}
+              disabled={submitting}
+            >
+              <Icon name="refresh" className="mr-1 icon-xs" />
+              Retry
+            </Button>
+          )}
+        </div>
       )}
     </Page>
   );

@@ -9,8 +9,8 @@ Pipeline:
    garment transfer.
 4. Encode result as JPEG.
 
-All inference runs on CPU (float32). Expected wall-clock: 5-10 minutes
-per image at 30 denoising steps.
+All inference runs on CPU (float32). Expected wall-clock: 4-8 minutes
+per image at 20 denoising steps.
 
 Models:
   - mattmdjaga/segformer_b2_clothes  (~90MB, clothing semantic segmentation)
@@ -196,11 +196,12 @@ def run_tryon(
 
     generator = torch.Generator(device="cpu").manual_seed(42)
 
+    num_steps = 20  # 20 steps is a good quality/speed trade-off on CPU
     result_images = pipe(
         image=person_img,
         condition_image=garment_img,
         mask=mask,
-        num_inference_steps=30,
+        num_inference_steps=num_steps,
         guidance_scale=2.5,
         height=TRYON_HEIGHT,
         width=TRYON_WIDTH,
@@ -210,7 +211,7 @@ def run_tryon(
     result_img = result_images[0]
 
     inference_ms = int((time.monotonic() - t2) * 1000)
-    logger.info("tryon CatVTON inference: %dms (30 steps)", inference_ms)
+    logger.info("tryon CatVTON inference: %dms (%d steps)", inference_ms, num_steps)
 
     # ── 5. Postprocess ─────────────────────────────────────────────
     t3 = time.monotonic()

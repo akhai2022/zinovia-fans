@@ -557,6 +557,27 @@ async def virtual_tryon_status(
     if not job:
         raise AppError(status_code=404, detail="job_not_found")
 
+    # Detect stale jobs: if stuck in pending/processing for >20 min, mark failed
+    if job.status in ("pending", "processing"):
+        from datetime import datetime, timezone, timedelta
+
+        stale_threshold = datetime.now(timezone.utc) - timedelta(minutes=20)
+        if job.updated_at.replace(tzinfo=timezone.utc) < stale_threshold:
+            from app.modules.ai_tools.tool_models import AiToolJob
+            from sqlalchemy import update
+
+            await session.execute(
+                update(AiToolJob)
+                .where(AiToolJob.id == job.id)
+                .values(
+                    status="failed",
+                    error_message="Job timed out — the worker was interrupted. Please try again.",
+                    updated_at=datetime.now(timezone.utc),
+                )
+            )
+            await session.commit()
+            await session.refresh(job)
+
     result_url: str | None = None
     if job.status == "ready" and job.result_object_key:
         storage = get_storage_client()
@@ -568,6 +589,40 @@ async def virtual_tryon_status(
         result_url=result_url,
         error=job.error_message,
     )
+
+
+@router.post(
+    "/virtual-tryon/{job_id}/retry",
+    response_model=VirtualTryOnResponse,
+    operation_id="ai_tools_virtual_tryon_retry",
+)
+async def virtual_tryon_retry(
+    job_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(get_current_user),
+) -> VirtualTryOnResponse:
+    """Retry a failed virtual try-on job."""
+    _require_virtual_tryon()
+    job = await get_tool_job(session, job_id, user.id)
+    if not job:
+        raise AppError(status_code=404, detail="job_not_found")
+    if job.status not in ("failed",):
+        raise AppError(status_code=409, detail="job_not_retryable")
+
+    from sqlalchemy import update as sql_update
+
+    await session.execute(
+        sql_update(AiToolJob)
+        .where(AiToolJob.id == job.id)
+        .values(status="pending", error_message=None, result_object_key=None)
+    )
+    await session.commit()
+
+    from app.celery_client import enqueue_virtual_tryon
+
+    enqueue_virtual_tryon(str(job.id))
+
+    return VirtualTryOnResponse(job_id=job.id, status="processing")
 
 
 # ---------------------------------------------------------------------------
