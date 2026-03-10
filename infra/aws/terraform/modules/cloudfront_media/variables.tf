@@ -52,3 +52,9 @@ variable "web_acl_id" {
   default     = null
   description = "WAF v2 Web ACL ID (CLOUDFRONT scope). Null = no WAF."
 }
+
+variable "aws_region" {
+  type        = string
+  default     = "us-east-1"
+  description = "AWS region for Origin Shield (should match S3 bucket region)."
+}

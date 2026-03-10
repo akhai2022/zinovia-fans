@@ -458,6 +458,7 @@ module "cloudfront_media" {
   logs_bucket_domain             = aws_s3_bucket.logs.bucket_regional_domain_name
   logs_prefix                    = "cloudfront/media"
   web_acl_id                     = length(aws_wafv2_web_acl.cloudfront) > 0 ? aws_wafv2_web_acl.cloudfront[0].arn : null
+  aws_region                     = var.aws_region
 }
 
 # Store CloudFront private key in Secrets Manager for ECS task injection
@@ -612,6 +613,10 @@ resource "aws_cloudfront_distribution" "web_alb" {
       name  = "X-Origin-Verify"
       value = random_password.origin_verify[0].result
     }
+    origin_shield {
+      enabled              = true
+      origin_shield_region = var.aws_region
+    }
   }
 
   # API origin: ALB via api.zinovia.ai; AllViewerExceptHostHeader sends Host: api.zinovia.ai
@@ -627,6 +632,10 @@ resource "aws_cloudfront_distribution" "web_alb" {
     custom_header {
       name  = "X-Origin-Verify"
       value = random_password.origin_verify[0].result
+    }
+    origin_shield {
+      enabled              = true
+      origin_shield_region = var.aws_region
     }
   }
 
@@ -711,6 +720,44 @@ resource "aws_cloudfront_distribution" "web_alb" {
     cache_policy_id            = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # CachingDisabled
     origin_request_policy_id   = "216adef6-5c7f-47e4-b989-5492eafa07d3" # AllViewer
     response_headers_policy_id = aws_cloudfront_response_headers_policy.security[0].id
+  }
+
+  # Custom error responses — serve Next.js error pages with short cache
+  custom_error_response {
+    error_code            = 403
+    response_code         = 403
+    response_page_path    = "/403"
+    error_caching_min_ttl = 10
+  }
+  custom_error_response {
+    error_code            = 404
+    response_code         = 404
+    response_page_path    = "/404"
+    error_caching_min_ttl = 30
+  }
+  custom_error_response {
+    error_code            = 500
+    response_code         = 500
+    response_page_path    = "/500"
+    error_caching_min_ttl = 5
+  }
+  custom_error_response {
+    error_code            = 502
+    response_code         = 502
+    response_page_path    = "/500"
+    error_caching_min_ttl = 5
+  }
+  custom_error_response {
+    error_code            = 503
+    response_code         = 503
+    response_page_path    = "/500"
+    error_caching_min_ttl = 5
+  }
+  custom_error_response {
+    error_code            = 504
+    response_code         = 504
+    response_page_path    = "/500"
+    error_caching_min_ttl = 5
   }
 
   restrictions {
