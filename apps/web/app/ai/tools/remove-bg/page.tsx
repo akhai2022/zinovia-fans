@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Icon } from "@/components/ui/icon";
 import { useToast } from "@/components/ui/toast";
 import { apiFetch } from "@/lib/api/client";
+import { useTranslation } from "@/lib/i18n";
 import "@/lib/api";
 
 type JobStatus = {
@@ -25,6 +26,8 @@ function RemoveBgContent() {
   const { authorized } = useRequireRole(["creator", "admin", "super_admin"]);
   const searchParams = useSearchParams();
   const { addToast } = useToast();
+  const { t } = useTranslation();
+  const tt = t.removeBg;
   const refToken = searchParams.get("ref");
 
   const [mediaAssetId, setMediaAssetId] = useState<string | null>(null);
@@ -48,7 +51,7 @@ function RemoveBgContent() {
         setPreviewUrl(data.download_url);
       })
       .catch(() => {
-        setError("Image link expired or invalid. Please upload a new image.");
+        setError(tt.errorRefExpired);
       })
       .finally(() => setRefLoading(false));
   }, [refToken]);
@@ -65,14 +68,14 @@ function RemoveBgContent() {
         if (data.status === "ready" || data.status === "failed") {
           clearInterval(poll);
           if (data.status === "ready") {
-            addToast("Background removed successfully", "success");
+            addToast(tt.toastSuccess, "success");
           } else if (data.error) {
             setError(data.error);
           }
         }
       } catch {
         clearInterval(poll);
-        setError("Failed to check status");
+        setError(tt.errorStatusCheck);
       }
     }, 2000);
     pollRef.current = poll;
@@ -107,9 +110,9 @@ function RemoveBgContent() {
       setJobStatus({ job_id: data.job_id, status: "processing", result_url: null, error: null });
     } catch (err) {
       const msg =
-        err instanceof Error ? err.message : "Failed to start processing";
+        err instanceof Error ? err.message : tt.errorStart;
       if (msg.includes("rate_limit")) {
-        setError("Daily limit reached. Try again tomorrow.");
+        setError(tt.errorRateLimit);
       } else {
         setError(msg);
       }
@@ -130,23 +133,22 @@ function RemoveBgContent() {
         <Button variant="ghost" size="sm" asChild>
           <Link href="/ai/images">
             <Icon name="arrow_back" className="mr-1 icon-sm" />
-            Back to AI Studio
+            {tt.backToStudio}
           </Link>
         </Button>
       </div>
 
       <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-        Remove Background
+        {tt.title}
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Instantly remove the background from any image. Get a clean PNG with
-        transparency.
+        {tt.description}
       </p>
 
       <Card className="mt-4">
         <CardHeader>
           <CardTitle className="text-base">
-            {isReady ? "Result" : "Upload Image"}
+            {isReady ? tt.resultTitle : tt.uploadTitle}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -155,7 +157,7 @@ function RemoveBgContent() {
             <div className="space-y-2">
               <Skeleton className="h-32 w-full" />
               <p className="text-sm text-muted-foreground">
-                Loading image from upload…
+                {tt.loadingRef}
               </p>
             </div>
           )}
@@ -170,7 +172,7 @@ function RemoveBgContent() {
             <div>
               {refToken && (
                 <p className="mb-2 text-xs text-muted-foreground">
-                  Image loaded from your upload
+                  {tt.imageFromUpload}
                 </p>
               )}
               <img
@@ -186,7 +188,7 @@ function RemoveBgContent() {
             <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 px-4 py-3">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               <span className="text-sm text-muted-foreground">
-                Removing background…
+                {tt.processing}
               </span>
             </div>
           )}
@@ -210,7 +212,7 @@ function RemoveBgContent() {
                     rel="noopener noreferrer"
                   >
                     <Icon name="download" className="mr-1.5 icon-sm" />
-                    Download PNG
+                    {tt.downloadButton}
                   </a>
                 </Button>
                 <Button
@@ -223,7 +225,7 @@ function RemoveBgContent() {
                     setError(null);
                   }}
                 >
-                  Process Another
+                  {tt.processAnother}
                 </Button>
               </div>
             </div>
@@ -240,7 +242,7 @@ function RemoveBgContent() {
           {mediaAssetId && !isProcessing && !isReady && (
             <Button onClick={handleRemoveBg} disabled={submitting}>
               <Icon name="content_cut" className="mr-1.5 icon-sm" />
-              {submitting ? "Starting…" : "Remove Background"}
+              {submitting ? tt.starting : tt.removeButton}
             </Button>
           )}
         </CardContent>

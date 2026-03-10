@@ -219,7 +219,7 @@ function AutoCaptionContent() {
                         setJobStatus(null);
                       }}
                     >
-                      Replace image
+                      {t.autoCaption.replaceImage}
                     </Button>
                   )}
                 </div>

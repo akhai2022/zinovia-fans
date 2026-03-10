@@ -208,7 +208,7 @@ function AnimateImageContent() {
                     setError(null);
                   }}
                 >
-                  Replace image
+                  {t.animateImage.replaceImage}
                 </Button>
               )}
             </CardContent>
@@ -342,7 +342,7 @@ function AnimateImageContent() {
                 <div className="flex min-h-[200px] items-center justify-center rounded-lg border border-dashed border-border">
                   <div className="text-center text-muted-foreground">
                     <Icon name="animation" className="mx-auto mb-2 text-3xl" />
-                    <p className="text-sm">Upload an image to animate it.</p>
+                    <p className="text-sm">{t.animateImage.idlePlaceholder}</p>
                   </div>
                 </div>
               )}

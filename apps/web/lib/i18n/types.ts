@@ -203,6 +203,7 @@ export interface Dictionary {
     autoTranslateTitle: string;
     autoTranslateDesc: string;
     comingSoonLabel: string;
+    tryItLabel: string;
   };
   aiHowItWorks: {
     heading: string;
@@ -233,6 +234,25 @@ export interface Dictionary {
     generateNewButton: string;
     emptyMessage: string;
     viewApplyButton: string;
+  };
+  removeBg: {
+    title: string;
+    description: string;
+    backToStudio: string;
+    uploadTitle: string;
+    resultTitle: string;
+    loadingRef: string;
+    imageFromUpload: string;
+    processing: string;
+    downloadButton: string;
+    processAnother: string;
+    removeButton: string;
+    starting: string;
+    errorRefExpired: string;
+    errorStatusCheck: string;
+    errorStart: string;
+    errorRateLimit: string;
+    toastSuccess: string;
   };
   cartoonAvatar: {
     title: string;
@@ -964,6 +984,8 @@ export interface Dictionary {
     framesLabel: string;
     fpsLabel: string;
     formatLabel: string;
+    idlePlaceholder: string;
+    replaceImage: string;
     errorRefExpired: string;
     errorStatusCheck: string;
     errorStart: string;
@@ -1020,6 +1042,7 @@ export interface Dictionary {
     betterQualityHint: string;
     includeKeywords: string;
     idlePlaceholder: string;
+    replaceImage: string;
     altTextNote: string;
     copyHashtags: string;
     errorStart: string;
