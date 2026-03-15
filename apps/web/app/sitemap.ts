@@ -83,6 +83,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/ai/tools/cartoon-avatar`, lastModified: now, changeFrequency: "monthly", priority: 0.5, alternates: alternates(`${SITE_URL}/ai/tools/cartoon-avatar`) },
     { url: `${SITE_URL}/ai/tools/animate-image`, lastModified: now, changeFrequency: "monthly", priority: 0.5, alternates: alternates(`${SITE_URL}/ai/tools/animate-image`) },
     { url: `${SITE_URL}/ai/tools/auto-caption`, lastModified: now, changeFrequency: "monthly", priority: 0.5, alternates: alternates(`${SITE_URL}/ai/tools/auto-caption`) },
+    { url: `${SITE_URL}/ai/tools/virtual-tryon`, lastModified: now, changeFrequency: "monthly", priority: 0.5, alternates: alternates(`${SITE_URL}/ai/tools/virtual-tryon`) },
+    { url: `${SITE_URL}/ai/tools/motion-transfer`, lastModified: now, changeFrequency: "monthly", priority: 0.5, alternates: alternates(`${SITE_URL}/ai/tools/motion-transfer`) },
     // Auth pages (indexable)
     { url: `${SITE_URL}/signup`, lastModified: now, changeFrequency: "monthly", priority: 0.8, alternates: alternates(`${SITE_URL}/signup`) },
     // Features hub

@@ -118,15 +118,16 @@ export function ImageUploadField({
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
+    // Snapshot files before clearing input (some browsers invalidate FileList on reset)
+    const fileArray = Array.from(files);
     e.target.value = "";
 
-    if (allowMultiple && files.length > 1) {
-      // Upload all selected files sequentially
-      for (const file of Array.from(files)) {
+    if (allowMultiple && fileArray.length > 1) {
+      for (const file of fileArray) {
         await uploadSingleFile(file);
       }
     } else {
-      await uploadSingleFile(files[0]);
+      await uploadSingleFile(fileArray[0]);
     }
   };
 

@@ -22,6 +22,8 @@ from app.modules.admin.schemas import (
     AdminPostAction,
     AdminPostOut,
     AdminPostPage,
+    AdminSendNotificationRequest,
+    AdminSendNotificationResponse,
     AdminTransactionOut,
     AdminTransactionPage,
     AdminUserAction,
@@ -44,6 +46,7 @@ from app.modules.admin.service import (
     list_user_posts_admin,
     list_user_subscribers_admin,
     list_users_admin,
+    send_broadcast_notification,
 )
 
 router = APIRouter()
@@ -237,6 +240,38 @@ async def list_user_subscribers(
         page=page,
         page_size=page_size,
     )
+
+
+# ---------------------------------------------------------------------------
+# Broadcast notifications
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/notifications/send",
+    response_model=AdminSendNotificationResponse,
+    operation_id="admin_send_notification",
+    summary="Send broadcast notification (+ optional email) to users",
+    description=(
+        "Create in-app notifications for targeted users and optionally send "
+        "personalised emails. Use {display_name} in the title or message to "
+        "insert each creator's display name."
+    ),
+)
+async def send_notification(
+    payload: AdminSendNotificationRequest,
+    session: AsyncSession = Depends(get_async_session),
+    _admin: User = Depends(require_admin_writer),
+) -> AdminSendNotificationResponse:
+    result = await send_broadcast_notification(
+        session,
+        title=payload.title,
+        message=payload.message,
+        send_email=payload.send_email,
+        target_role=payload.target_role,
+        target_user_id=payload.target_user_id,
+    )
+    return AdminSendNotificationResponse(**result)
 
 
 # ---------------------------------------------------------------------------

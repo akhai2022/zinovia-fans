@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from uuid import UUID
 
@@ -7,11 +8,12 @@ from sqlalchemy import delete, or_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
-from app.modules.auth.constants import ADMIN_ROLE
+from app.modules.auth.constants import ADMIN_ROLE, CREATOR_ROLE, FAN_ROLE
 from app.modules.auth.models import Profile, User
 from app.modules.billing.models import Subscription
 from app.modules.ledger.models import LedgerEvent
 from app.modules.media.models import MediaObject
+from app.modules.notifications.models import Notification
 from app.modules.posts.models import Post, PostMedia
 from app.shared.pagination import normalize_pagination
 
@@ -736,3 +738,101 @@ async def admin_action_user(
 
     await session.commit()
     return {"status": "ok", "action": action, "user_id": str(target_user_id)}
+
+
+# ---------------------------------------------------------------------------
+# Broadcast notifications
+# ---------------------------------------------------------------------------
+
+BROADCAST_EMAIL_DELAY = 1  # seconds between emails (rate limiting)
+
+
+async def send_broadcast_notification(
+    session: AsyncSession,
+    *,
+    title: str,
+    message: str,
+    send_email: bool,
+    target_role: str | None = None,
+    target_user_id: UUID | None = None,
+) -> dict[str, int]:
+    """Send in-app notification (+ optional email) to targeted users.
+
+    The message body supports ``{display_name}`` placeholder for personalisation.
+    """
+    from app.modules.onboarding.mail import send_admin_notification_email
+
+    # Build user query
+    q = (
+        select(User, Profile)
+        .outerjoin(Profile, Profile.user_id == User.id)
+        .where(User.is_active.is_(True))
+    )
+
+    if target_user_id:
+        q = q.where(User.id == target_user_id)
+    elif target_role == "creator":
+        q = q.where(User.role == CREATOR_ROLE)
+    elif target_role == "fan":
+        q = q.where(User.role == FAN_ROLE)
+    elif target_role == "all":
+        pass  # no role filter — all active users
+    else:
+        raise AppError(status_code=400, detail="target_role or target_user_id required")
+
+    rows = (await session.execute(q)).all()
+
+    if not rows:
+        return {"sent_count": 0, "email_count": 0}
+
+    # Create in-app notifications
+    notifications = []
+    for user, _profile in rows:
+        notifications.append(
+            Notification(
+                user_id=user.id,
+                type="admin_broadcast",
+                payload_json={"title": title, "message": message},
+            )
+        )
+    session.add_all(notifications)
+    await session.commit()
+
+    sent_count = len(notifications)
+    email_count = 0
+
+    # Send emails (personalised with {display_name})
+    if send_email:
+        for user, profile in rows:
+            display_name = (
+                (profile.display_name if profile else None)
+                or user.email.split("@")[0]
+            )
+            personalised_title = title.replace("{display_name}", display_name)
+            personalised_message = message.replace("{display_name}", display_name)
+
+            try:
+                await send_admin_notification_email(
+                    recipient=user.email,
+                    title=personalised_title,
+                    message=personalised_message,
+                )
+                email_count += 1
+            except Exception:
+                logger.exception(
+                    "broadcast email failed for user_id=%s email=%s",
+                    user.id,
+                    user.email,
+                )
+
+            # Rate limit
+            await asyncio.sleep(BROADCAST_EMAIL_DELAY)
+
+    logger.info(
+        "broadcast_notification sent=%d emailed=%d target_role=%s target_user_id=%s",
+        sent_count,
+        email_count,
+        target_role,
+        target_user_id,
+    )
+    return {"sent_count": sent_count, "email_count": email_count}

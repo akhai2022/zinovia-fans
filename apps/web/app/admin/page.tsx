@@ -1298,10 +1298,29 @@ export default function AdminPage() {
             {/* Broadcast Notification form */}
             {showNotifyForm === "broadcast" && (
               <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">Broadcast Notification</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-foreground">Broadcast Notification</h3>
+                  <span
+                    className="relative cursor-help text-muted-foreground hover:text-foreground transition-colors group"
+                    tabIndex={0}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                    <div className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 w-80 -translate-x-1/2 rounded-lg border border-border bg-popover p-3 text-xs text-popover-foreground shadow-lg opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity">
+                      <p className="font-semibold mb-1">How it works</p>
+                      <ul className="list-disc pl-3.5 space-y-1 text-muted-foreground">
+                        <li>Creates an <strong className="text-foreground">in-app notification</strong> for every targeted user.</li>
+                        <li>If <strong className="text-foreground">&quot;Also send email&quot;</strong> is checked, each user also receives a personalised email.</li>
+                        <li>Use <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">{"{display_name}"}</code> in the title or message to insert each user&apos;s name.</li>
+                      </ul>
+                      <p className="font-semibold mt-2 mb-1">Example</p>
+                      <p className="text-muted-foreground">Title: <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">Hi {"{display_name}"}, complete your profile</code></p>
+                      <p className="text-muted-foreground mt-1">Message: <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">Please add your avatar, bio, and username or your account may be removed.</code></p>
+                    </div>
+                  </span>
+                </div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Input
-                    placeholder="Title"
+                    placeholder="Title — use {display_name} to personalise"
                     value={notifyTitle}
                     onChange={(e) => setNotifyTitle(e.target.value)}
                   />
@@ -1316,7 +1335,7 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <textarea
-                  placeholder="Message body..."
+                  placeholder={"Message body — use {display_name} to personalise..."}
                   value={notifyMessage}
                   onChange={(e) => setNotifyMessage(e.target.value)}
                   rows={3}

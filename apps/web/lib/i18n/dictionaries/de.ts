@@ -37,6 +37,7 @@ export const de: Dictionary = {
     aiAnimateImage: "Bild animieren",
     aiAutoCaption: "Auto-Beschriftung",
     aiVirtualTryOn: "Virtuelle Anprobe",
+    aiMotionTransfer: "Motion Transfer",
     comingSoon: "Demn\u00e4chst verf\u00fcgbar",
     demo: "Demo",
     forCreators: "Für Creator",
@@ -374,6 +375,7 @@ export const de: Dictionary = {
     noAccountPrompt: "Kein Konto?",
     signUpLink: "Registrieren",
     forgotPasswordLink: "Passwort vergessen?",
+    errorFieldsRequired: "Bitte geben Sie Ihre E-Mail-Adresse und Ihr Passwort ein.",
   },
   signup: {
     title: "Konto erstellen",
@@ -1083,6 +1085,8 @@ export const de: Dictionary = {
     autoCaptionDesc: "KI-generierte Bildunterschriften, Alt-Texte und Schlüsselwörter aus Ihren Bildern.",
     virtualTryOnTitle: "Virtuelle Anprobe",
     virtualTryOnDesc: "Laden Sie ein Personenfoto und ein Kleidungsbild hoch, um eine realistische Anprobe-Vorschau zu sehen — KI-gestützt.",
+    motionTransferTitle: "Motion Transfer",
+    motionTransferDesc: "Übertragen Sie Bewegungen aus einem Quellvideo auf eine Zielfigur — Ganzkörper-Ersetzung mit Gesichtserkennung.",
   },
   animateImage: {
     title: "Bild animieren",
@@ -1132,6 +1136,8 @@ export const de: Dictionary = {
     autoCaptionDesc: "KI-generierte Beschriftungen, Alt-Text und Schlüsselwörter aus Ihren Bildern.",
     virtualTryOnTitle: "Virtuelle Anprobe",
     virtualTryOnDesc: "Sehen Sie, wie Kleidung an Ihnen oder Ihren Models aussieht — mit KI-Anprobe.",
+    motionTransferTitle: "Motion Transfer",
+    motionTransferDesc: "Übertragen Sie Bewegungen aus einem Quellvideo auf eine Zielfigur mit KI.",
     ctaStart: "Jetzt loslegen",
     ctaExplore: "KI-Studio entdecken",
   },

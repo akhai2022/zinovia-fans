@@ -37,6 +37,10 @@ export function LoginForm({ next, sessionUnavailable }: LoginFormProps) {
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
+    if (!email.trim() || !password) {
+      setError(t.login.errorFieldsRequired);
+      return;
+    }
     setLoading(true);
     try {
       await apiFetch("/auth/login", {

@@ -3,12 +3,13 @@ import { Button } from "@/components/ui/button";
 import type { Dictionary } from "@/lib/i18n/types";
 
 const CARDS = [
-  { key: "removeBg", icon: "content_cut", href: "/ai/tools/remove-bg" },
-  { key: "cartoon", icon: "brush", href: "/ai/tools/cartoon-avatar" },
-  { key: "animate", icon: "animation", href: "/ai/tools/animate-image" },
-  { key: "autoCaption", icon: "subtitles", href: "/ai/tools/auto-caption" },
-  { key: "safety", icon: "shield", href: "/ai" },
-  { key: "virtualTryOn", icon: "checkroom", href: "/ai/tools/virtual-tryon" },
+  { key: "removeBg", icon: "content_cut", href: "/ai/tools/remove-bg", isNew: false },
+  { key: "cartoon", icon: "brush", href: "/ai/tools/cartoon-avatar", isNew: false },
+  { key: "animate", icon: "animation", href: "/ai/tools/animate-image", isNew: false },
+  { key: "autoCaption", icon: "subtitles", href: "/ai/tools/auto-caption", isNew: false },
+  { key: "safety", icon: "shield", href: "/ai", isNew: false },
+  { key: "virtualTryOn", icon: "checkroom", href: "/ai/tools/virtual-tryon", isNew: false },
+  { key: "motionTransfer", icon: "movie_creation", href: "/ai/tools/motion-transfer", isNew: true },
 ] as const;
 
 type CardKey = (typeof CARDS)[number]["key"];
@@ -21,6 +22,7 @@ function getCardTitle(key: CardKey, t: Dictionary["aiStudioStrip"]): string {
     case "autoCaption": return t.autoCaptionTitle;
     case "safety": return t.safetyTitle;
     case "virtualTryOn": return t.virtualTryOnTitle;
+    case "motionTransfer": return t.motionTransferTitle;
   }
 }
 
@@ -32,6 +34,7 @@ function getCardDesc(key: CardKey, t: Dictionary["aiStudioStrip"]): string {
     case "autoCaption": return t.autoCaptionDesc;
     case "safety": return t.safetyDesc;
     case "virtualTryOn": return t.virtualTryOnDesc;
+    case "motionTransfer": return t.motionTransferDesc;
   }
 }
 
@@ -70,12 +73,22 @@ export function AIStudioStrip({ t }: { t: Dictionary["aiStudioStrip"] }) {
       </div>
 
       <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {CARDS.map(({ key, icon, href }) => (
+        {CARDS.map(({ key, icon, href, isNew }) => (
           <Link
             key={key}
             href={href}
-            className="sr-child card-hover-lift group flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-card p-6 transition-colors hover:border-primary/20"
+            className={`sr-child card-hover-lift group relative flex flex-col gap-3 rounded-2xl border p-6 transition-colors hover:border-primary/20 ${
+              isNew
+                ? "border-primary/40 bg-gradient-to-br from-primary/[0.08] via-card to-card ring-1 ring-primary/20"
+                : "border-white/[0.06] bg-card"
+            }`}
           >
+            {isNew && (
+              <span className="absolute right-4 top-4 inline-flex animate-pulse items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg shadow-primary/30">
+                <span className="material-symbols-outlined text-sm">bolt</span>
+                New
+              </span>
+            )}
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform group-hover:scale-110">
               <span className="material-symbols-outlined text-xl">{icon}</span>
             </div>

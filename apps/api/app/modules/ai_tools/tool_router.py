@@ -33,6 +33,10 @@ from app.modules.ai_tools.tool_schemas import (
     ImageRefCreateRequest,
     ImageRefCreateResponse,
     ImageRefResolveResponse,
+    MotionTransferRequest,
+    MotionTransferResponse,
+    MotionTransferStatusOut,
+    MotionTransferUsageOut,
     RemoveBgRequest,
     RemoveBgResponse,
     RemoveBgStatusOut,
@@ -51,6 +55,7 @@ from app.modules.audit.service import (
     ACTION_AI_TOOL_ANIMATE_IMAGE,
     ACTION_AI_TOOL_AUTO_CAPTION,
     ACTION_AI_TOOL_CARTOONIZE,
+    ACTION_AI_TOOL_MOTION_TRANSFER,
     ACTION_AI_TOOL_REMOVE_BG,
     ACTION_AI_TOOL_VIRTUAL_TRYON,
     log_audit_event,
@@ -623,6 +628,355 @@ async def virtual_tryon_retry(
     enqueue_virtual_tryon(str(job.id))
 
     return VirtualTryOnResponse(job_id=job.id, status="processing")
+
+
+# ---------------------------------------------------------------------------
+# Motion Transfer / Character Replace
+# ---------------------------------------------------------------------------
+
+
+def _require_motion_transfer() -> None:
+    settings = get_settings()
+    if not settings.enable_ai_tools or not settings.enable_motion_transfer:
+        raise AppError(status_code=404, detail="feature_disabled")
+
+
+VALID_MT_RESOLUTIONS = {"512", "720", "1024"}
+VALID_MT_FPS = {12, 24, 30}
+VALID_MT_MODES = {"animate", "replace"}
+VALID_VIDEO_CONTENT_TYPES = {"video/mp4", "video/quicktime", "video/webm"}
+VALID_IMAGE_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
+MAX_SOURCE_VIDEO_DURATION_SEC = 30
+MAX_SOURCE_VIDEO_BYTES = 200_000_000  # 200 MB
+
+
+async def _check_motion_transfer_quota(
+    session: AsyncSession, user: User
+) -> tuple[int, int, bool]:
+    """Check monthly usage quota for motion transfer. Returns (used, limit, unlimited)."""
+    settings = get_settings()
+
+    if user.role in ("super_admin", "admin"):
+        return 0, 0, True
+
+    limit = settings.ai_tool_motion_transfer_monthly_limit
+
+    # Count jobs created in the current calendar month (UTC)
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    from sqlalchemy import func as sql_func
+
+    r = await session.execute(
+        select(sql_func.count(AiToolJob.id)).where(
+            AiToolJob.user_id == user.id,
+            AiToolJob.tool == "motion_transfer",
+            AiToolJob.created_at >= month_start,
+        )
+    )
+    used = r.scalar() or 0
+    return used, limit, False
+
+
+@router.get(
+    "/motion-transfer/usage",
+    response_model=MotionTransferUsageOut,
+    operation_id="ai_tools_motion_transfer_usage",
+)
+async def motion_transfer_usage(
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(get_current_user),
+) -> MotionTransferUsageOut:
+    """Get current month's usage info for motion transfer."""
+    _require_motion_transfer()
+    used, limit, unlimited = await _check_motion_transfer_quota(session, user)
+    if unlimited:
+        return MotionTransferUsageOut(limit=0, used=0, remaining=0, unlimited=True)
+    return MotionTransferUsageOut(
+        limit=limit, used=used, remaining=max(0, limit - used), unlimited=False
+    )
+
+
+@router.post(
+    "/motion-transfer",
+    response_model=MotionTransferResponse,
+    operation_id="ai_tools_motion_transfer",
+)
+async def motion_transfer(
+    body: MotionTransferRequest,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(get_current_user),
+) -> MotionTransferResponse:
+    """Submit a motion transfer / character replace job. Monthly quota enforced."""
+    _require_motion_transfer()
+
+    # Consent check
+    if not body.consent_acknowledged:
+        raise AppError(
+            status_code=422,
+            detail="consent_required",
+        )
+
+    # Validate params
+    if body.mode not in VALID_MT_MODES:
+        raise AppError(status_code=422, detail="invalid_mode")
+    if body.output_resolution not in VALID_MT_RESOLUTIONS:
+        raise AppError(status_code=422, detail="invalid_output_resolution")
+    if body.output_fps not in VALID_MT_FPS:
+        raise AppError(status_code=422, detail="invalid_output_fps")
+    if body.seed is not None and (body.seed < 0 or body.seed > 2**32):
+        raise AppError(status_code=422, detail="invalid_seed")
+
+    # Monthly quota check (atomic: SELECT FOR UPDATE style via re-check after insert)
+    used, limit, unlimited = await _check_motion_transfer_quota(session, user)
+    if not unlimited and used >= limit:
+        raise AppError(
+            status_code=403,
+            detail="monthly_quota_exceeded",
+        )
+
+    # Verify asset ownership — source video
+    source_media = await _verify_media_ownership(session, body.source_video_asset_id, user)
+    if not source_media.content_type or source_media.content_type not in (
+        VALID_VIDEO_CONTENT_TYPES | VALID_IMAGE_CONTENT_TYPES
+    ):
+        raise AppError(status_code=422, detail="invalid_source_video_type")
+
+    # Verify target asset (image or video)
+    target_media = await _verify_media_ownership(session, body.target_asset_id, user)
+    if not target_media.content_type or target_media.content_type not in (
+        VALID_VIDEO_CONTENT_TYPES | VALID_IMAGE_CONTENT_TYPES
+    ):
+        raise AppError(status_code=422, detail="invalid_target_asset_type")
+
+    # Optional garment asset
+    garment_object_key = None
+    garment_media_id = None
+    if body.garment_asset_id:
+        garment_media = await _verify_media_ownership(session, body.garment_asset_id, user)
+        if not garment_media.content_type or garment_media.content_type not in VALID_IMAGE_CONTENT_TYPES:
+            raise AppError(status_code=422, detail="invalid_garment_type")
+        garment_object_key = garment_media.object_key
+        garment_media_id = str(garment_media.id)
+
+    # Verify source video is not the same as target
+    if body.source_video_asset_id == body.target_asset_id:
+        raise AppError(status_code=422, detail="source_and_target_must_differ")
+
+    params = {
+        "target_object_key": target_media.object_key,
+        "target_media_asset_id": str(target_media.id),
+        "target_content_type": target_media.content_type,
+        "garment_object_key": garment_object_key,
+        "garment_media_asset_id": garment_media_id,
+        "source_content_type": source_media.content_type,
+        "mode": body.mode,
+        "preserve_background": body.preserve_background,
+        "preserve_audio": body.preserve_audio,
+        "retarget_pose": body.retarget_pose,
+        "use_relighting_lora": body.use_relighting_lora,
+        "output_resolution": body.output_resolution,
+        "output_fps": body.output_fps,
+        "seed": body.seed,
+        "stage": "queued",
+        "progress": 0.0,
+    }
+
+    job = await create_tool_job(
+        session,
+        user_id=user.id,
+        tool="motion_transfer",
+        input_object_key=source_media.object_key,
+        input_media_asset_id=source_media.id,
+        params=params,
+    )
+    await session.commit()
+
+    from app.celery_client import enqueue_motion_transfer
+
+    enqueue_motion_transfer(str(job.id))
+
+    await log_audit_event(
+        session,
+        action=ACTION_AI_TOOL_MOTION_TRANSFER,
+        actor_id=user.id,
+        resource_type="ai_tool_job",
+        resource_id=str(job.id),
+        metadata={
+            "tool": "motion_transfer",
+            "source_media_asset_id": str(source_media.id),
+            "target_media_asset_id": str(target_media.id),
+            "garment_media_asset_id": garment_media_id,
+            "output_resolution": body.output_resolution,
+        },
+    )
+
+    return MotionTransferResponse(job_id=job.id, status="pending")
+
+
+@router.get(
+    "/motion-transfer/{job_id}",
+    response_model=MotionTransferStatusOut,
+    operation_id="ai_tools_motion_transfer_status",
+)
+async def motion_transfer_status(
+    job_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(get_current_user),
+) -> MotionTransferStatusOut:
+    """Poll motion transfer job status."""
+    _require_motion_transfer()
+    job = await get_tool_job(session, job_id, user.id)
+    if not job:
+        raise AppError(status_code=404, detail="job_not_found")
+
+    # Detect stale jobs (30 min timeout for GPU workloads)
+    if job.status in ("pending", "processing"):
+        from datetime import timedelta
+
+        stale_threshold = datetime.now(timezone.utc) - timedelta(minutes=30)
+        if job.updated_at.replace(tzinfo=timezone.utc) < stale_threshold:
+            from sqlalchemy import update as sql_update
+
+            await session.execute(
+                sql_update(AiToolJob)
+                .where(AiToolJob.id == job.id)
+                .values(
+                    status="failed",
+                    error_message="Job timed out — the worker was interrupted. Please try again.",
+                    updated_at=datetime.now(timezone.utc),
+                )
+            )
+            await session.commit()
+            await session.refresh(job)
+
+    result_url: str | None = None
+    preview_url: str | None = None
+    if job.status == "ready" and job.result_object_key:
+        storage = get_storage_client()
+        result_url = generate_signed_download(storage, job.result_object_key)
+        # Check for preview/thumbnail
+        preview_key = job.params.get("preview_object_key") if job.params else None
+        if preview_key:
+            preview_url = generate_signed_download(storage, preview_key)
+
+    params = job.params or {}
+    stage = params.get("stage")
+    progress = params.get("progress")
+    settings_out = {
+        k: params.get(k)
+        for k in (
+            "mode",
+            "preserve_background",
+            "preserve_audio",
+            "realism",
+            "identity_strength",
+            "motion_fidelity",
+            "garment_fidelity",
+            "output_resolution",
+            "output_fps",
+            "seed",
+        )
+        if params.get(k) is not None
+    }
+
+    return MotionTransferStatusOut(
+        job_id=job.id,
+        status=job.status,
+        stage=stage,
+        progress=progress,
+        result_url=result_url,
+        preview_url=preview_url,
+        error=job.error_message,
+        settings=settings_out if settings_out else None,
+    )
+
+
+@router.post(
+    "/motion-transfer/{job_id}/retry",
+    response_model=MotionTransferResponse,
+    operation_id="ai_tools_motion_transfer_retry",
+)
+async def motion_transfer_retry(
+    job_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(get_current_user),
+) -> MotionTransferResponse:
+    """Retry a failed motion transfer job. Does not consume additional quota."""
+    _require_motion_transfer()
+    job = await get_tool_job(session, job_id, user.id)
+    if not job:
+        raise AppError(status_code=404, detail="job_not_found")
+    if job.status != "failed":
+        raise AppError(status_code=409, detail="job_not_retryable")
+
+    from sqlalchemy import update as sql_update
+
+    await session.execute(
+        sql_update(AiToolJob)
+        .where(AiToolJob.id == job.id)
+        .values(
+            status="pending",
+            error_message=None,
+            result_object_key=None,
+            updated_at=datetime.now(timezone.utc),
+        )
+    )
+    # Reset stage in params
+    if job.params:
+        updated_params = {**job.params, "stage": "queued", "progress": 0.0}
+        await session.execute(
+            sql_update(AiToolJob)
+            .where(AiToolJob.id == job.id)
+            .values(params=updated_params)
+        )
+    await session.commit()
+
+    from app.celery_client import enqueue_motion_transfer
+
+    enqueue_motion_transfer(str(job.id))
+
+    return MotionTransferResponse(job_id=job.id, status="pending")
+
+
+@router.post(
+    "/motion-transfer/{job_id}/cancel",
+    response_model=MotionTransferResponse,
+    operation_id="ai_tools_motion_transfer_cancel",
+)
+async def motion_transfer_cancel(
+    job_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(get_current_user),
+) -> MotionTransferResponse:
+    """Cancel a pending/processing motion transfer job."""
+    _require_motion_transfer()
+    job = await get_tool_job(session, job_id, user.id)
+    if not job:
+        raise AppError(status_code=404, detail="job_not_found")
+    if job.status not in ("pending", "processing"):
+        raise AppError(status_code=409, detail="job_not_cancelable")
+
+    from sqlalchemy import update as sql_update
+
+    await session.execute(
+        sql_update(AiToolJob)
+        .where(AiToolJob.id == job.id)
+        .values(
+            status="failed",
+            error_message="Canceled by user.",
+            updated_at=datetime.now(timezone.utc),
+        )
+    )
+    if job.params:
+        await session.execute(
+            sql_update(AiToolJob)
+            .where(AiToolJob.id == job.id)
+            .values(params={**job.params, "stage": "canceled"})
+        )
+    await session.commit()
+
+    return MotionTransferResponse(job_id=job.id, status="failed")
 
 
 # ---------------------------------------------------------------------------

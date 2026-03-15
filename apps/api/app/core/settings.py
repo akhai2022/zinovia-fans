@@ -256,11 +256,19 @@ class Settings(BaseSettings):
     enable_animate_image: bool = Field(default=False, alias="ENABLE_ANIMATE_IMAGE")
     enable_auto_caption: bool = Field(default=False, alias="ENABLE_AUTO_CAPTION")
     enable_virtual_tryon: bool = Field(default=True, alias="ENABLE_VIRTUAL_TRYON")
+    enable_motion_transfer: bool = Field(default=True, alias="ENABLE_MOTION_TRANSFER")
     ai_tool_rmbg_daily_limit: int = Field(default=30, alias="AI_TOOL_RMBG_DAILY_LIMIT", ge=1)
     ai_tool_cartoon_daily_limit: int = Field(default=5, alias="AI_TOOL_CARTOON_DAILY_LIMIT", ge=1)
     ai_tool_animate_daily_limit: int = Field(default=3, alias="AI_TOOL_ANIMATE_DAILY_LIMIT", ge=1)
     ai_tool_caption_daily_limit: int = Field(default=10, alias="AI_TOOL_CAPTION_DAILY_LIMIT", ge=1)
     ai_tool_tryon_daily_limit: int = Field(default=3, alias="AI_TOOL_TRYON_DAILY_LIMIT", ge=1)
+    ai_tool_motion_transfer_monthly_limit: int = Field(
+        default=2, alias="AI_TOOL_MOTION_TRANSFER_MONTHLY_LIMIT", ge=1
+    )
+    # Wan2.2-Animate backend config (set on GPU workers only)
+    motion_transfer_backend: str = Field(
+        default="wan_animate_14b", alias="MOTION_TRANSFER_BACKEND"
+    )
     enable_smart_previews: bool = Field(default=True, alias="ENABLE_SMART_PREVIEWS")
     enable_promo_generator: bool = Field(default=True, alias="ENABLE_PROMO_GENERATOR")
     enable_translations: bool = Field(default=True, alias="ENABLE_TRANSLATIONS")

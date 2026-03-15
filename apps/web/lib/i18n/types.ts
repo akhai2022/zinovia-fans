@@ -35,6 +35,7 @@ export interface Dictionary {
     aiAnimateImage: string;
     aiAutoCaption: string;
     aiVirtualTryOn: string;
+    aiMotionTransfer: string;
     comingSoon: string;
     demo: string;
     forCreators: string;
@@ -321,6 +322,7 @@ export interface Dictionary {
     noAccountPrompt: string;
     signUpLink: string;
     forgotPasswordLink: string;
+    errorFieldsRequired: string;
   };
   signup: {
     title: string;
@@ -960,6 +962,8 @@ export interface Dictionary {
     autoCaptionDesc: string;
     virtualTryOnTitle: string;
     virtualTryOnDesc: string;
+    motionTransferTitle: string;
+    motionTransferDesc: string;
   };
   animateImage: {
     title: string;
@@ -1008,6 +1012,8 @@ export interface Dictionary {
     autoCaptionDesc: string;
     virtualTryOnTitle: string;
     virtualTryOnDesc: string;
+    motionTransferTitle: string;
+    motionTransferDesc: string;
     ctaStart: string;
     ctaExplore: string;
   };

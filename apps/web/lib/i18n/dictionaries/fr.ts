@@ -37,6 +37,7 @@ export const fr: Dictionary = {
     aiAnimateImage: "Animer une image",
     aiAutoCaption: "Sous-titrage auto",
     aiVirtualTryOn: "Essayage Virtuel",
+    aiMotionTransfer: "Motion Transfer",
     comingSoon: "Bient\u00f4t disponible",
     demo: "D\u00e9mo",
     forCreators: "Pour les Cr\u00e9ateurs",
@@ -374,6 +375,7 @@ export const fr: Dictionary = {
     noAccountPrompt: "Pas de compte\u00a0?",
     signUpLink: "S\u2019inscrire",
     forgotPasswordLink: "Mot de passe oubli\u00e9\u00a0?",
+    errorFieldsRequired: "Veuillez saisir votre e-mail et votre mot de passe.",
   },
   signup: {
     title: "Cr\u00e9ez votre compte",
@@ -1083,6 +1085,8 @@ export const fr: Dictionary = {
     autoCaptionDesc: "Générez des légendes, textes alternatifs et mots-clés à partir de vos images grâce à l'IA.",
     virtualTryOnTitle: "Essayage Virtuel",
     virtualTryOnDesc: "Téléchargez une photo de personne et un vêtement pour voir un aperçu d'essayage réaliste — propulsé par l'IA.",
+    motionTransferTitle: "Motion Transfer",
+    motionTransferDesc: "Transférez le mouvement d'une vidéo source vers un personnage cible — remplacement du corps entier avec reconnaissance des expressions.",
   },
   animateImage: {
     title: "Animer une image",
@@ -1132,6 +1136,8 @@ export const fr: Dictionary = {
     autoCaptionDesc: "Légendes, texte alternatif et mots-clés générés par l'IA à partir de vos images.",
     virtualTryOnTitle: "Essayage Virtuel",
     virtualTryOnDesc: "Découvrez comment les vêtements vous vont grâce à l'essayage virtuel par IA.",
+    motionTransferTitle: "Motion Transfer",
+    motionTransferDesc: "Transférez le mouvement d'une vidéo source vers un personnage cible avec l'IA.",
     ctaStart: "Commencer à créer",
     ctaExplore: "Explorer le Studio IA",
   },

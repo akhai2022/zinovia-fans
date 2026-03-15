@@ -37,6 +37,7 @@ ACTION_AI_TOOL_CARTOONIZE = "ai_tool_cartoonize"
 ACTION_AI_TOOL_ANIMATE_IMAGE = "ai_tool_animate_image"
 ACTION_AI_TOOL_AUTO_CAPTION = "ai_tool_auto_caption"
 ACTION_AI_TOOL_VIRTUAL_TRYON = "ai_tool_virtual_tryon"
+ACTION_AI_TOOL_MOTION_TRANSFER = "ai_tool_motion_transfer"
 ACTION_AI_IMAGE_REF_CREATE = "ai_image_ref_create"
 
 

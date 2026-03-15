@@ -37,6 +37,7 @@ export const ar: Dictionary = {
     aiAnimateImage: "تحريك صورة",
     aiAutoCaption: "تعليق تلقائي",
     aiVirtualTryOn: "تجربة افتراضية",
+    aiMotionTransfer: "Motion Transfer",
     comingSoon: "قريبًا",
     demo: "عرض تجريبي",
     forCreators: "للمبدعين",
@@ -372,6 +373,7 @@ export const ar: Dictionary = {
     noAccountPrompt: "ليس لديك حساب؟",
     signUpLink: "إنشاء حساب",
     forgotPasswordLink: "نسيت كلمة المرور؟",
+    errorFieldsRequired: "يرجى إدخال البريد الإلكتروني وكلمة المرور.",
   },
   signup: {
     title: "إنشاء حساب",
@@ -1071,6 +1073,8 @@ export const ar: Dictionary = {
     autoCaptionDesc: "توليد تعليقات ونصوص بديلة وكلمات مفتاحية من صورك باستخدام الذكاء الاصطناعي.",
     virtualTryOnTitle: "تجربة افتراضية",
     virtualTryOnDesc: "ارفع صورة شخص وصورة ملابس لمشاهدة معاينة تجربة واقعية — بتقنية الذكاء الاصطناعي.",
+    motionTransferTitle: "Motion Transfer",
+    motionTransferDesc: "انقل الحركة من فيديو مصدر إلى شخصية مستهدفة — استبدال كامل للجسم مع مراعاة تعبيرات الوجه.",
   },
   animateImage: {
     title: "تحريك صورة",
@@ -1120,6 +1124,8 @@ export const ar: Dictionary = {
     autoCaptionDesc: "تعليقات ونص بديل وكلمات مفتاحية مُنشأة بالذكاء الاصطناعي من صورك.",
     virtualTryOnTitle: "تجربة افتراضية",
     virtualTryOnDesc: "شاهد كيف تبدو الملابس عليك أو على عارضيك بتقنية التجربة الافتراضية.",
+    motionTransferTitle: "Motion Transfer",
+    motionTransferDesc: "انقل الحركة من فيديو مصدر إلى شخصية مستهدفة باستخدام الذكاء الاصطناعي.",
     ctaStart: "ابدأ الإنشاء",
     ctaExplore: "استكشف الاستوديو",
   },

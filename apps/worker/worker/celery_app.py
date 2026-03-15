@@ -23,6 +23,7 @@ celery_app = Celery(
         "worker.tasks.ai_tools",
         "worker.tasks.billing",
         "worker.tasks.media",
+        "worker.tasks.motion_transfer",
         "worker.tasks.notifications",
         "worker.tasks.posts",
         "worker.tasks.translation",
@@ -60,7 +61,7 @@ def _fail_stuck_jobs(sig, how, exitcode, **kwargs):  # noqa: ARG001
                 result = await session.execute(
                     update(AiToolJob)
                     .where(AiToolJob.status == "processing")
-                    .where(AiToolJob.tool == "virtual_tryon")
+                    .where(AiToolJob.tool.in_(["virtual_tryon", "motion_transfer"]))
                     .values(
                         status="failed",
                         error_message="Worker was restarted during processing. Please try again.",
@@ -69,7 +70,7 @@ def _fail_stuck_jobs(sig, how, exitcode, **kwargs):  # noqa: ARG001
                 )
                 await session.commit()
                 if result.rowcount:  # type: ignore[union-attr]
-                    logger.warning("Marked %d stuck virtual_tryon jobs as failed", result.rowcount)
+                    logger.warning("Marked %d stuck long-running jobs as failed", result.rowcount)
             await engine.dispose()
         except Exception:
             logger.exception("Failed to clean up stuck jobs on shutdown")

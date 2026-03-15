@@ -37,6 +37,7 @@ export const ro: Dictionary = {
     aiAnimateImage: "Animare imagine",
     aiAutoCaption: "Subtitrare automată",
     aiVirtualTryOn: "Probă Virtuală",
+    aiMotionTransfer: "Motion Transfer",
     comingSoon: "În curând",
     demo: "Demo",
     forCreators: "Pentru Creatori",
@@ -374,6 +375,7 @@ export const ro: Dictionary = {
     noAccountPrompt: "Nu aveți cont?",
     signUpLink: "Înregistrare",
     forgotPasswordLink: "Ați uitat parola?",
+    errorFieldsRequired: "Vă rugăm să introduceți emailul și parola.",
   },
   signup: {
     title: "Creați-vă contul",
@@ -1104,6 +1106,8 @@ export const ro: Dictionary = {
     autoCaptionDesc: "Subtitrări, texte alternative și cuvinte cheie generate de AI din imaginile tale.",
     virtualTryOnTitle: "Probă Virtuală",
     virtualTryOnDesc: "Încărcați o fotografie cu o persoană și o imagine de îmbrăcăminte pentru a vedea o previzualizare realistă — cu IA.",
+    motionTransferTitle: "Motion Transfer",
+    motionTransferDesc: "Transferați mișcarea dintr-un videoclip sursă către un personaj țintă — înlocuire completă a corpului cu recunoașterea expresiilor.",
   },
   animateImage: {
     title: "Animare imagine",
@@ -1153,6 +1157,8 @@ export const ro: Dictionary = {
     autoCaptionDesc: "Subtitrări, alt-text și cuvinte cheie generate de IA din imaginile tale.",
     virtualTryOnTitle: "Probă Virtuală",
     virtualTryOnDesc: "Vedeți cum vă stau hainele cu proba virtuală bazată pe IA.",
+    motionTransferTitle: "Motion Transfer",
+    motionTransferDesc: "Transferați mișcarea dintr-un videoclip sursă către un personaj țintă cu IA.",
     ctaStart: "Începeți să creați",
     ctaExplore: "Explorați Studioul IA",
   },

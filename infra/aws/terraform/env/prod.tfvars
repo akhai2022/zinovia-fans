@@ -78,3 +78,12 @@ default_currency = "eur"
 
 # AI
 ai_provider = "replicate"
+
+# GPU Worker (Wan2.2-Animate) — enable when ready to provision GPU instances
+# Set to true, then: terraform apply -var-file=env/prod.tfvars
+enable_gpu_worker      = true
+gpu_instance_type      = "g4dn.xlarge"  # 1x T4 16GB, 4 vCPU, 16GB RAM — ~$0.16/hr Spot
+gpu_worker_scaling_min = 0  # Scale to zero when idle (cost optimization)
+gpu_worker_scaling_max = 2
+gpu_worker_volume_size = 100  # GB — model weights ~30GB + workspace
+gpu_worker_spot_enabled = true  # Spot approved — ~$0.16/hr vs $0.526/hr On-Demand

@@ -171,3 +171,28 @@ class AdminUserSubscriberPage(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+# ---------------------------------------------------------------------------
+# Broadcast notifications
+# ---------------------------------------------------------------------------
+
+
+class AdminSendNotificationRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    message: str = Field(..., min_length=1, max_length=5000)
+    send_email: bool = False
+    target_role: str | None = Field(
+        default=None,
+        pattern="^(fan|creator|all)$",
+        description="Send to all users with this role (or 'all'). Mutually exclusive with target_user_id.",
+    )
+    target_user_id: UUID | None = Field(
+        default=None,
+        description="Send to a single user. Mutually exclusive with target_role.",
+    )
+
+
+class AdminSendNotificationResponse(BaseModel):
+    sent_count: int
+    email_count: int

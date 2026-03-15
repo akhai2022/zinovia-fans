@@ -83,6 +83,42 @@ export default async function HomePage() {
       />
       <LandingHero />
 
+      {/* NEW FEATURE Announcement Banner */}
+      <ScrollReveal>
+        <section className="mx-auto w-full max-w-6xl px-4 pt-8 sm:px-6">
+          <Link
+            href="/ai/tools/motion-transfer"
+            className="group relative block overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-accent/10 p-5 transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 sm:p-6"
+          >
+            <div className="absolute -right-8 -top-8 h-32 w-32 animate-pulse rounded-full bg-primary/10 blur-2xl" />
+            <div className="absolute -left-4 bottom-0 h-20 w-20 animate-pulse rounded-full bg-accent/10 blur-xl" style={{animationDelay: "1s"}} />
+            <div className="relative flex flex-wrap items-center gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary">
+                <span className="material-symbols-outlined text-2xl">movie_creation</span>
+              </div>
+              <div className="flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex animate-pulse items-center gap-1 rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white shadow-md shadow-primary/30">
+                    <span className="material-symbols-outlined text-xs">bolt</span>
+                    New Feature
+                  </span>
+                  <h3 className="text-base font-semibold text-foreground sm:text-lg">
+                    Motion Transfer / Character Replace
+                  </h3>
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Transfer motion from any video onto a target character. Full-body, expression-aware, with audio preservation. Try it now in AI Studio.
+                </p>
+              </div>
+              <span className="hidden shrink-0 items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-colors group-hover:bg-primary group-hover:text-white sm:inline-flex">
+                Try it
+                <span className="material-symbols-outlined text-base">arrow_forward</span>
+              </span>
+            </div>
+          </Link>
+        </section>
+      </ScrollReveal>
+
       {/* Featured Creators — heading + staggered cards */}
       <ScrollReveal stagger staggerDelay={100}>
         <FeaturedCreators />

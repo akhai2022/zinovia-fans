@@ -20,6 +20,7 @@ from app.modules.auth.constants import READER_ROLE, SUPER_ADMIN_ROLE
 from app.modules.auth.models import Profile, User
 from app.modules.auth.security import hash_password
 from app.modules.media.models import MediaObject as _MediaObject  # noqa: F401 — register media_assets table
+from app.modules.onboarding.constants import KYC_APPROVED
 
 logger = logging.getLogger(__name__)
 
@@ -54,10 +55,16 @@ async def seed_reader(session: AsyncSession, email: str, password: str) -> None:
     result = await session.execute(select(User).where(User.email == email))
     existing = result.scalar_one_or_none()
     if existing:
+        changed = False
         if existing.role != READER_ROLE:
             existing.role = READER_ROLE
+            changed = True
+        if existing.onboarding_state != KYC_APPROVED:
+            existing.onboarding_state = KYC_APPROVED
+            changed = True
+        if changed:
             await session.commit()
-            logger.info("Upgraded existing user %s to reader role.", email)
+            logger.info("Updated existing reader user %s (role + onboarding).", email)
         else:
             logger.info("Reader user %s already exists. Skipping.", email)
         return
@@ -67,6 +74,7 @@ async def seed_reader(session: AsyncSession, email: str, password: str) -> None:
         password_hash=hash_password(password),
         role=READER_ROLE,
         is_active=True,
+        onboarding_state=KYC_APPROVED,
     )
     profile = Profile(user=user, display_name="Reader")
     session.add_all([user, profile])

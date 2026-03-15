@@ -123,6 +123,48 @@ class VirtualTryOnStatusOut(BaseModel):
 # Image Ref (deep-link tokens)
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Motion Transfer / Character Replace
+# ---------------------------------------------------------------------------
+
+class MotionTransferRequest(BaseModel):
+    source_video_asset_id: UUID
+    target_asset_id: UUID  # image or video
+    mode: str = "animate"  # "animate" | "replace"
+    garment_asset_id: UUID | None = None
+    preserve_background: bool = False
+    preserve_audio: bool = True
+    retarget_pose: bool = False
+    use_relighting_lora: bool = False
+    output_resolution: str = "720"  # 512 | 720 | 1024
+    output_fps: int = 24  # 12 | 24 | 30
+    seed: int | None = None
+    consent_acknowledged: bool = False
+
+
+class MotionTransferResponse(BaseModel):
+    job_id: UUID
+    status: str
+
+
+class MotionTransferStatusOut(BaseModel):
+    job_id: UUID
+    status: str  # pending | preprocessing | generating | postprocessing | ready | failed
+    stage: str | None = None
+    progress: float | None = None  # 0.0-1.0
+    result_url: str | None = None
+    preview_url: str | None = None
+    error: str | None = None
+    settings: dict | None = None
+
+
+class MotionTransferUsageOut(BaseModel):
+    limit: int
+    used: int
+    remaining: int
+    unlimited: bool = False
+
+
 class ImageRefCreateRequest(BaseModel):
     media_asset_id: UUID
 

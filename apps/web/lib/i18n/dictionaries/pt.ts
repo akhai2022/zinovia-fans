@@ -37,6 +37,7 @@ export const pt: Dictionary = {
     aiAnimateImage: "Animar imagem",
     aiAutoCaption: "Legenda automática",
     aiVirtualTryOn: "Prova Virtual",
+    aiMotionTransfer: "Motion Transfer",
     comingSoon: "Em breve",
     demo: "Demo",
     forCreators: "Para Criadores",
@@ -374,6 +375,7 @@ export const pt: Dictionary = {
     noAccountPrompt: "Não tem conta?",
     signUpLink: "Criar conta",
     forgotPasswordLink: "Esqueceu a palavra-passe?",
+    errorFieldsRequired: "Por favor, insira o seu e-mail e palavra-passe.",
   },
   signup: {
     title: "Crie a sua conta",
@@ -1103,6 +1105,8 @@ export const pt: Dictionary = {
     autoCaptionDesc: "Legendas, textos alternativos e palavras-chave gerados por IA a partir das suas imagens.",
     virtualTryOnTitle: "Prova Virtual",
     virtualTryOnDesc: "Envie uma foto de pessoa e uma imagem de roupa para ver uma prévia de prova realista — com IA.",
+    motionTransferTitle: "Motion Transfer",
+    motionTransferDesc: "Transfira o movimento de um vídeo fonte para um personagem alvo — substituição de corpo inteiro com reconhecimento de expressões.",
   },
   animateImage: {
     title: "Animar imagem",
@@ -1152,6 +1156,8 @@ export const pt: Dictionary = {
     autoCaptionDesc: "Legendas, alt-text e palavras-chave gerados por IA a partir das suas imagens.",
     virtualTryOnTitle: "Prova Virtual",
     virtualTryOnDesc: "Veja como as roupas ficam em você ou nos seus modelos com prova virtual por IA.",
+    motionTransferTitle: "Motion Transfer",
+    motionTransferDesc: "Transfira o movimento de um vídeo fonte para um personagem alvo com IA.",
     ctaStart: "Começar a criar",
     ctaExplore: "Explorar o Estúdio IA",
   },

@@ -37,6 +37,7 @@ export const en: Dictionary = {
     aiAnimateImage: "Animate Image",
     aiAutoCaption: "Auto Caption",
     aiVirtualTryOn: "Virtual Try-On",
+    aiMotionTransfer: "Motion Transfer",
     comingSoon: "Coming soon",
     demo: "Demo",
     forCreators: "For Creators",
@@ -369,6 +370,7 @@ export const en: Dictionary = {
     noAccountPrompt: "No account?",
     signUpLink: "Sign up",
     forgotPasswordLink: "Forgot password?",
+    errorFieldsRequired: "Please enter your email and password.",
   },
   signup: {
     title: "Create your account",
@@ -1066,6 +1068,8 @@ export const en: Dictionary = {
     autoCaptionDesc: "Generate captions, alt-text, and keywords from images using AI — perfect for posts.",
     virtualTryOnTitle: "Virtual Try-On",
     virtualTryOnDesc: "Upload a person photo and a garment image to see a realistic try-on preview — powered by AI diffusion.",
+    motionTransferTitle: "Motion Transfer",
+    motionTransferDesc: "Transfer motion from a driving video onto a target character — full-body, expression-aware character replacement.",
   },
   animateImage: {
     title: "Animate Image",
@@ -1114,6 +1118,8 @@ export const en: Dictionary = {
     autoCaptionDesc: "AI-generated captions, alt-text, and keywords from your images.",
     virtualTryOnTitle: "Virtual Try-On",
     virtualTryOnDesc: "See how clothes look on you or your models with AI-powered try-on.",
+    motionTransferTitle: "Motion Transfer",
+    motionTransferDesc: "Transfer motion from a source video onto a target character with AI.",
     ctaStart: "Start Creating",
     ctaExplore: "Explore AI Studio",
   },

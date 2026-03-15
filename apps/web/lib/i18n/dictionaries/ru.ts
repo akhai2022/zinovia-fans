@@ -37,6 +37,7 @@ export const ru: Dictionary = {
     aiAnimateImage: "Анимация изображения",
     aiAutoCaption: "Авто-подпись",
     aiVirtualTryOn: "Виртуальная Примерка",
+    aiMotionTransfer: "Motion Transfer",
     comingSoon: "Скоро",
     demo: "Демо",
     forCreators: "Для авторов",
@@ -369,6 +370,7 @@ export const ru: Dictionary = {
     noAccountPrompt: "Нет аккаунта?",
     signUpLink: "Зарегистрироваться",
     forgotPasswordLink: "Забыли пароль?",
+    errorFieldsRequired: "Пожалуйста, введите email и пароль.",
   },
   signup: {
     title: "Создайте аккаунт",
@@ -1067,6 +1069,8 @@ export const ru: Dictionary = {
     autoCaptionDesc: "ИИ-генерация подписей, alt-текстов и ключевых слов из ваших изображений.",
     virtualTryOnTitle: "Виртуальная Примерка",
     virtualTryOnDesc: "Загрузите фото человека и изображение одежды, чтобы увидеть реалистичный предпросмотр примерки — на базе ИИ.",
+    motionTransferTitle: "Motion Transfer",
+    motionTransferDesc: "Перенесите движение из исходного видео на целевого персонажа — полная замена тела с распознаванием выражений лица.",
   },
   animateImage: {
     title: "Анимация изображения",
@@ -1116,6 +1120,8 @@ export const ru: Dictionary = {
     autoCaptionDesc: "ИИ-генерация подписей, alt-текста и ключевых слов из ваших изображений.",
     virtualTryOnTitle: "Виртуальная Примерка",
     virtualTryOnDesc: "Посмотрите, как одежда выглядит на вас или на моделях с помощью виртуальной примерки.",
+    motionTransferTitle: "Motion Transfer",
+    motionTransferDesc: "Перенесите движение из исходного видео на целевого персонажа с помощью ИИ.",
     ctaStart: "Начать создавать",
     ctaExplore: "Исследовать ИИ-студию",
   },

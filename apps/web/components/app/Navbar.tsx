@@ -240,6 +240,13 @@ export function Navbar({
                         {t.nav.aiVirtualTryOn}
                       </Link>
                     </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/ai/tools/motion-transfer" className="flex items-center gap-2">
+                        <Icon name="movie_creation" className="icon-base text-muted-foreground" />
+                        {t.nav.aiMotionTransfer}
+                        <span className="ml-auto rounded-full bg-primary/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-primary">New</span>
+                      </Link>
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
@@ -450,7 +457,8 @@ export function Navbar({
                 { href: "/ai/tools/animate-image", label: t.nav.aiAnimateImage, icon: "animation" },
                 { href: "/ai/tools/auto-caption", label: t.nav.aiAutoCaption, icon: "subtitles" },
                 { href: "/ai/tools/virtual-tryon", label: t.nav.aiVirtualTryOn, icon: "checkroom" },
-              ] as { href: string; label: string; icon: string; comingSoon?: boolean }[]).map((item) => (
+                { href: "/ai/tools/motion-transfer", label: t.nav.aiMotionTransfer, icon: "movie_creation", isNew: true },
+              ] as { href: string; label: string; icon: string; comingSoon?: boolean; isNew?: boolean }[]).map((item) => (
                 <Link
                   key={item.href + item.icon}
                   href={item.href}
@@ -466,6 +474,9 @@ export function Navbar({
                   {item.label}
                   {item.comingSoon && (
                     <span className="ml-auto rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{t.nav.comingSoon}</span>
+                  )}
+                  {item.isNew && (
+                    <span className="ml-auto rounded-full bg-primary/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-primary">New</span>
                   )}
                 </Link>
               ))}

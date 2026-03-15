@@ -43,18 +43,20 @@ export function Drawer({
       />
       <aside
         className={cn(
-          "absolute top-0 h-full w-[86vw] max-w-sm border-border bg-card p-5 shadow-premium-lg transition-transform duration-300 ease-out",
+          "absolute top-0 flex h-full w-[86vw] max-w-sm flex-col border-border bg-card p-5 pb-0 shadow-premium-lg transition-transform duration-300 ease-out",
           side === "right" ? "right-0 border-l translate-x-0" : "left-0 border-r translate-x-0",
           className
         )}
       >
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex shrink-0 items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">{title}</h2>
           <button type="button" onClick={onClose} className="rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted">
             Close
           </button>
         </div>
-        {children}
+        <div className="flex-1 overflow-y-auto overscroll-contain -mx-5 px-5 pb-5">
+          {children}
+        </div>
       </aside>
     </div>
   );

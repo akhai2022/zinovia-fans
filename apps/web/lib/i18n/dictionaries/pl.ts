@@ -37,6 +37,7 @@ export const pl: Dictionary = {
     aiAnimateImage: "Animuj obraz",
     aiAutoCaption: "Automatyczny podpis",
     aiVirtualTryOn: "Wirtualna Przymierzalnia",
+    aiMotionTransfer: "Motion Transfer",
     comingSoon: "Wkrótce",
     demo: "Demo",
     forCreators: "Dla Twórców",
@@ -373,6 +374,7 @@ export const pl: Dictionary = {
     noAccountPrompt: "Nie masz konta?",
     signUpLink: "Załóż konto",
     forgotPasswordLink: "Nie pamiętasz hasła?",
+    errorFieldsRequired: "Proszę podać adres e-mail i hasło.",
   },
   signup: {
     title: "Utwórz konto",
@@ -1082,6 +1084,8 @@ export const pl: Dictionary = {
     autoCaptionDesc: "Generowane przez AI podpisy, teksty alternatywne i słowa kluczowe z Twoich zdjęć.",
     virtualTryOnTitle: "Wirtualna Przymierzalnia",
     virtualTryOnDesc: "Prześlij zdjęcie osoby i ubrania, aby zobaczyć realistyczny podgląd przymiarki — napędzany przez AI.",
+    motionTransferTitle: "Motion Transfer",
+    motionTransferDesc: "Przenieś ruch z filmu źródłowego na postać docelową — pełna zamiana ciała z rozpoznawaniem wyrazu twarzy.",
   },
   animateImage: {
     title: "Animuj obraz",
@@ -1131,6 +1135,8 @@ export const pl: Dictionary = {
     autoCaptionDesc: "Podpisy, alt-text i słowa kluczowe generowane przez AI z Twoich obrazów.",
     virtualTryOnTitle: "Wirtualna Przymierzalnia",
     virtualTryOnDesc: "Zobacz, jak ubrania wyglądają na Tobie lub modelach dzięki wirtualnej przymierzalni AI.",
+    motionTransferTitle: "Motion Transfer",
+    motionTransferDesc: "Przenieś ruch z filmu źródłowego na postać docelową za pomocą AI.",
     ctaStart: "Zacznij tworzyć",
     ctaExplore: "Odkryj Studio AI",
   },

@@ -37,6 +37,7 @@ export const tr: Dictionary = {
     aiAnimateImage: "Görsel canlandır",
     aiAutoCaption: "Otomatik altyazı",
     aiVirtualTryOn: "Sanal Deneme",
+    aiMotionTransfer: "Motion Transfer",
     comingSoon: "Yakında",
     demo: "Demo",
     forCreators: "İçerik Üreticileri İçin",
@@ -374,6 +375,7 @@ export const tr: Dictionary = {
     noAccountPrompt: "Hesabınız yok mu?",
     signUpLink: "Kayıt ol",
     forgotPasswordLink: "Şifrenizi mi unuttunuz?",
+    errorFieldsRequired: "Lütfen e-posta ve şifrenizi girin.",
   },
   signup: {
     title: "Hesabınızı oluşturun",
@@ -1083,6 +1085,8 @@ export const tr: Dictionary = {
     autoCaptionDesc: "Görsellerinizden yapay zeka ile oluşturulmuş altyazılar, alt metinler ve anahtar kelimeler.",
     virtualTryOnTitle: "Sanal Deneme",
     virtualTryOnDesc: "Bir kişi fotoğrafı ve bir kıyafet görseli yükleyerek gerçekçi bir deneme önizlemesi görün — yapay zeka ile.",
+    motionTransferTitle: "Motion Transfer",
+    motionTransferDesc: "Kaynak videodan hedef karaktere hareket aktarın — yüz ifadesi tanımalı tam vücut değiştirme.",
   },
   animateImage: {
     title: "Görsel canlandır",
@@ -1132,6 +1136,8 @@ export const tr: Dictionary = {
     autoCaptionDesc: "Görsellerinizden yapay zeka ile oluşturulan altyazılar, alt-text ve anahtar kelimeler.",
     virtualTryOnTitle: "Sanal Deneme",
     virtualTryOnDesc: "Kıyafetlerin üzerinizde nasıl göründüğünü yapay zeka destekli sanal deneme ile görün.",
+    motionTransferTitle: "Motion Transfer",
+    motionTransferDesc: "Kaynak videodan hedef karaktere yapay zeka ile hareket aktarın.",
     ctaStart: "Oluşturmaya başla",
     ctaExplore: "Stüdyoyu keşfet",
   },

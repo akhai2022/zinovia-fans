@@ -96,6 +96,14 @@ export function getApiErrorMessage(err: unknown): ApiErrorMessage {
     if (err.status === 401) {
       return { kind: "unauthorized", message: "Sign in to continue.", status: 401 };
     }
+    if (err.status === 422) {
+      return {
+        kind: "error",
+        message: detail || "Please check your input and try again.",
+        status: 422,
+        requestId: err.requestId,
+      };
+    }
     return {
       kind: "error",
       message: detail || err.message || `Request failed (${err.status})`,
@@ -125,6 +133,14 @@ export function getApiErrorMessage(err: unknown): ApiErrorMessage {
     }
     if (err.status === 401) {
       return { kind: "unauthorized", message: "Sign in to continue." };
+    }
+    if (err.status === 422) {
+      const fallback422 = detailCode || (typeof rawDetail === "string" ? rawDetail : undefined);
+      return {
+        kind: "error",
+        message: fallback422 || "Please check your input and try again.",
+        status: 422,
+      };
     }
     const fallbackMsg = detailCode || (typeof rawDetail === "string" ? rawDetail : err.statusText);
     return {
