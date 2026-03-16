@@ -108,7 +108,9 @@ def _get_pipeline():
     )
     # VAE must run in float32 for quality
     _pipeline.vae.to(torch.float32)
-    _pipeline.to("cuda")
+    # Use CPU offloading — moves layers to GPU only when needed,
+    # keeps the rest in CPU RAM. Required for 14B model on 16GB GPU.
+    _pipeline.enable_model_cpu_offload()
 
     elapsed = time.monotonic() - t0
     logger.info("Wan2.2-Animate pipeline loaded in %.1fs", elapsed)

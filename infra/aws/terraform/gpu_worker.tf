@@ -164,10 +164,10 @@ resource "aws_autoscaling_group" "gpu_worker" {
 
       # Fallback instance types if primary Spot is unavailable
       override {
-        instance_type = "g4dn.xlarge"
+        instance_type = "g4dn.2xlarge"
       }
       override {
-        instance_type = "g5.xlarge"
+        instance_type = "g5.2xlarge"
       }
     }
 
@@ -262,8 +262,8 @@ resource "aws_ecs_task_definition" "gpu_worker" {
   task_role_arn            = aws_iam_role.ecs_task.arn
 
   # EC2: CPU/memory managed by instance, but we set limits
-  cpu    = 4096   # 4 vCPU (g4dn.xlarge has 4)
-  memory = 15360  # 15 GB (g4dn.xlarge has 16GB, leave 1GB for system)
+  cpu    = 8192   # 8 vCPU (g4dn.2xlarge has 8)
+  memory = 30720  # 30 GB (g4dn.2xlarge has 32GB, leave 2GB for system)
 
   container_definitions = jsonencode([{
     name      = "gpu-worker"
