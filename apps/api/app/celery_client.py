@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
 from app.core.settings import get_settings
@@ -106,10 +107,21 @@ def enqueue_virtual_tryon(job_id: str) -> None:
     app.send_task("ai_tools.virtual_tryon", args=[job_id])  # type: ignore[attr-defined]
 
 
-def enqueue_motion_transfer(job_id: str) -> None:
-    """Enqueue AI tool motion transfer task to GPU queue. Idempotent on worker side."""
+def enqueue_admin_verification_help_email() -> None:
+    """Enqueue one-off task to email all unverified users with help instructions."""
     app = _get_celery_app()
-    app.send_task("ai_tools.motion_transfer", args=[job_id], queue="gpu")  # type: ignore[attr-defined]
+    app.send_task("admin.send_verification_help_email")  # type: ignore[attr-defined]
+
+
+def enqueue_motion_transfer(job_id: str) -> None:
+    """Enqueue AI tool motion transfer task.
+
+    Routes to GPU queue when a GPU worker is available, otherwise falls back
+    to the default queue (CPU worker with Replicate backend).
+    """
+    app = _get_celery_app()
+    queue = "gpu" if os.environ.get("MOTION_TRANSFER_USE_GPU") == "1" else None
+    app.send_task("ai_tools.motion_transfer", args=[job_id], queue=queue)  # type: ignore[attr-defined]
 
 
 def enqueue_translate_caption(

@@ -54,6 +54,7 @@ def _cfg(key: str, default: str = "") -> str:
 
 
 def _model_id() -> str:
+    # 14B requires g4dn.4xlarge (64GB RAM) or larger for CPU offloading.
     return _cfg("WAN_ANIMATE_MODEL_ID", "Wan-AI/Wan2.2-Animate-14B-Diffusers")
 
 
@@ -105,11 +106,11 @@ def _get_pipeline():
     _pipeline = WanAnimatePipeline.from_pretrained(
         model_id,
         torch_dtype=torch.bfloat16,
+        low_cpu_mem_usage=True,
     )
     # VAE must run in float32 for quality
     _pipeline.vae.to(torch.float32)
-    # Use CPU offloading — moves layers to GPU only when needed,
-    # keeps the rest in CPU RAM. Required for 14B model on 16GB GPU.
+    # CPU offloading: moves layers to GPU only when needed
     _pipeline.enable_model_cpu_offload()
 
     elapsed = time.monotonic() - t0

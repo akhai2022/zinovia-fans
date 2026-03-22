@@ -38,9 +38,13 @@ export function GoogleAnalytics() {
           gtag('js', new Date());
           gtag('config', '${GA_MEASUREMENT_ID}', {
             page_path: window.location.pathname,
-            send_page_view: true
+            send_page_view: true,
+            url_passthrough: true,
+            allow_enhanced_conversions: true
           });${GOOGLE_ADS_ID ? `
-          gtag('config', '${GOOGLE_ADS_ID}');` : ""}
+          gtag('config', '${GOOGLE_ADS_ID}', {
+            allow_enhanced_conversions: true
+          });` : ""}
         `}
       </Script>
     </>

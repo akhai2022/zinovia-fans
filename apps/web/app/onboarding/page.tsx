@@ -10,7 +10,7 @@ import { getApiErrorMessage } from "@/lib/errors";
 import { uuidClient } from "@/lib/uuid";
 import { useTranslation } from "@/lib/i18n";
 import { Icon } from "@/components/ui/icon";
-import { creatorKycStarted, creatorOnboardingCompleted } from "@/lib/gtag";
+import { creatorKycStarted, creatorKycPendingReview, creatorOnboardingCompleted } from "@/lib/gtag";
 import "@/lib/api";
 
 type Step = {
@@ -68,6 +68,11 @@ export default function OnboardingPage() {
   // Fire onboarding-completed event once when creator reaches the "all done" state
   useEffect(() => {
     if (status?.checklist.kyc_approved) creatorOnboardingCompleted();
+  }, [status]);
+
+  // Fire pending-review event when creator sees the KYC_SUBMITTED state
+  useEffect(() => {
+    if (status?.state === "KYC_SUBMITTED") creatorKycPendingReview();
   }, [status]);
 
   const onStartVerification = async () => {

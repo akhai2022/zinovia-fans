@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Page } from "@/components/brand/Page";
 import { Button } from "@/components/ui/button";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
+import { PricingEngagement } from "./PricingEngagement";
 
 const SITE_URL = "https://zinovia.ai";
 
@@ -87,6 +88,7 @@ export default function PricingPage() {
 
   return (
     <Page className="max-w-4xl space-y-12 py-12">
+      <PricingEngagement />
       <Breadcrumbs items={[{ label: "Pricing" }]} />
       <script
         type="application/ld+json"
@@ -97,7 +99,7 @@ export default function PricingPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
       />
 
-      <header className="text-center space-y-4">
+      <header className="text-center space-y-6">
         <h1 className="font-display text-premium-h2 font-bold text-foreground">
           Simple pricing.{" "}
           <span className="text-gradient-brand">Keep more.</span>
@@ -105,7 +107,35 @@ export default function PricingPage() {
         <p className="mx-auto max-w-xl text-muted-foreground">
           No monthly fees. No upfront costs. You only pay when you earn. Transparent pricing that lets creators keep more of what they make.
         </p>
+        <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-muted-foreground">
+          <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-green-500" /> 48-hour payouts</span>
+          <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-green-500" /> AES content encryption</span>
+          <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-green-500" /> Built-in AI tools</span>
+          <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-green-500" /> 9 languages</span>
+        </div>
+        <div className="flex flex-wrap justify-center gap-4 pt-2">
+          <Button size="lg" className="btn-cta-primary h-12 px-8 text-base" asChild>
+            <Link href="/signup">Get started free</Link>
+          </Button>
+          <Button size="lg" variant="secondary" className="h-12 px-8 text-base" asChild>
+            <Link href="/demo/creator">See the platform</Link>
+          </Button>
+        </div>
       </header>
+
+      {/* Social Proof */}
+      <section className="grid gap-4 sm:grid-cols-3">
+        {[
+          { quote: "48-hour payouts changed my life. I moved from OnlyFans and never looked back.", author: "Sarah M.", role: "Fitness creator" },
+          { quote: "The content encryption gives me peace of mind. Best security of any creator platform.", author: "Alex T.", role: "Digital artist" },
+          { quote: "My fans from across Europe can finally navigate the platform in their own language.", author: "Maria L.", role: "Lifestyle creator" },
+        ].map((t) => (
+          <div key={t.author} className="rounded-2xl border border-white/[0.06] bg-card p-5">
+            <p className="text-sm leading-relaxed text-foreground/80">&ldquo;{t.quote}&rdquo;</p>
+            <p className="mt-3 text-xs text-muted-foreground">{t.author} &middot; {t.role}</p>
+          </div>
+        ))}
+      </section>
 
       {/* Pricing Cards */}
       <section className="space-y-6">

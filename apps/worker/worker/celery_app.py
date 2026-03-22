@@ -18,6 +18,7 @@ celery_app = Celery(
     "zinovia_worker",
     broker=_redis_broker_url(),
     include=[
+        "worker.tasks.admin_email",
         "worker.tasks.ai",
         "worker.tasks.ai_safety",
         "worker.tasks.ai_tools",
@@ -25,6 +26,7 @@ celery_app = Celery(
         "worker.tasks.media",
         "worker.tasks.motion_transfer",
         "worker.tasks.notifications",
+        "worker.tasks.onboarding_emails",
         "worker.tasks.posts",
         "worker.tasks.translation",
     ],
@@ -87,5 +89,9 @@ celery_app.conf.beat_schedule = {
     "billing-renew-worldline-every-hour": {
         "task": "billing.renew_worldline_subscriptions",
         "schedule": crontab(minute=0),
+    },
+    "onboarding-emails-daily": {
+        "task": "onboarding.send_sequence_emails",
+        "schedule": crontab(hour=9, minute=0),  # 09:00 UTC daily
     },
 }

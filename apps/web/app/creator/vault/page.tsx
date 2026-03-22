@@ -353,21 +353,32 @@ function VaultCell({
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
   const isVideo = item.content_type.startsWith("video/");
 
+  const [hasPoster, setHasPoster] = useState(true);
+
   useEffect(() => {
     let cancelled = false;
     const variant = isVideo ? "poster" : "grid";
     MediaService.mediaDownloadUrl(item.id, variant)
       .then(({ download_url }) => {
-        if (!cancelled) setThumbUrl(download_url ?? null);
+        if (!cancelled) {
+          setThumbUrl(download_url ?? null);
+          setHasPoster(true);
+        }
       })
       .catch(() => {
-        // Fallback to original if no variant
         if (!cancelled) {
-          MediaService.mediaDownloadUrl(item.id)
-            .then(({ download_url }) => {
-              if (!cancelled) setThumbUrl(download_url ?? null);
-            })
-            .catch(() => {});
+          if (isVideo) {
+            // No poster for this video — don't fall back to raw mp4 (won't render as <img>)
+            setThumbUrl(null);
+            setHasPoster(false);
+          } else {
+            // For images, fallback to original
+            MediaService.mediaDownloadUrl(item.id)
+              .then(({ download_url }) => {
+                if (!cancelled) setThumbUrl(download_url ?? null);
+              })
+              .catch(() => {});
+          }
         }
       });
     return () => {
@@ -385,10 +396,17 @@ function VaultCell({
           loading="lazy"
         />
       ) : (
-        <div className="flex h-full w-full items-center justify-center">
-          <span className="text-xs text-muted-foreground">
-            {isVideo ? t.vault.cellVideo : t.vault.cellImage}
-          </span>
+        <div className="flex h-full w-full items-center justify-center bg-muted/50">
+          {isVideo && !hasPoster ? (
+            <div className="flex flex-col items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground/60"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span className="text-[10px] text-muted-foreground/60">{t.vault.cellVideo}</span>
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">
+              {isVideo ? t.vault.cellVideo : t.vault.cellImage}
+            </span>
+          )}
         </div>
       )}
       {isVideo && (

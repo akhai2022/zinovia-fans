@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 def _replicate_model_id() -> str:
-    return os.environ.get("REPLICATE_MT_MODEL", "zsxkib/mimic-motion")
+    return os.environ.get("REPLICATE_MT_MODEL", "bytedance/dreamactor-m2.0")
 
 
 def _replicate_timeout() -> int:
@@ -69,7 +69,7 @@ class ReplicateMotionTransferBackend(MotionTransferBackend):
             errors.append("Source video is empty")
         if not inputs.target_bytes:
             errors.append("Target identity image is empty")
-        if inputs.source_duration_sec > 15.0:
+        if inputs.source_duration_sec > 15.5:
             errors.append(
                 f"Source video too long for Replicate: {inputs.source_duration_sec:.1f}s (max 15s)"
             )
@@ -119,13 +119,21 @@ class ReplicateMotionTransferBackend(MotionTransferBackend):
         target_uri = f"data:{target_mime};base64,{target_b64}"
 
         # Build input dict — adapt to the specific model's API
-        replicate_input = {
-            "motion_video": source_uri,
-            "reference_image": target_uri,
-        }
+        # DreamActor M2.0: image (reference) + video (driving motion)
+        # MimicMotion: appearance_image + motion_video
+        if "dreamactor" in model_id:
+            replicate_input = {
+                "image": target_uri,
+                "video": source_uri,
+            }
+        else:
+            replicate_input = {
+                "appearance_image": target_uri,
+                "motion_video": source_uri,
+            }
 
         # Add optional params if model supports them
-        if settings.seed is not None:
+        if settings.seed is not None and "dreamactor" not in model_id:
             replicate_input["seed"] = settings.seed
 
         if progress_callback:

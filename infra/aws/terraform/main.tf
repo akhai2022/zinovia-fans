@@ -723,12 +723,8 @@ resource "aws_cloudfront_distribution" "web_alb" {
   }
 
   # Custom error responses — serve branded error pages with short cache
-  custom_error_response {
-    error_code            = 403
-    response_code         = 403
-    response_page_path    = "/error-pages/forbidden"
-    error_caching_min_ttl = 10
-  }
+  # NOTE: 403 error page removed — it was intercepting API JSON responses
+  # (e.g. auth failures) and replacing them with HTML, breaking the frontend.
   custom_error_response {
     error_code            = 500
     response_code         = 500
@@ -1491,7 +1487,8 @@ resource "aws_ecs_task_definition" "api" {
         { name = "MEDIA_WM_PREVIEW_TEXT", value = "zinovia-fans" },
         { name = "PAYMENT_PROVIDER", value = var.payment_provider },
         { name = "WORLDLINE_MERCHANT_ID", value = var.worldline_merchant_id },
-        { name = "WORLDLINE_API_ENDPOINT", value = var.worldline_api_endpoint }
+        { name = "WORLDLINE_API_ENDPOINT", value = var.worldline_api_endpoint },
+        { name = "MOTION_TRANSFER_USE_GPU", value = var.enable_gpu_worker ? "1" : "0" }
       ],
       local.web_base_url != "" ? [
         { name = "APP_BASE_URL", value = local.web_base_url },
@@ -1626,6 +1623,8 @@ resource "aws_ecs_task_definition" "worker" {
       { name = "ENABLE_SMART_PREVIEWS", value = tostring(var.enable_smart_previews) },
       { name = "ENABLE_TRANSLATIONS", value = tostring(var.enable_translations) },
       { name = "ENABLE_VIRTUAL_TRYON", value = "true" },
+      { name = "MOTION_TRANSFER_BACKEND", value = "replicate_hosted" },
+      { name = "ENABLE_MOTION_TRANSFER", value = "true" },
       # Worker doesn't send email or use cookies but shares Settings with API
       { name = "MAIL_PROVIDER", value = "resend" },
       { name = "COOKIE_SECURE", value = "true" },
@@ -1636,7 +1635,8 @@ resource "aws_ecs_task_definition" "worker" {
       { name = "DATABASE_URL", valueFrom = aws_secretsmanager_secret.database_url.arn },
       { name = "JWT_SECRET", valueFrom = module.secrets.jwt_secret_arn },
       { name = "CSRF_SECRET", valueFrom = module.secrets.csrf_secret_arn },
-      { name = "REPLICATE_API_TOKEN", valueFrom = module.secrets.replicate_api_token_arn }
+      { name = "REPLICATE_API_TOKEN", valueFrom = module.secrets.replicate_api_token_arn },
+      { name = "HF_TOKEN", valueFrom = "arn:aws:secretsmanager:us-east-1:208030346312:secret:zinovia-fans-prod-hf-token-Hospv2" }
     ]
   }])
 }

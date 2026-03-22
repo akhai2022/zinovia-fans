@@ -162,12 +162,9 @@ resource "aws_autoscaling_group" "gpu_worker" {
         version            = "$Latest"
       }
 
-      # Fallback instance types if primary Spot is unavailable
+      # g4dn.2xlarge: 8 vCPU, 32 GB, 1x T4 GPU — minimum for task (7 vCPU, 30 GB)
       override {
         instance_type = "g4dn.2xlarge"
-      }
-      override {
-        instance_type = "g5.2xlarge"
       }
     }
 
@@ -262,7 +259,7 @@ resource "aws_ecs_task_definition" "gpu_worker" {
   task_role_arn            = aws_iam_role.ecs_task.arn
 
   # EC2: CPU/memory managed by instance, but we set limits
-  cpu    = 8192   # 8 vCPU (g4dn.2xlarge has 8)
+  cpu    = 7168   # 7 vCPU (g4dn.2xlarge has 8, leave 1 for system)
   memory = 30720  # 30 GB (g4dn.2xlarge has 32GB, leave 2GB for system)
 
   container_definitions = jsonencode([{
@@ -296,14 +293,14 @@ resource "aws_ecs_task_definition" "gpu_worker" {
       { name = "CELERY_CONCURRENCY", value = "1" },
       { name = "ENABLE_AI_TOOLS", value = "true" },
       { name = "ENABLE_VIRTUAL_TRYON", value = "true" },
-      { name = "MOTION_TRANSFER_BACKEND", value = "wan_animate_14b" },
+      { name = "MOTION_TRANSFER_BACKEND", value = "mimic_motion" },
       { name = "ENABLE_MOTION_TRANSFER", value = "true" },
-      # Wan2.2-Animate config
-      { name = "WAN_ANIMATE_MODEL_ID", value = "Wan-AI/Wan2.2-Animate-14B-Diffusers" },
-      { name = "WAN_ANIMATE_MAX_DURATION_SECONDS", value = "15" },
-      { name = "WAN_ANIMATE_NUM_INFERENCE_STEPS", value = "20" },
-      { name = "WAN_ANIMATE_OUTPUT_HEIGHT", value = "720" },
-      { name = "WAN_ANIMATE_OUTPUT_WIDTH", value = "1280" },
+      # MimicMotion config
+      { name = "MIMIC_MOTION_CKPT", value = "/app/models/MimicMotion_1-1.pth" },
+      { name = "MIMIC_MOTION_DWPOSE_DIR", value = "/app/models/DWPose" },
+      { name = "MIMIC_MOTION_RESOLUTION", value = "576" },
+      { name = "MIMIC_MOTION_NUM_STEPS", value = "25" },
+      { name = "MIMIC_MOTION_MAX_DURATION", value = "15" },
       # Worker shared settings
       { name = "MAIL_PROVIDER", value = "resend" },
       { name = "COOKIE_SECURE", value = "true" },
@@ -314,6 +311,7 @@ resource "aws_ecs_task_definition" "gpu_worker" {
       { name = "JWT_SECRET", valueFrom = module.secrets.jwt_secret_arn },
       { name = "CSRF_SECRET", valueFrom = module.secrets.csrf_secret_arn },
       { name = "REPLICATE_API_TOKEN", valueFrom = module.secrets.replicate_api_token_arn },
+      { name = "HF_TOKEN", valueFrom = "arn:aws:secretsmanager:us-east-1:208030346312:secret:zinovia-fans-prod-hf-token-Hospv2" },
     ]
   }])
 }

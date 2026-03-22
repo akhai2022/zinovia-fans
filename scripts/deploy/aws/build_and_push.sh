@@ -86,15 +86,17 @@ else
   echo "WARN: Docker Compose services not running — skipping pre-build tests" >&2
 fi
 
+DOCKER_NETWORK="${DOCKER_NETWORK:---network=host}"
+
 echo "--- Build API ---"
-docker build ${DOCKER_BUILD_FLAGS} -f infra/docker/api/Dockerfile \
+docker build ${DOCKER_BUILD_FLAGS} ${DOCKER_NETWORK} -f infra/docker/api/Dockerfile \
   -t "${API_ECR}:${TAG_SHA}" \
   -t "${API_ECR}:${TAG_LATEST}" \
   -t "${API_ECR}:${TAG_ECS_LATEST}" \
   .
 APP_URL="--build-arg NEXT_PUBLIC_APP_URL=https://zinovia.ai"
 echo "--- Build Web (NEXT_PUBLIC_API_BASE_URL=$API_BASE_URL) ---"
-docker build ${DOCKER_BUILD_FLAGS} -f infra/docker/web/Dockerfile \
+docker build ${DOCKER_BUILD_FLAGS} ${DOCKER_NETWORK} -f infra/docker/web/Dockerfile \
   --build-arg NEXT_PUBLIC_API_BASE_URL="$API_BASE_URL" $APP_URL \
   --build-arg NEXT_PUBLIC_API_SAME_ORIGIN_PROXY="$API_SAME_ORIGIN_PROXY" \
   --build-arg NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="$STRIPE_PUBLISHABLE_KEY" \
@@ -104,7 +106,7 @@ docker build ${DOCKER_BUILD_FLAGS} -f infra/docker/web/Dockerfile \
   -t "${WEB_ECR}:${TAG_ECS_LATEST}" \
   .
 echo "--- Build Worker ---"
-docker build ${DOCKER_BUILD_FLAGS} -f infra/docker/worker/Dockerfile \
+docker build ${DOCKER_BUILD_FLAGS} ${DOCKER_NETWORK} -f infra/docker/worker/Dockerfile \
   -t "${WORKER_ECR}:${TAG_SHA}" \
   -t "${WORKER_ECR}:${TAG_LATEST}" \
   -t "${WORKER_ECR}:${TAG_ECS_LATEST}" \

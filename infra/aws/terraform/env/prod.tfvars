@@ -82,8 +82,8 @@ ai_provider = "replicate"
 # GPU Worker (Wan2.2-Animate) — enable when ready to provision GPU instances
 # Set to true, then: terraform apply -var-file=env/prod.tfvars
 enable_gpu_worker      = true
-gpu_instance_type      = "g4dn.2xlarge"  # 1x T4 16GB GPU, 8 vCPU, 32GB RAM — needed for 14B model
-gpu_worker_scaling_min = 0  # Scale to zero when idle (cost optimization)
+gpu_instance_type      = "g4dn.2xlarge"  # 1x T4 16GB GPU, 8 vCPU, 32GB RAM — MimicMotion fits (~12GB weights)
+gpu_worker_scaling_min = 1
 gpu_worker_scaling_max = 2
-gpu_worker_volume_size = 200  # GB — model weights ~30GB + Docker image ~15GB + workspace
-gpu_worker_spot_enabled = true  # Spot approved — ~$0.16/hr vs $0.526/hr On-Demand
+gpu_worker_volume_size = 100  # GB — model weights ~12GB + Docker image ~15GB + workspace
+gpu_worker_spot_enabled = false  # On-Demand (Spot quota exceeded, request increase for cost savings)

@@ -48,6 +48,9 @@ export const creatorKycStarted = () =>
 export const creatorKycCompleted = () =>
   event("creator_kyc_completed");
 
+export const creatorKycPendingReview = () =>
+  event("creator_kyc_pending_review");
+
 export const creatorOnboardingCompleted = () =>
   event("creator_onboarding_completed");
 

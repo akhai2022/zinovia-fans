@@ -28,10 +28,12 @@ _DEFAULT_BACKEND = "wan_animate_14b"
 def _register_defaults() -> None:
     from worker.ml.motion_transfer.wan_animate_backend import WanAnimateBackend
     from worker.ml.motion_transfer.replicate_backend import ReplicateMotionTransferBackend
+    from worker.ml.motion_transfer.mimic_motion_backend import MimicMotionBackend
     from worker.ml.motion_transfer.stub_backend import StubMotionTransferBackend
 
     _BACKENDS["wan_animate_14b"] = WanAnimateBackend
     _BACKENDS["replicate_hosted"] = ReplicateMotionTransferBackend
+    _BACKENDS["mimic_motion"] = MimicMotionBackend
     _BACKENDS["demo_composite"] = StubMotionTransferBackend
 
 

@@ -24,7 +24,7 @@ from app.main import app
 from app.modules.ai_tools.tool_models import AiToolJob
 from app.modules.auth.models import User
 from app.modules.media.models import MediaObject
-from tests.conftest import signup_verify_login
+from conftest import signup_verify_login
 
 
 @pytest.fixture
@@ -56,15 +56,23 @@ async def _get_user_id(email: str) -> uuid.UUID:
         return r.scalar_one()
 
 
-async def _setup_creator(client: AsyncClient, email: str = "mt-creator@test.com") -> tuple[str, uuid.UUID]:
+def _unique_email(prefix: str = "mt") -> str:
+    return f"{prefix}-{uuid.uuid4().hex[:8]}@test.com"
+
+
+async def _setup_creator(client: AsyncClient, email: str | None = None) -> tuple[str, uuid.UUID]:
     """Create creator user, return (token, user_id)."""
+    if email is None:
+        email = _unique_email("mt-creator")
     token = await signup_verify_login(client, email, role="creator")
     user_id = await _get_user_id(email)
     return token, user_id
 
 
-async def _setup_super_admin(client: AsyncClient, email: str = "mt-admin@test.com") -> tuple[str, uuid.UUID]:
+async def _setup_super_admin(client: AsyncClient, email: str | None = None) -> tuple[str, uuid.UUID]:
     """Create super_admin user, return (token, user_id)."""
+    if email is None:
+        email = _unique_email("mt-admin")
     token = await signup_verify_login(client, email, role="creator")
     user_id = await _get_user_id(email)
     async with async_session_factory() as session:
@@ -92,7 +100,7 @@ async def _create_assets_for_user(user_id: uuid.UUID) -> tuple[uuid.UUID, uuid.U
 
 @pytest.mark.asyncio
 async def test_motion_transfer_requires_consent(async_client: AsyncClient):
-    token, user_id = await _setup_creator(async_client, "mt-consent@test.com")
+    token, user_id = await _setup_creator(async_client)
     source_id, target_id = await _create_assets_for_user(user_id)
 
     with patch("app.celery_client.enqueue_motion_transfer"):
@@ -111,7 +119,7 @@ async def test_motion_transfer_requires_consent(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_motion_transfer_invalid_resolution(async_client: AsyncClient):
-    token, user_id = await _setup_creator(async_client, "mt-res@test.com")
+    token, user_id = await _setup_creator(async_client)
     source_id, target_id = await _create_assets_for_user(user_id)
 
     with patch("app.celery_client.enqueue_motion_transfer"):
@@ -130,7 +138,7 @@ async def test_motion_transfer_invalid_resolution(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_motion_transfer_invalid_fps(async_client: AsyncClient):
-    token, user_id = await _setup_creator(async_client, "mt-fps@test.com")
+    token, user_id = await _setup_creator(async_client)
     source_id, target_id = await _create_assets_for_user(user_id)
 
     with patch("app.celery_client.enqueue_motion_transfer"):
@@ -151,7 +159,7 @@ async def test_motion_transfer_invalid_fps(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_motion_transfer_submit_success(async_client: AsyncClient):
-    token, user_id = await _setup_creator(async_client, "mt-happy@test.com")
+    token, user_id = await _setup_creator(async_client)
     source_id, target_id = await _create_assets_for_user(user_id)
 
     with patch("app.celery_client.enqueue_motion_transfer"):
@@ -172,7 +180,7 @@ async def test_motion_transfer_submit_success(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_motion_transfer_status(async_client: AsyncClient):
-    token, user_id = await _setup_creator(async_client, "mt-status@test.com")
+    token, user_id = await _setup_creator(async_client)
     source_id, target_id = await _create_assets_for_user(user_id)
 
     with patch("app.celery_client.enqueue_motion_transfer"):
@@ -201,7 +209,7 @@ async def test_motion_transfer_status(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_motion_transfer_quota_creator_limit(async_client: AsyncClient):
-    token, user_id = await _setup_creator(async_client, "mt-quota@test.com")
+    token, user_id = await _setup_creator(async_client)
     source_id, target_id = await _create_assets_for_user(user_id)
 
     with patch("app.celery_client.enqueue_motion_transfer"):
@@ -245,7 +253,7 @@ async def test_motion_transfer_quota_creator_limit(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_motion_transfer_quota_super_admin_unlimited(async_client: AsyncClient):
-    token, user_id = await _setup_super_admin(async_client, "mt-admin-q@test.com")
+    token, user_id = await _setup_super_admin(async_client)
     source_id, target_id = await _create_assets_for_user(user_id)
 
     with patch("app.celery_client.enqueue_motion_transfer"):
@@ -265,7 +273,7 @@ async def test_motion_transfer_quota_super_admin_unlimited(async_client: AsyncCl
 
 @pytest.mark.asyncio
 async def test_motion_transfer_usage_endpoint(async_client: AsyncClient):
-    token, user_id = await _setup_creator(async_client, "mt-usage@test.com")
+    token, user_id = await _setup_creator(async_client)
 
     r = await async_client.get(
         "/ai-tools/motion-transfer/usage",
@@ -281,7 +289,7 @@ async def test_motion_transfer_usage_endpoint(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_motion_transfer_usage_super_admin(async_client: AsyncClient):
-    token, user_id = await _setup_super_admin(async_client, "mt-usage-sa@test.com")
+    token, user_id = await _setup_super_admin(async_client)
 
     r = await async_client.get(
         "/ai-tools/motion-transfer/usage",
@@ -296,7 +304,7 @@ async def test_motion_transfer_usage_super_admin(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_motion_transfer_retry_failed_job(async_client: AsyncClient):
-    token, user_id = await _setup_creator(async_client, "mt-retry@test.com")
+    token, user_id = await _setup_creator(async_client)
     source_id, target_id = await _create_assets_for_user(user_id)
 
     with patch("app.celery_client.enqueue_motion_transfer"):
@@ -331,7 +339,7 @@ async def test_motion_transfer_retry_failed_job(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_motion_transfer_cancel_pending_job(async_client: AsyncClient):
-    token, user_id = await _setup_creator(async_client, "mt-cancel@test.com")
+    token, user_id = await _setup_creator(async_client)
     source_id, target_id = await _create_assets_for_user(user_id)
 
     with patch("app.celery_client.enqueue_motion_transfer"):
@@ -358,7 +366,7 @@ async def test_motion_transfer_cancel_pending_job(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_failed_validation_does_not_consume_quota(async_client: AsyncClient):
-    token, user_id = await _setup_creator(async_client, "mt-val-noquota@test.com")
+    token, user_id = await _setup_creator(async_client)
     source_id, target_id = await _create_assets_for_user(user_id)
 
     with patch("app.celery_client.enqueue_motion_transfer"):
