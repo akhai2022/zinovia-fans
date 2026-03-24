@@ -264,28 +264,56 @@ class MimicMotionBackend(MotionTransferBackend):
             logger.info("Extracting poses from source video")
             t_pre = time.monotonic()
 
+            import math
+            from torchvision.datasets.folder import pil_loader
+            from torchvision.transforms.functional import (
+                pil_to_tensor, resize, center_crop, to_pil_image,
+            )
             from mimicmotion.dwpose.preprocess import get_video_pose, get_image_pose
 
+            resolution = _resolution()
             sample_stride = _sample_stride()
 
-            # Load and process reference image
-            ref_image = PILImage.open(target_path).convert("RGB")
-            ref_image_np = np.array(ref_image)
-            src_fps = inputs.source_fps or 24
+            # Load reference image and resize/crop to target resolution
+            # (follows MimicMotion's official preprocess logic)
+            image_pixels = pil_to_tensor(
+                PILImage.open(target_path).convert("RGB")
+            )  # (C, H, W)
+            h, w = image_pixels.shape[-2:]
+            # Compute target dimensions preserving aspect ratio
+            aspect_ratio = 16 / 9
+            if h > w:
+                w_target, h_target = resolution, int(resolution / aspect_ratio // 64) * 64
+            else:
+                w_target, h_target = int(resolution / aspect_ratio // 64) * 64, resolution
+            h_w_ratio = float(h) / float(w)
+            if h_w_ratio < h_target / w_target:
+                h_resize, w_resize = h_target, math.ceil(h_target / h_w_ratio)
+            else:
+                h_resize, w_resize = math.ceil(w_target * h_w_ratio), w_target
+            image_pixels = resize(image_pixels, [h_resize, w_resize], antialias=None)
+            image_pixels = center_crop(image_pixels, [h_target, w_target])
+            image_pixels_np = image_pixels.permute(1, 2, 0).numpy()  # (H, W, C)
 
-            # Extract poses from driving video (needs ref_image as numpy for alignment)
-            pose_pixels, detected_bodies = get_video_pose(
-                source_path,
-                ref_image_np,
-                sample_stride=sample_stride,
+            # Extract poses
+            image_pose = get_image_pose(image_pixels_np)
+            video_pose = get_video_pose(
+                source_path, image_pixels_np, sample_stride=sample_stride,
             )
-
-            # Get reference image pose
-            ref_pose = get_image_pose(ref_image_np)
+            # Concatenate ref pose + video poses, scale to [-1, 1]
+            pose_pixels = np.concatenate([np.expand_dims(image_pose, 0), video_pose])
+            pose_pixels = torch.from_numpy(pose_pixels.copy()) / 127.5 - 1
+            # Image: (1, C, H, W) scaled to [-1, 1]
+            image_pixels = (
+                np.transpose(np.expand_dims(image_pixels_np, 0), (0, 3, 1, 2))
+            )
+            image_pixels = torch.from_numpy(image_pixels) / 127.5 - 1
 
             timings["preprocess_ms"] = int((time.monotonic() - t_pre) * 1000)
-            num_pose_frames = pose_pixels.shape[0] if hasattr(pose_pixels, 'shape') else len(pose_pixels)
-            logger.info("Preprocessing done: %d pose frames extracted", num_pose_frames)
+            logger.info(
+                "Preprocessing done: %d pose frames, image=%s",
+                pose_pixels.shape[0], list(image_pixels.shape),
+            )
 
             if progress_callback:
                 progress_callback(0.20, "generating")
@@ -295,33 +323,20 @@ class MimicMotionBackend(MotionTransferBackend):
             t_inf = time.monotonic()
 
             pipe = _get_pipeline()
-            resolution = _resolution()
+            device = torch.device("cuda")
 
-            # Prepare pose tensor: get_video_pose returns (N, H, W, C) numpy
-            if not isinstance(pose_pixels, torch.Tensor):
-                pose_pixels = torch.tensor(pose_pixels)
-            # Pipeline expects (B, N, C, H, W) float [0,1]
-            if pose_pixels.ndim == 4:  # (N, H, W, C)
-                pose_pixels = pose_pixels.permute(0, 3, 1, 2).float() / 255.0
-                pose_pixels = pose_pixels.unsqueeze(0)
+            # Convert image back to PIL (pipeline expects PIL input)
+            image_pil = [
+                to_pil_image(img.to(torch.uint8))
+                for img in (image_pixels + 1.0) * 127.5
+            ]
 
-            # Reference image as tensor: (B, C, H, W) float [0,1]
-            from torchvision import transforms
-            transform = transforms.Compose([
-                transforms.Resize((resolution, int(resolution * 1024 / 576))),
-                transforms.ToTensor(),
-            ])
-            image_pixels = transform(ref_image).unsqueeze(0)
-
-            num_frames = pose_pixels.shape[1]
+            num_frames = pose_pixels.shape[0]
             tile_size = min(_tile_size(), num_frames)
             tile_overlap = min(_tile_overlap(), tile_size - 1)
 
-            generator = None
-            if settings.seed is not None:
-                generator = torch.Generator(device="cpu").manual_seed(settings.seed)
-            else:
-                generator = torch.Generator(device="cpu").manual_seed(42)
+            seed = settings.seed if settings.seed is not None else 42
+            generator = torch.Generator(device=device).manual_seed(seed)
 
             # Progress callback for diffusion steps
             def step_callback(pipe_obj, step_idx, timestep, callback_kwargs):
@@ -330,25 +345,28 @@ class MimicMotionBackend(MotionTransferBackend):
                     progress_callback(pct, "generating")
                 return callback_kwargs
 
+            guidance_scale = 2.0
+
             with torch.no_grad():
-                output = pipe(
-                    image=image_pixels,
+                frames = pipe(
+                    image_pil,
                     image_pose=pose_pixels,
                     num_frames=num_frames,
                     tile_size=tile_size,
                     tile_overlap=tile_overlap,
-                    height=resolution,
-                    width=int(resolution * 1024 / 576),
+                    height=pose_pixels.shape[-2],
+                    width=pose_pixels.shape[-1],
                     fps=7,
                     noise_aug_strength=0.02,
                     num_inference_steps=_num_steps(),
                     generator=generator,
-                    min_guidance_scale=2.0,
-                    max_guidance_scale=3.0,
+                    min_guidance_scale=guidance_scale,
+                    max_guidance_scale=guidance_scale,
                     decode_chunk_size=8,
-                    output_type="pil",
+                    output_type="pt",
+                    device=device,
                     callback_on_step_end=step_callback,
-                )
+                ).frames.cpu()
 
             timings["inference_ms"] = int((time.monotonic() - t_inf) * 1000)
 
@@ -358,8 +376,12 @@ class MimicMotionBackend(MotionTransferBackend):
             # ===== ENCODE OUTPUT =====
             logger.info("Encoding output video")
 
-            # output_type="pil" → output.frames is list of list of PIL Images
-            output_frames = output.frames[0]  # list of PIL Images
+            # frames: (B, N, C, H, W) float [0,1] — skip first frame (ref image)
+            video_frames = (frames * 255.0).to(torch.uint8)
+            output_frames = []
+            for i in range(1, video_frames.shape[1]):  # skip frame 0 = ref
+                frame = video_frames[0, i].permute(1, 2, 0).numpy()  # (H, W, C)
+                output_frames.append(frame)
 
             if not output_frames:
                 raise RuntimeError("MimicMotion produced no output frames")
