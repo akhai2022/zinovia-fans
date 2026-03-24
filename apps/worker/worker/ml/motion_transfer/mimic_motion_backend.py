@@ -97,7 +97,6 @@ def _sample_stride() -> int:
 # ---------------------------------------------------------------------------
 
 _pipeline = None
-_pose_detector = None
 
 
 def _get_pipeline():
@@ -122,24 +121,6 @@ def _get_pipeline():
     elapsed = time.monotonic() - t0
     logger.info("MimicMotion pipeline loaded in %.1fs", elapsed)
     return _pipeline
-
-
-def _get_pose_detector():
-    """Load DWPose detector singleton."""
-    global _pose_detector
-    if _pose_detector is not None:
-        return _pose_detector
-
-    from mimicmotion.dwpose.preprocess import Preprocessor
-
-    logger.info("Loading DWPose detector from %s", _dwpose_dir())
-    _pose_detector = Preprocessor()
-    _pose_detector.load(
-        det_model_path=os.path.join(_dwpose_dir(), "yolox_l.onnx"),
-        pose_model_path=os.path.join(_dwpose_dir(), "dw-ll_ucoco_384.onnx"),
-    )
-    logger.info("DWPose detector loaded")
-    return _pose_detector
 
 
 # ---------------------------------------------------------------------------
@@ -250,7 +231,6 @@ class MimicMotionBackend(MotionTransferBackend):
 
         # Trigger model loading
         _get_pipeline()
-        _get_pose_detector()
 
         return {
             "workspace": workspace,
@@ -284,32 +264,28 @@ class MimicMotionBackend(MotionTransferBackend):
             logger.info("Extracting poses from source video")
             t_pre = time.monotonic()
 
-            from mimicmotion.utils.utils import get_video_pose, get_image_pose
+            from mimicmotion.dwpose.preprocess import get_video_pose, get_image_pose
 
-            pose_detector = _get_pose_detector()
-            resolution = _resolution()
             sample_stride = _sample_stride()
-
-            # Extract poses from driving video
-            pose_pixels, detected_bodies = get_video_pose(
-                source_path,
-                pose_detector,
-                resolution=resolution,
-                sample_stride=sample_stride,
-            )
 
             # Load and process reference image
             ref_image = PILImage.open(target_path).convert("RGB")
+            ref_image_np = np.array(ref_image)
             src_fps = inputs.source_fps or 24
 
-            # Get reference image pose for alignment
-            ref_pose = get_image_pose(ref_image, pose_detector, resolution=resolution)
+            # Extract poses from driving video (needs ref_image as numpy for alignment)
+            pose_pixels, detected_bodies = get_video_pose(
+                source_path,
+                ref_image_np,
+                sample_stride=sample_stride,
+            )
+
+            # Get reference image pose
+            ref_pose = get_image_pose(ref_image_np)
 
             timings["preprocess_ms"] = int((time.monotonic() - t_pre) * 1000)
-            logger.info(
-                "Preprocessing done: %d pose frames extracted",
-                pose_pixels.shape[1] if hasattr(pose_pixels, 'shape') else len(pose_pixels),
-            )
+            num_pose_frames = pose_pixels.shape[0] if hasattr(pose_pixels, 'shape') else len(pose_pixels)
+            logger.info("Preprocessing done: %d pose frames extracted", num_pose_frames)
 
             if progress_callback:
                 progress_callback(0.20, "generating")
@@ -319,20 +295,23 @@ class MimicMotionBackend(MotionTransferBackend):
             t_inf = time.monotonic()
 
             pipe = _get_pipeline()
-            device = torch.device("cuda")
+            resolution = _resolution()
 
-            # Prepare tensors
+            # Prepare pose tensor: get_video_pose returns (N, H, W, C) numpy
             if not isinstance(pose_pixels, torch.Tensor):
                 pose_pixels = torch.tensor(pose_pixels)
-            pose_pixels = pose_pixels.unsqueeze(0).to(device)
+            # Pipeline expects (B, N, C, H, W) float [0,1]
+            if pose_pixels.ndim == 4:  # (N, H, W, C)
+                pose_pixels = pose_pixels.permute(0, 3, 1, 2).float() / 255.0
+                pose_pixels = pose_pixels.unsqueeze(0)
 
-            # Reference image as tensor
+            # Reference image as tensor: (B, C, H, W) float [0,1]
             from torchvision import transforms
             transform = transforms.Compose([
                 transforms.Resize((resolution, int(resolution * 1024 / 576))),
                 transforms.ToTensor(),
             ])
-            image_pixels = transform(ref_image).unsqueeze(0).to(device)
+            image_pixels = transform(ref_image).unsqueeze(0)
 
             num_frames = pose_pixels.shape[1]
             tile_size = min(_tile_size(), num_frames)
@@ -340,9 +319,9 @@ class MimicMotionBackend(MotionTransferBackend):
 
             generator = None
             if settings.seed is not None:
-                generator = torch.Generator(device=device).manual_seed(settings.seed)
+                generator = torch.Generator(device="cpu").manual_seed(settings.seed)
             else:
-                generator = torch.Generator(device=device).manual_seed(42)
+                generator = torch.Generator(device="cpu").manual_seed(42)
 
             # Progress callback for diffusion steps
             def step_callback(pipe_obj, step_idx, timestep, callback_kwargs):
@@ -361,13 +340,13 @@ class MimicMotionBackend(MotionTransferBackend):
                     height=resolution,
                     width=int(resolution * 1024 / 576),
                     fps=7,
-                    noise_aug_strength=0.0,
+                    noise_aug_strength=0.02,
                     num_inference_steps=_num_steps(),
                     generator=generator,
                     min_guidance_scale=2.0,
-                    max_guidance_scale=2.0,
+                    max_guidance_scale=3.0,
                     decode_chunk_size=8,
-                    output_type="pt",
+                    output_type="pil",
                     callback_on_step_end=step_callback,
                 )
 
@@ -379,12 +358,8 @@ class MimicMotionBackend(MotionTransferBackend):
             # ===== ENCODE OUTPUT =====
             logger.info("Encoding output video")
 
-            frames_tensor = output.frames[0]  # (num_frames, C, H, W)
-            output_frames = []
-            for i in range(frames_tensor.shape[0]):
-                frame = frames_tensor[i].cpu().permute(1, 2, 0).numpy()
-                frame = (np.clip(frame, 0, 1) * 255).astype(np.uint8)
-                output_frames.append(frame)
+            # output_type="pil" → output.frames is list of list of PIL Images
+            output_frames = output.frames[0]  # list of PIL Images
 
             if not output_frames:
                 raise RuntimeError("MimicMotion produced no output frames")
