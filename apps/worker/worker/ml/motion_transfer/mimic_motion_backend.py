@@ -106,7 +106,13 @@ def _get_pipeline():
         return _pipeline
 
     import torch
+    from mimicmotion.utils.geglu_patch import patch_geglu_inplace
     from mimicmotion.utils.loader import create_pipeline
+
+    # Apply GeGLU patch (required by MimicMotion)
+    patch_geglu_inplace()
+    # Use float16 as default dtype (matches official inference.py)
+    torch.set_default_dtype(torch.float16)
 
     logger.info("Loading MimicMotion pipeline (base=%s, ckpt=%s)", _base_model(), _ckpt_path())
     t0 = time.monotonic()
