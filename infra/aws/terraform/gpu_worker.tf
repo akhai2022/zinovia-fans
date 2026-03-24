@@ -264,7 +264,7 @@ resource "aws_ecs_task_definition" "gpu_worker" {
 
   container_definitions = jsonencode([{
     name      = "gpu-worker"
-    image     = var.enable_gpu_worker ? "${aws_ecr_repository.gpu_worker[0].repository_url}:latest" : "placeholder"
+    image     = var.enable_gpu_worker ? "${aws_ecr_repository.gpu_worker[0].repository_url}:397683e" : "placeholder"
     essential = true
 
     # GPU resource requirement — ECS places this on GPU instances
