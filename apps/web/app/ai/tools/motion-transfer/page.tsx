@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useRequireRole } from "@/lib/hooks/useRequireRole";
 import { ImageUploadField } from "@/features/media/ImageUploadField";
 import { VideoUploadField } from "@/features/media/VideoUploadField";
@@ -136,6 +137,8 @@ function ProcessingSteps({ stage, progress }: { stage: string | null; progress: 
 function MotionTransferContent() {
   const { authorized, user } = useRequireRole(["creator", "admin", "super_admin"]);
   const { addToast } = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Source video state
   const [sourceAssetId, setSourceAssetId] = useState<string | null>(null);
@@ -160,8 +163,23 @@ function MotionTransferContent() {
   const [consentAcknowledged, setConsentAcknowledged] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // Job state
-  const [jobId, setJobId] = useState<string | null>(null);
+  // Job state — restore from URL ?job=<id> on mount
+  const [jobId, setJobIdState] = useState<string | null>(
+    searchParams.get("job"),
+  );
+  const setJobId = useCallback(
+    (id: string | null) => {
+      setJobIdState(id);
+      const url = new URL(window.location.href);
+      if (id) {
+        url.searchParams.set("job", id);
+      } else {
+        url.searchParams.delete("job");
+      }
+      router.replace(url.pathname + url.search, { scroll: false });
+    },
+    [router],
+  );
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -203,7 +221,7 @@ function MotionTransferContent() {
         }
       } catch {
         pollFailCountRef.current += 1;
-        if (pollFailCountRef.current >= 3) {
+        if (pollFailCountRef.current >= 10) {
           clearInterval(poll);
           setError("Failed to check job status. Please refresh the page.");
         }
