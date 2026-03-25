@@ -197,20 +197,22 @@ function MotionTransferContent() {
       .finally(() => setUsageLoading(false));
   }, [authorized]);
 
-  // Poll job status
+  // Poll job status — fetch immediately on mount, then every 10s
   const pollFailCountRef = useRef(0);
   useEffect(() => {
     if (!jobId) return;
     pollFailCountRef.current = 0;
-    const poll = setInterval(async () => {
+    let stopped = false;
+
+    const fetchStatus = async () => {
       try {
         const data = await apiFetch<JobStatus>(`/ai-tools/motion-transfer/${jobId}`);
+        if (stopped) return;
         pollFailCountRef.current = 0;
         setJobStatus(data);
         if (data.status === "ready" || data.status === "failed") {
-          clearInterval(poll);
+          stopped = true;
           if (data.status === "ready") {
-            addToast("Motion transfer complete!", "success");
             // Refresh usage
             apiFetch<UsageInfo>("/ai-tools/motion-transfer/usage")
               .then(setUsage)
@@ -222,13 +224,20 @@ function MotionTransferContent() {
       } catch {
         pollFailCountRef.current += 1;
         if (pollFailCountRef.current >= 10) {
-          clearInterval(poll);
+          stopped = true;
           setError("Failed to check job status. Please refresh the page.");
         }
       }
+    };
+
+    // Fetch immediately, then poll
+    fetchStatus();
+    const poll = setInterval(() => {
+      if (!stopped) fetchStatus();
+      else clearInterval(poll);
     }, 10_000);
-    return () => clearInterval(poll);
-  }, [jobId, addToast]);
+    return () => { stopped = true; clearInterval(poll); };
+  }, [jobId]);
 
   // Upload handlers
   const handleSourceUpload = useCallback((assetId: string) => {
