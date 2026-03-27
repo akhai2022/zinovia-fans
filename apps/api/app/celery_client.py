@@ -113,6 +113,12 @@ def enqueue_admin_verification_help_email() -> None:
     app.send_task("admin.send_verification_help_email")  # type: ignore[attr-defined]
 
 
+def enqueue_admin_kyc_reminder_email() -> None:
+    """Enqueue one-off task to email all creators stuck before KYC completion."""
+    app = _get_celery_app()
+    app.send_task("admin.send_kyc_reminder_email")  # type: ignore[attr-defined]
+
+
 def enqueue_motion_transfer(job_id: str) -> None:
     """Enqueue AI tool motion transfer task.
 

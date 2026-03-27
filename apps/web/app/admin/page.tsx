@@ -1808,7 +1808,19 @@ export default function AdminPage() {
                   </div>
                   <div>
                     <span className="text-muted-foreground">Onboarding:</span>{" "}
-                    <span className="text-foreground">{selectedUser.onboarding_state || "N/A"}</span>
+                    <span className={
+                      selectedUser.onboarding_state === "KYC_APPROVED" ? "text-emerald-600 font-medium" :
+                      selectedUser.onboarding_state === "KYC_SUBMITTED" ? "text-amber-600 font-medium" :
+                      selectedUser.onboarding_state === "KYC_PENDING" ? "text-orange-500 font-medium" :
+                      selectedUser.onboarding_state === "KYC_REJECTED" ? "text-red-600 font-medium" :
+                      "text-foreground"
+                    }>
+                      {selectedUser.onboarding_state === "KYC_PENDING" ? "KYC Pending (no docs submitted)" :
+                       selectedUser.onboarding_state === "KYC_SUBMITTED" ? "KYC Submitted (awaiting review)" :
+                       selectedUser.onboarding_state === "KYC_APPROVED" ? "Verified" :
+                       selectedUser.onboarding_state === "KYC_REJECTED" ? "KYC Rejected" :
+                       selectedUser.onboarding_state || "N/A"}
+                    </span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Joined:</span>{" "}
