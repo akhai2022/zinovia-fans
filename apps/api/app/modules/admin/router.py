@@ -275,6 +275,25 @@ async def send_notification(
 
 
 # ---------------------------------------------------------------------------
+# Admin: bulk email actions
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/email/kyc-reminder",
+    operation_id="admin_send_kyc_reminder",
+    summary="Send KYC reminder email to all creators pending verification",
+)
+async def send_kyc_reminder(
+    _admin: User = Depends(require_admin_writer),
+) -> dict:
+    from app.celery_client import enqueue_admin_kyc_reminder_email
+
+    enqueue_admin_kyc_reminder_email()
+    return {"status": "queued", "message": "KYC reminder emails are being sent"}
+
+
+# ---------------------------------------------------------------------------
 # Admin: token lookup & force-verify (for when SES isn't working)
 # ---------------------------------------------------------------------------
 
