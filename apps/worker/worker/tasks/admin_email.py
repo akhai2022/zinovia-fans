@@ -118,13 +118,14 @@ def send_kyc_reminder_email() -> str:
     """
 
     async def _run() -> str:
-        from app.modules.auth.models import User
+        from app.modules.auth.models import User, Profile
         from app.modules.onboarding.mail import get_mail_provider
 
         provider = get_mail_provider()
         async with _make_session_factory()() as session:
             r = await session.execute(
-                select(User.email, User.display_name, User.onboarding_state)
+                select(User.email, Profile.display_name, User.onboarding_state)
+                .outerjoin(Profile, Profile.user_id == User.id)
                 .where(User.onboarding_state.in_(["KYC_PENDING", "EMAIL_VERIFIED"]))
                 .where(User.is_active == True)  # noqa: E712
                 .where(User.role == "creator")
