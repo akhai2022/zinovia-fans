@@ -224,10 +224,13 @@ def send_kyc_reminder_email() -> str:
                     )
                     sent += 1
                     logger.info("Sent KYC reminder to %s", email)
+                    # Resend rate limit: 5 req/s — pace at ~3 req/s to stay safe
+                    await asyncio.sleep(0.35)
                 except Exception as e:
                     failed += 1
                     cause = str(e.__cause__) if e.__cause__ else str(e)
                     logger.error("Failed to send KYC reminder to %s: %s (cause: %s)", email, str(e), cause[:200])
+                    await asyncio.sleep(0.5)
 
             result = f"Done: {sent} sent, {failed} failed, {len(users)} total KYC-pending creators"
             logger.info(result)
