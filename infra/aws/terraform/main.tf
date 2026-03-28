@@ -118,6 +118,9 @@ module "network" {
   availability_zones = local.azs
   environment        = var.environment
   nat_gateway_count  = local.ha_nat_gateway_count
+
+  # Allow other projects sharing the same RDS to access it
+  additional_rds_ingress_security_group_ids = var.additional_rds_ingress_security_group_ids
 }
 
 # Security groups when using existing VPC (same rules as module)
@@ -1625,7 +1628,7 @@ resource "aws_ecs_task_definition" "worker" {
       { name = "ENABLE_VIRTUAL_TRYON", value = "true" },
       { name = "MOTION_TRANSFER_BACKEND", value = "replicate_hosted" },
       { name = "ENABLE_MOTION_TRANSFER", value = "true" },
-      # Worker doesn't send email or use cookies but shares Settings with API
+      # Worker sends onboarding + KYC reminder emails via Resend
       { name = "MAIL_PROVIDER", value = "resend" },
       { name = "COOKIE_SECURE", value = "true" },
       { name = "MEDIA_WM_PREVIEW_ENABLED", value = "true" },
@@ -1636,7 +1639,8 @@ resource "aws_ecs_task_definition" "worker" {
       { name = "JWT_SECRET", valueFrom = module.secrets.jwt_secret_arn },
       { name = "CSRF_SECRET", valueFrom = module.secrets.csrf_secret_arn },
       { name = "REPLICATE_API_TOKEN", valueFrom = module.secrets.replicate_api_token_arn },
-      { name = "HF_TOKEN", valueFrom = "arn:aws:secretsmanager:us-east-1:208030346312:secret:zinovia-fans-prod-hf-token-Hospv2" }
+      { name = "HF_TOKEN", valueFrom = "arn:aws:secretsmanager:us-east-1:208030346312:secret:zinovia-fans-prod-hf-token-Hospv2" },
+      { name = "RESEND_API_KEY", valueFrom = module.secrets.resend_api_key_arn }
     ]
   }])
 }
