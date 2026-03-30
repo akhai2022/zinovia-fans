@@ -1427,7 +1427,7 @@ resource "aws_ecs_task_definition" "api" {
 
   container_definitions = jsonencode([{
     name         = "api"
-    image        = "${module.ecr.api_repository_url}:d8170fa"
+    image        = "${module.ecr.api_repository_url}:ba997b8"
     essential    = true
     portMappings = [{ containerPort = 8000, protocol = "tcp" }]
     logConfiguration = {
@@ -1544,7 +1544,7 @@ resource "aws_ecs_task_definition" "web" {
 
   container_definitions = jsonencode([{
     name         = "web"
-    image        = "${module.ecr.web_repository_url}:d8170fa"
+    image        = "${module.ecr.web_repository_url}:ba997b8"
     essential    = true
     portMappings = [{ containerPort = 3000, protocol = "tcp" }]
     logConfiguration = {
@@ -1597,7 +1597,7 @@ resource "aws_ecs_task_definition" "worker" {
 
   container_definitions = jsonencode([{
     name           = "worker"
-    image          = "${module.ecr.worker_repository_url}:d8170fa"
+    image          = "${module.ecr.worker_repository_url}:ba997b8"
     essential      = true
     stopTimeout    = 30
     logConfiguration = {

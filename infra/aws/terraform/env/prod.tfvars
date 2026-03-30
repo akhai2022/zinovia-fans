@@ -9,6 +9,9 @@ vpc_cidr          = "10.0.0.0/16"
 use_existing_vpc  = false
 nat_gateway_count = 1
 
+# Shared RDS access — allow zinovia-formation API to connect
+additional_rds_ingress_security_group_ids = ["sg-0e4d73cf477e3a7fd"]
+
 # RDS
 db_instance_class        = "db.t3.small"
 db_multi_az              = true

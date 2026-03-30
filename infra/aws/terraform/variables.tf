@@ -62,6 +62,12 @@ variable "nat_gateway_count" {
   description = "Number of NAT gateways in new VPC (2 for prod HA)"
 }
 
+variable "additional_rds_ingress_security_group_ids" {
+  type        = list(string)
+  default     = []
+  description = "Additional security group IDs allowed to access RDS (e.g. zinovia-formation API SG)"
+}
+
 # RDS
 variable "db_instance_class" {
   type        = string

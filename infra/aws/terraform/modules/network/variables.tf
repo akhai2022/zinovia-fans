@@ -18,6 +18,12 @@ variable "environment" {
   description = "Environment name"
 }
 
+variable "additional_rds_ingress_security_group_ids" {
+  type        = list(string)
+  default     = []
+  description = "Additional security group IDs allowed to access RDS (e.g. other projects sharing this DB)"
+}
+
 # Number of NAT gateways (1 for staging/cost, 2+ for prod HA)
 variable "nat_gateway_count" {
   type        = number
