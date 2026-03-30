@@ -50,6 +50,7 @@ function SelfieStep({
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [mode, setMode] = useState<"camera" | "upload">("camera");
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -73,15 +74,16 @@ function SelfieStep({
       }
     } catch {
       setCameraError(t.kyc.cameraAccessDenied);
+      setMode("upload");
     }
   }, [t]);
 
   useEffect(() => {
-    if (!selfieFile && !previewUrl) {
+    if (mode === "camera" && !selfieFile && !previewUrl) {
       startCamera();
     }
     return () => stopCamera();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const takePhoto = useCallback(() => {
     const video = videoRef.current;
@@ -120,6 +122,15 @@ function SelfieStep({
     startCamera();
   }, [onCapture, previewUrl, startCamera]);
 
+  const handleSelfieUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) return;
+    stopCamera();
+    onCapture(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  }, [onCapture, stopCamera]);
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -127,8 +138,33 @@ function SelfieStep({
         <p className="text-xs text-muted-foreground">
           {t.kyc.selfieInstructions}
         </p>
-        <div className="overflow-hidden rounded-lg border-2 border-border bg-black">
-          {selfieFile && previewUrl ? (
+
+        {/* Mode toggle: camera or upload */}
+        {!selfieFile && (
+          <div className="flex gap-2 rounded-lg bg-muted/50 p-1">
+            <button
+              type="button"
+              onClick={() => { setMode("camera"); }}
+              className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                mode === "camera" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Icon name="photo_camera" className="mr-1 icon-xs align-middle" />Camera
+            </button>
+            <button
+              type="button"
+              onClick={() => { stopCamera(); setMode("upload"); }}
+              className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                mode === "upload" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Icon name="upload_file" className="mr-1 icon-xs align-middle" />Upload photo
+            </button>
+          </div>
+        )}
+
+        {selfieFile && previewUrl ? (
+          <div className="overflow-hidden rounded-lg border-2 border-border">
             <div className="relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -142,7 +178,9 @@ function SelfieStep({
                 </Button>
               </div>
             </div>
-          ) : (
+          </div>
+        ) : mode === "camera" ? (
+          <div className="overflow-hidden rounded-lg border-2 border-border bg-black">
             <div className="relative">
               <video
                 ref={videoRef}
@@ -167,9 +205,30 @@ function SelfieStep({
                 </div>
               )}
             </div>
-          )}
-        </div>
-        {cameraError && (
+          </div>
+        ) : (
+          /* Upload mode */
+          <div className="rounded-lg border-2 border-dashed border-border bg-muted/30 p-8 text-center">
+            <label htmlFor="selfie-upload" className="cursor-pointer space-y-2">
+              <Icon name="account_circle" className="mx-auto text-4xl text-muted-foreground/50" />
+              <p className="text-sm text-muted-foreground">
+                Tap to upload a clear selfie photo
+              </p>
+              <p className="text-xs text-muted-foreground/70">
+                JPG, PNG up to 10 MB
+              </p>
+            </label>
+            <input
+              id="selfie-upload"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleSelfieUpload}
+            />
+          </div>
+        )}
+
+        {cameraError && mode === "camera" && (
           <p className="text-xs text-destructive">{cameraError}</p>
         )}
         <canvas ref={canvasRef} className="hidden" />
@@ -389,7 +448,7 @@ export default function KycVerifyPage() {
                   {t.kyc.idUploadLabel}
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  {t.kyc.idUploadInstructions}
+                  Upload a clear photo of any government-issued ID: passport, national ID card, or driver&apos;s license. Make sure all text is readable.
                 </p>
                 <div className="rounded-lg border-2 border-dashed border-border bg-muted/30 p-6 text-center">
                   {idFile ? (
