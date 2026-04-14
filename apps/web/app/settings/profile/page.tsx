@@ -307,7 +307,7 @@ export default function SettingsProfilePage() {
             </div>
             <div className="grid gap-6 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="phone">{t.profile.phoneLabel} <span className="text-destructive">*</span></Label>
+                <Label htmlFor="phone">{t.profile.phoneLabel}</Label>
                 <Input
                   id="phone"
                   type="tel"

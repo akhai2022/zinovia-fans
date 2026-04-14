@@ -13,6 +13,10 @@ from app.core.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
+# Retry delays (seconds) for transient Resend send failures. Empty list = no retry.
+# Total attempts = len(_RESEND_RETRY_DELAYS) + 1.
+_RESEND_RETRY_DELAYS: tuple[float, ...] = (0.5, 1.5)
+
 
 class VerificationEmailDeliveryError(RuntimeError):
     """Raised when the configured provider cannot send verification email."""
@@ -203,54 +207,88 @@ class ResendMailProvider:
                 },
             )
             return
-        try:
-            params: resend.Emails.SendParams = {
-                "from": self._mail_from,
-                "to": [recipient],
-                "reply_to": [self._reply_to],
-                "subject": subject,
-                "html": html_body,
-                "text": text_body,
-                "headers": {
-                    "List-Unsubscribe": f"<{self._unsubscribe_url}>",
-                    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-                },
-            }
-            response = await asyncio.to_thread(resend.Emails.send, params)
-            logger.info(
-                "%s email delivered",
-                email_type,
-                extra={
-                    "request_id": get_request_id(),
-                    "provider": "resend",
-                    "outcome": "sent",
-                    "resend_id": response.get("id") if isinstance(response, dict) else None,
-                },
-            )
-        except resend.exceptions.ResendError as exc:
-            logger.error(
-                "%s email delivery failed",
-                email_type,
-                extra={
-                    "request_id": get_request_id(),
-                    "provider": "resend",
-                    "outcome": "failed",
-                    "error": str(exc),
-                },
-            )
-            raise VerificationEmailDeliveryError("resend_send_failed") from exc
-        except Exception as exc:  # noqa: BLE001 - wraps network/timeouts/etc
-            logger.error(
-                "%s email delivery failed",
-                email_type,
-                extra={
-                    "request_id": get_request_id(),
-                    "provider": "resend",
-                    "outcome": "failed",
-                    "error": exc.__class__.__name__,
-                },
-            )
-            raise VerificationEmailDeliveryError("resend_send_failed") from exc
+        params: resend.Emails.SendParams = {
+            "from": self._mail_from,
+            "to": [recipient],
+            "reply_to": [self._reply_to],
+            "subject": subject,
+            "html": html_body,
+            "text": text_body,
+            "headers": {
+                "List-Unsubscribe": f"<{self._unsubscribe_url}>",
+                "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            },
+        }
+        total_attempts = len(_RESEND_RETRY_DELAYS) + 1
+        last_exc: Exception | None = None
+        for attempt in range(1, total_attempts + 1):
+            try:
+                response = await asyncio.to_thread(resend.Emails.send, params)
+                logger.info(
+                    "%s email delivered",
+                    email_type,
+                    extra={
+                        "request_id": get_request_id(),
+                        "provider": "resend",
+                        "outcome": "sent",
+                        "attempt": attempt,
+                        "recipient": recipient,
+                        "resend_id": response.get("id") if isinstance(response, dict) else None,
+                    },
+                )
+                return
+            except resend.exceptions.ResendError as exc:
+                # Provider-side error (auth, domain, rate): retry only on 5xx-ish server errors.
+                last_exc = exc
+                status_code = getattr(exc, "status_code", None) or getattr(exc, "code", None)
+                retriable = isinstance(status_code, int) and status_code >= 500
+                logger.warning(
+                    "%s email delivery attempt failed (resend error)",
+                    email_type,
+                    extra={
+                        "request_id": get_request_id(),
+                        "provider": "resend",
+                        "outcome": "retry" if retriable and attempt < total_attempts else "failed",
+                        "attempt": attempt,
+                        "recipient": recipient,
+                        "status_code": status_code,
+                        "error": str(exc),
+                    },
+                )
+                if not retriable or attempt >= total_attempts:
+                    break
+            except Exception as exc:  # noqa: BLE001 - transient network/timeout/etc
+                last_exc = exc
+                logger.warning(
+                    "%s email delivery attempt failed (transient)",
+                    email_type,
+                    extra={
+                        "request_id": get_request_id(),
+                        "provider": "resend",
+                        "outcome": "retry" if attempt < total_attempts else "failed",
+                        "attempt": attempt,
+                        "recipient": recipient,
+                        "error": exc.__class__.__name__,
+                    },
+                )
+                if attempt >= total_attempts:
+                    break
+            await asyncio.sleep(_RESEND_RETRY_DELAYS[attempt - 1])
+
+        logger.error(
+            "%s email delivery failed after %d attempts",
+            email_type,
+            total_attempts,
+            extra={
+                "request_id": get_request_id(),
+                "provider": "resend",
+                "outcome": "failed",
+                "attempts": total_attempts,
+                "recipient": recipient,
+                "error": (last_exc.__class__.__name__ if last_exc else "unknown"),
+            },
+        )
+        raise VerificationEmailDeliveryError("resend_send_failed") from last_exc
 
     async def send_verification_email(self, payload: VerificationEmailPayload) -> None:
         verify_link = _build_verify_link(payload.token)
